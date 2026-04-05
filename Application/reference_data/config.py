@@ -10,9 +10,9 @@ BACKEND = "postgresql"
 # PostgreSQL settings (used when BACKEND = "postgresql")
 PG_HOST = "localhost"
 PG_PORT = 5432
-PG_DBNAME = "postgres"
-PG_USER = "postgres"
-PG_PASSWORD = "Eagle1968"  # fill in if you set a password
+PG_DBNAME = "eagle_dev"
+PG_USER = "eagle_app"
+PG_PASSWORD = "eagle_dev_local"
 
 # SQLite settings (used when BACKEND = "sqlite")
 SQLITE_PATH = "reference_data/reference_data.db"
