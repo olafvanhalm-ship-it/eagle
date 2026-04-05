@@ -272,3 +272,135 @@ Implemented proper NCA-specific packaging for all 31 AIFMD jurisdictions, replac
 4. **Baseline drift compounds.** When multiple changes happen in sequence (packaging changes, then builder changes), each change may leave stale references or baselines. Running `--capture-expected` after the final state is cleaner than incremental updates.
 
 5. **authorised_anon needs per-template sub-suite support.** The directory contains independent templates (each a different AIFM) that cannot be processed as a single adapter instance. Implementing per-template discovery is needed before this suite can be automated.
+
+## 2026-04-05: Report Viewer — full-stack implementation (backend + frontend + cascade)
+
+### What was built
+Complete report viewer for AIFMD Annex IV regulatory reports:
+- **Persistence layer** (`persistence/report_store.py`): SQLAlchemy ORM with dual SQLite/PostgreSQL backend. Tables: review_sessions, review_reports, review_edits, review_validation_runs.
+- **API layer** (`api/`): FastAPI v0.2.0 with 22 routes across 4 routers (session, report, registry, validation).
+- **Dependency graph** (`canonical/dependency_graph.py`): 109 source→report field mappings. Reverse index enables instant lookup of which report fields cascade from a source entity edit.
+- **Cascade re-projection**: Source entity edits automatically update derived report fields with provenance tracking (`cascade_reprojection` source).
+- **Field-level validation**: Mandatory field checks, format validation, data type checks — provides inline DQF feedback without XML regeneration.
+- **Frontend** (`frontend/app/page.js`): Next.js App Router + Tailwind CSS. Components: UploadTab, ReportViewer, SectionAccordion, FieldRow, EditableCell, ProvenanceIcon, ValidationBadge, CompletionBar, SourceDataEditor, DiffPanel, FundSidebar, Toast.
+- **Product config** (`config/products/aifmd_annex_iv.yaml`): Product-specific settings for multi-regulation readiness.
+- **Integration tests** (`Testing/test_review_api.py`): 8 tests covering persistence, dependency graph, cascade, validation, and API health.
+
+### Architecture decisions
+
+1. **Edit at source canonical level, cascade to report fields.** The user edits positions, fund_static, manager, etc. — not ESMA field IDs directly. The dependency graph maps `manager.name` → AIFM field 19, `fund_static.base_currency` → AIF field 49, etc. This ensures consistency when one source field feeds multiple report fields.
+
+2. **Composite fields flagged but not auto-computed.** Fields like "total NAV" (sum of all position market values) or "top 5 counterparties" require full pipeline aggregation. The cascade marks them as stale but doesn't recompute — that requires "Validate Report" which regenerates from scratch.
+
+3. **Dual-layer validation.** Field-level validation (mandatory, format, type) runs instantly for inline indicators. Full validation (XSD + DQF) runs on explicit "Validate Report" button and requires XML regeneration. The field-level approach gives immediate feedback; full validation catches cross-field and structural issues.
+
+4. **Turbopack root resolution for Google Drive paths.** Next.js 16 with Turbopack fails to resolve the workspace root when the project lives on a Google Drive FUSE mount (paths with spaces and special characters). Fixed by setting `turbopack.root: __dirname` in next.config.mjs.
+
+### Issues encountered
+
+1. **Google Drive FUSE mount blocks SQLite.** WAL mode requires file locking not supported by FUSE. Persistence layer falls back to tempdir automatically.
+
+2. **Google Drive FUSE mount blocks Next.js build cache.** The `.next/` directory contains files that FUSE can't unlink. Build must happen on a local filesystem. On Olaf's machine (C:\Dev\eagle) this is fine; in sandbox we verified by copying to /tmp.
+
+3. **Turbopack root inference fails with nested app directory.** The error "couldn't find next/package.json from project directory" occurs because Turbopack infers the workspace root from the `app/` directory instead of the project root. Setting `turbopack.root` in config resolves this.
+
+### Lessons for next time
+
+1. **FUSE-mounted drives are hostile to build tooling.** SQLite, Next.js build cache, and file watching all assume POSIX file semantics. Google Drive FUSE doesn't provide them. Always build and run on local filesystem; use the mount only for final deliverables.
+
+2. **Cascade graphs should be built from the same mapping tables used for projection.** The dependency graph reuses `AIFM_ENTITY_MAP` and `AIF_ENTITY_MAP` from `aifmd_projection.py` — no duplication. If the projection tables change, the cascade automatically updates.
+
+3. **Integration tests are fast with SQLite in-memory.** The full 8-test suite runs in under 2 seconds with `sqlite://` (no disk I/O). Use this for rapid iteration; switch to PostgreSQL for pre-deployment testing.
+
+4. **Missing `httpx` and `python-multipart` for FastAPI TestClient.** These are not in the standard FastAPI install. Add them to requirements: `pip install httpx python-multipart`.
+
+## 2026-04-05: Dev environment migration — Google Drive to GitHub + local dev
+
+### What was built
+Complete local development environment: Git repo at `C:\Dev\eagle`, pushed to private GitHub repo (`olafvanhalm-ship-it/eagle`), Python venv with all dependencies, PostgreSQL `eagle_dev` database with reference data, VS Code setup, Node.js for future front-end, and a mini FastAPI + Next.js upload/validation UI.
+
+### What went well
+- Regression suite ran first try locally (9/9 PASS) after reference data setup
+- End-to-end browser flow (upload Excel → generate XML → validate) worked with only one import path fix
+- Helper .bat scripts (`run_tests.bat`, `pull_latest.bat`, `push_changes.bat`, `start_eagle.bat`) make the workflow accessible without CLI knowledge
+
+### Issues encountered
+1. **PowerShell vs Command Prompt syntax.** `2>nul` (CMD redirect) fails in PowerShell — use `$null` instead. Gave CMD-style commands initially.
+2. **setuptools build backend typo.** Used `setuptools.backends._legacy:_Backend` (doesn't exist) instead of `setuptools.build_meta`. Cost one round-trip.
+3. **Flat-layout package discovery.** `setuptools` found `Testing/`, `Blueprint/`, `Application/` as top-level packages and refused to build. Fixed with `[tool.setuptools.packages.find] where = ["Application"]`.
+4. **`config.py` truncated on Google Drive.** The `get_store()` function's last line was cut off (`return ReferenceStore.sqlite(SQLI`). File corruption or sync issue — always verify file integrity after Drive edits.
+5. **FastAPI import path.** `m_adapter.py` lives deep in `Application/Adapters/Input adapters/M adapter/` — adding only `Application/` to sys.path wasn't enough. Had to add the M adapter directory explicitly.
+
+### Lessons for next time
+1. **Always use PowerShell syntax when giving Olaf commands.** He uses PowerShell, not CMD. Test redirect syntax, quoting, and special characters (`$` needs backtick escape).
+2. **Google Drive file edits can truncate.** After editing a file on Drive, read it back to verify completeness before telling the user to copy it.
+3. **Python project structure with spaces in paths is fragile.** Paths like `Input adapters/M adapter` work for scripts but complicate import paths. The future `src/eagle/` restructuring will fix this.
+4. **`_format_validation()` needs fixing.** The PipelineValidationResult object structure doesn't match the assumed dict-based format. Validation scores show 0/0/0 in the UI. Investigate the actual object attributes in the next session.
+
+## 2026-04-05: AIF canonical field mapping — completely wrong ESMA numbering
+
+### What happened
+The `to_canonical_aifs()` method in `m_adapter.py` mapped AIF data to field IDs using an invented numbering scheme instead of the official ESMA Annex IV question numbers. All 13 scalar fields it set were mapped to wrong field IDs.
+
+### Impact
+- **Every value in the AIF Report Viewer was in the wrong field.** "Reporting Member state" showed "Commercial real estate fund" (the AIF name), "Version" showed "Commercial real estate fund B.V." (another name), "Creation date" showed "NL" (the domicile), "Reporting period type" showed "EUR" (the base currency), "Reporting period year" showed "71000000" (the AuM).
+- The AIFM report happened to be correct because its numbering aligned (fields 1-38), but AIF fields have a different structure.
+
+### Root cause
+When I wrote `to_canonical_aifs()`, I numbered the AIF fields sequentially as Q1=AIF ID, Q2=AIF Name, Q3=Domicile, etc. — treating them as "AIF-specific" question numbers. But the ESMA Annex IV AIF report uses its own field numbering where:
+- Fields 1-3 are Header file metadata (RMS, Version, Creation date) — same as AIFM
+- Fields 4-15 are Header section (filing type, content type, period dates, change codes)
+- Fields 16-30 are AIF identification (AIFM NC, AIF NC, Name, EEA flag, domicile, LEI, etc.)
+- Fields 48-53 are financial data (AuM, base currency, FX rate, NAV)
+
+I never checked the field numbering against `aifmd_validation_rules.yaml` — I assumed the AIF fields had their own independent numbering starting from the entity-specific data.
+
+### Fix
+1. Rewrote `to_canonical_aifs()` to use correct ESMA field IDs from the validation rules YAML
+2. AIF header fields 1-9 now match AIFM structure (report metadata)
+3. AIF identification fields 16-30 now correctly map to ESMA questions
+4. Financial fields use correct IDs: 48 (AuM), 49 (base ccy), 50-52 (FX), 53 (NAV)
+5. Added auto-validation after upload so DQF indicators are populated immediately
+6. Added AMND-only field filtering: change codes (10-12) hidden for INIT filings
+
+### Also fixed
+- Auto-validation now runs immediately after upload (session.py), so DQF column shows results from the first view
+- Filled+Required filter now hides AMND-only fields (change codes 10-12) on INIT reports
+
+### Lessons for next time
+
+1. **Always verify canonical field IDs against the validation rules YAML.** The YAML is the single source of truth for ESMA field numbering. Never invent field numbers from domain knowledge or by counting sequentially. Open the YAML, find the field name, use that exact field ID.
+
+2. **AIFM and AIF share the same header structure (fields 1-15).** Both report types have identical metadata fields for RMS, version, creation date, filing type, content type, period dates, and change codes. The entity-specific data starts at field 16 for both. This is an ESMA design decision, not obvious from the field names.
+
+3. **Test the canonical output, not just the pipeline.** The regression suite tests the full pipeline (template → XML → validate), which exercises the old `generate_all()` path — not the new canonical path. A simple print of `{field_id: field_value}` from `to_canonical_aifs()` would have shown the misalignment instantly. Add canonical-level assertions to the test suite.
+
+4. **"It works in the UI" is not "it works correctly."** The Report Viewer showed data in every row — it just showed the wrong data in the wrong fields. Functional tests must verify *content correctness*, not just *presence* of data.
+
+## 2026-04-05: XML→field extraction — the right architecture for Report Viewer
+
+### What happened
+The `to_canonical_aifs()` / `to_canonical_aifm()` methods only mapped ~20 scalar fields out of 302 (6%). All derived, aggregated, and ranking data (instruments, geographical focus, exposures, turnovers, counterparties, risk measures, monthly returns, leverage, etc.) was missing because those methods only projected a subset of entity-level data to ESMA field IDs.
+
+### Root cause
+The canonical report methods were designed to produce a flat field→value mapping, but the ESMA Annex IV report has ~302 fields including extensive repeating groups. Manually mapping each group's elements to ESMA field IDs in `to_canonical_aifs()` was incomplete and error-prone. Meanwhile, the XML builders (`aif_builder.py`, `aifm_builder.py`) already produce **fully-populated, XSD-valid XML** with all 302 fields.
+
+### Fix
+Built `canonical/xml_field_extractor.py` which:
+1. Parses the generated AIFM/AIF XML after `generate_and_validate()` runs
+2. Walks the XML tree with context-aware parent disambiguation (e.g., `<Ranking>` under `MainInstrumentTraded` → field 64 vs under `PrincipalExposure` → field 94)
+3. Extracts scalar fields into `fields_json` and repeating groups into `groups_json`
+4. Handles FCA format (namespace stripping, `FCAFieldReference`/`AssumptionDetails` aliases)
+5. Replaced the old `to_canonical_aifm()` / `to_canonical_aifs()` calls in `session.py` upload flow
+
+Result: AIF fields went from 18/302 (6%) to 133/302 (44%) — the 44% represents all data actually present in the template. Missing fields are legitimately empty optionals (no share classes, no prime brokers, no dominant influence, etc.).
+
+### Lessons for next time
+
+1. **Don't reimplement what the pipeline already does correctly.** The XML builders already solve the field mapping problem. Parsing the XML output is simpler and guaranteed consistent with what gets submitted to the NCA.
+
+2. **Shared XML element names need parent context.** Elements like `<Ranking>`, `<SubAssetType>`, `<EntityName>`, `<RateOctober>` appear in 6+ different contexts. A simple `find_element()` only finds the first match. Use the parent element chain to disambiguate.
+
+3. **Completeness percentage should reflect reality.** 44% is correct for this fund — it doesn't have share classes, prime brokers, controlled structures, etc. Don't chase 100% by filling in phantom data.
+
+5. **Validate before you display.** Running validation after upload (not just on button click) catches field-level issues immediately. The DQF column in the UI should never be empty when a report is first viewed.

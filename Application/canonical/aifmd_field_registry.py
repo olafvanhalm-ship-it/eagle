@@ -332,6 +332,94 @@ class FieldRegistry:
         """Look up a reference table (e.g. 'asset_sub_types') by name."""
         return self._reference_tables.get(name, [])
 
+    # ------------------------------------------------------------------
+    # Content-type applicability (AIFMD Annex IV reporting obligations)
+    # ------------------------------------------------------------------
+    # CT=1: header only (no-reporting)
+    # CT=2: header + Art 24(1)           (registered / light)
+    # CT=3: header + Art 24(1) + 24(2)   (authorised / full)
+    # CT=4: header + Art 24(1) + 24(2) + 24(4)  (leveraged EU)
+    # CT=5: header + Art 24(1) + 24(4)   (leveraged non-EU)
+
+    _HEADER_SECTIONS = {
+        "AIF - Header Section",
+        "AIF - Header file",
+        "AIF Cancellation Record",
+    }
+
+    _SECTIONS_24_1 = {
+        "AIF - Header Section",
+        "AIF - Header file",
+        "AIF Cancellation Record",
+        "AIF type",
+        "Fund identification codes",
+        "Share class identification codes",
+        "Base currency information",
+        "Master feeder structure",
+        "Breakdown of investment strategies",
+        "Principal markets in which AIF trades",
+        "Identification of prime broker(s) of the AIF",
+        "Geographical focus",
+        "Main instruments in which the AIF is trading",
+        "Five most important portfolio concentrations",
+        "Top Five Counterparty Exposures (excluding CCPs)",
+        "Direct clearing through central clearing counterparties (CCPs)",
+        "Trading and clearing mechanisms",
+        "Breakdown of the ownership of units in the AIF by investor group",
+        "Total number of open positions",
+        "Typical deal/position size",
+        "Dominant Influence [see Article 1 of Directive 83/349/EEC]",
+        "Individual Exposures in which it is trading and the main categories of assets in which the AIF invested as at the reporting date",
+        "Value of turnover in each asset class over the reporting months",
+        "Investor Concentration",
+    }
+
+    _SECTIONS_24_2 = {
+        "Historical risk profile",
+        "Measure of risks",
+        "Portfolio Liquidity Profile",
+        "Investor Liquidity Profile",
+        "Investor redemptions",
+        "Special arrangements and preferential treatment",
+        "Financing liquidity",
+        "Five largest sources of borrowed cash or securities (short positions)",
+        "Jurisdictions of the three main funding sources",
+        "Value of borrowings of cash or securities represented by:",
+        "Value of borrowing embedded in financial instruments",
+        "Value of collateral and other credit support that the AIF has posted to all counterparties",
+        "Of the amount of collateral and other credit support that the reporting fund has posted to counterparties: what percentage has been re-hypothecated by counterparties?",
+        "Results of stress tests",
+        "Currency of Exposures",
+    }
+
+    _SECTIONS_24_4 = {
+        "AIF - 24.2 - Item 30: Leverage of the AIF",
+        "Gross exposure of financial and, as the case may be, or legal structures controlled by the AIF as defined in Recital 78 of the AIFMD",
+    }
+
+    @classmethod
+    def section_applicable_cts(cls, section: str) -> set[int]:
+        """Return content types for which a section is applicable."""
+        cts: set[int] = set()
+        if section in cls._HEADER_SECTIONS:
+            cts = {1, 2, 3, 4, 5}
+        if section in cls._SECTIONS_24_1:
+            cts |= {2, 3, 4, 5}
+        if section in cls._SECTIONS_24_2:
+            cts |= {3, 4}
+        if section in cls._SECTIONS_24_4:
+            cts |= {4, 5}
+        return cts
+
+    @classmethod
+    def is_section_applicable(cls, section: str, content_type: int) -> bool:
+        """Check if a section applies to a given content type."""
+        cts = cls.section_applicable_cts(section)
+        if not cts:
+            # Unknown section — default to applicable
+            return True
+        return content_type in cts
+
     @property
     def aifm_field_count(self) -> int:
         return len(self._aifm_fields)

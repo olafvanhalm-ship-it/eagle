@@ -1,0 +1,89 @@
+# Product configuration for AIFMD Annex IV reporting
+# This file defines the product-specific settings used by the Eagle platform
+# for the AIFMD Annex IV report type.
+
+product_id: aifmd_annex_iv
+product_name: "AIFMD Annex IV"
+regulation: "Directive 2011/61/EU"
+version: "1.0"
+
+# Report types within this product
+report_types:
+  - id: AIFM
+    name: "AIFM Report"
+    description: "Alternative Investment Fund Manager report"
+    field_count: 38
+    sections:
+      - "Identification"
+      - "Activity"
+      - "Instruments"
+      - "AuM"
+
+  - id: AIF
+    name: "AIF Report"
+    description: "Alternative Investment Fund report"
+    field_count: 302
+    sections:
+      - "Identification"
+      - "Strategy"
+      - "Instruments"
+      - "Leverage"
+      - "Risk"
+      - "Liquidity"
+      - "Operational"
+      - "Counterparty"
+      - "Borrowing"
+
+# Filing types
+filing_types:
+  - INIT   # Initial filing
+  - AMND   # Amendment
+  - CANCEL # Cancellation
+
+# Template types
+template_types:
+  - LIGHT  # Light reporting obligation
+  - FULL   # Full reporting obligation
+
+# Validation rules file
+validation_rules: "aifmd_annex_iv_validation_rules.yaml"
+
+# Field classification file
+field_classification: "aifmd_field_source_classification.yaml"
+
+# NCA packaging configuration module
+nca_packaging: "aifmd_nca_packaging"
+
+# Supported NCAs (ISO 3166-1 alpha-2)
+supported_ncas:
+  - AT  # FMA Austria
+  - BE  # FSMA Belgium
+  - BG  # FSC Bulgaria
+  - CY  # CySEC Cyprus
+  - CZ  # CNB Czech Republic
+  - DE  # BaFin Germany
+  - DK  # DFSA Denmark
+  - EE  # EFSA Estonia
+  - ES  # CNMV Spain
+  - FI  # FIN-FSA Finland
+  - FR  # AMF France
+  - GB  # FCA United Kingdom
+  - GR  # HCMC Greece
+  - HR  # HANFA Croatia
+  - HU  # MNB Hungary
+  - IE  # CBI Ireland
+  - IT  # CONSOB Italy
+  - LI  # FMA Liechtenstein
+  - LT  # LB Lithuania
+  - LU  # CSSF Luxembourg
+  - LV  # FKTK Latvia
+  - MT  # MFSA Malta
+  - NL  # AFM Netherlands
+  - NO  # NFSA Norway
+  - PL  # KNF Poland
+  - PT  # CMVM Portugal
+  - RO  # ASF Romania
+  - SE  # FI Sweden
+  - SI  # SMA Slovenia
+  - SK  # NBS Slovakia
+  - IS  # FME Iceland

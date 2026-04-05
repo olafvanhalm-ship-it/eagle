@@ -1636,7 +1636,24 @@ class MAdapter(AifmBuilderMixin, AifBuilderMixin, OrchestratorMixin):
         """Export parsed AIF data to generic CanonicalAIFReport instances.
 
         Creates one canonical report per AIF in self.aifs, mapping all available
-        fields from the M template using ESMA question numbers.
+        fields from the M template using ESMA Annex IV AIF question numbers.
+
+        ESMA AIF field numbering (aifmd_validation_rules.yaml):
+          1  Reporting Member state         16 AIFM National Code
+          2  Version                        17 AIF national code
+          3  Creation date and time         18 AIF Name
+          4  Filing type                    19 AIF EEA Flag
+          5  AIF content type               20 AIF reporting code
+          6  Reporting period start date    21 Domicile of the AIF
+          7  Reporting period end date      22 Inception Date
+          8  Reporting period type          23 AIF no reporting flag
+          9  Reporting period year          24 AIF LEI code
+         10  Change obligation freq Code    25 AIF ISIN code
+         11  Change obligation contents     26 AIF CUSIP code
+         12  Change obligation Quarter      27 AIF SEDOL code
+         13  Last reporting flag            28 AIF Bloomberg Code
+         14  Question Number (assumption)   29 AIF Reuters code
+         15  Assumption description         30 AIF ECB code
         """
         canonical_aifs = []
 
@@ -1644,93 +1661,308 @@ class MAdapter(AifmBuilderMixin, AifBuilderMixin, OrchestratorMixin):
             report = CanonicalAIFReport()
             aif_id = _str(aif.get("Custom AIF Identification", "") or aif.get("AIF ID", ""))
 
-            # Map basic AIF identification fields
-            # Q1: AIF Identification (custom or AIF ID)
-            if aif_id:
-                report.set_field("1", aif_id, source="m_adapter", priority=SourcePriority.IMPORTED,
-                               source_ref=f"AIF #{aif_index}")
+            # ── AIF Header file (fields 1-3) ─────────────────────────────
+            # These mirror the AIFM header: report-level metadata
 
-            # Q2: AIF Name
+            # Field 1: Reporting Member State
+            rms = self.reporting_member_state or ""
+            if rms:
+                report.set_field("1", rms, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 2: Version (XSD version)
+            report.set_field("2", XSD_VERSION, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 3: Creation date and time
+            report.set_field("3", datetime.now().strftime("%Y-%m-%d"), source="m_adapter",
+                            priority=SourcePriority.IMPORTED)
+
+            # ── AIF Header section (fields 4-15) ─────────────────────────
+
+            # Field 4: Filing type
+            filing_type = self.filing_type or "INIT"
+            report.set_field("4", filing_type, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 5: AIF content type
+            content_type = _str(aif.get("AIF Content Type", "") or aif.get("AIF content type", ""))
+            if not content_type:
+                # Derive: 1=24(1) authorised, 2=24(2) registered, 3=non-EU
+                if self.template_type != "FULL":
+                    content_type = "2"
+                else:
+                    domicile = (_str(aif.get("Domicile of the AIF", "")) or
+                               _str(aif.get("AIF Domicile", "")) or
+                               self.aifm_jurisdiction or rms)
+                    content_type = "1" if _is_eea(domicile) else "3"
+            report.set_field("5", content_type, source="m_adapter",
+                            priority=SourcePriority.DERIVED if not _str(aif.get("AIF Content Type", "")) else SourcePriority.IMPORTED)
+
+            # Field 6: Reporting period start date
+            period_start, period_end = _reporting_period_dates(self.reporting_period_type,
+                                                               self.reporting_year)
+            report.set_field("6", period_start, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 7: Reporting period end date
+            report.set_field("7", period_end, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 8: Reporting period type
+            period_type = self.reporting_period_type or "Y1"
+            report.set_field("8", period_type, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 9: Reporting period year
+            year = str(self.reporting_year) if self.reporting_year else ""
+            if year:
+                report.set_field("9", year, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 10: Change in AIF reporting obligation frequency Code
+            change_freq = _str(aif.get("Change code 1", "") or aif.get("Change Code 1", "")
+                              or aif.get("Change in AIF reporting obligation frequency Code", ""))
+            if change_freq:
+                report.set_field("10", change_freq, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 11: Change in AIF reporting obligation contents Code
+            change_contents = _str(aif.get("Change code 2", "") or aif.get("Change Code 2", "")
+                                  or aif.get("Change in AIF reporting obligation contents Code", ""))
+            if change_contents:
+                report.set_field("11", change_contents, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 12: Change in AIF reporting obligation Quarter
+            change_quarter = _str(aif.get("Change code 3", "") or aif.get("Change Code 3", "")
+                                 or aif.get("Change in AIF reporting obligation Quarter", ""))
+            if change_quarter:
+                report.set_field("12", change_quarter, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 13: Last reporting flag
+            aif_last_reporting = _str(aif.get("Last Reporting Flag", ""))
+            if aif_last_reporting:
+                report.set_field("13", aif_last_reporting, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Fields 14-15: Assumptions (repeating group — stored as group items)
+            aif_assumptions = [a for a in (self.aif_assumptions if hasattr(self, 'aif_assumptions') else [])
+                              if _str(a.get("Custom AIF Identification", "") or a.get("AIF ID", "")) == aif_id]
+            if aif_assumptions:
+                for a_rec in aif_assumptions:
+                    q_num = _str(a_rec.get("Question Number", ""))
+                    a_desc = _str(a_rec.get("Assumption Description", ""))
+                    if q_num or a_desc:
+                        report.add_group_item("assumptions", {
+                            "question": q_num,
+                            "description": a_desc,
+                        }, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # ── AIF Identification (fields 16-30) ────────────────────────
+
+            # Field 16: AIFM National Code
+            aifm_nc = self.aifm_national_code or ""
+            if aifm_nc:
+                report.set_field("16", aifm_nc, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 17: AIF national code
+            aif_nc = _str(aif.get("AIF National Code", "") or aif.get("AIF national code", ""))
+            if not aif_nc:
+                # Try to find from aif_national_codes list
+                aif_ncs = [nc for nc in self.aif_national_codes
+                          if _str(nc.get("Custom AIF Identification", "") or nc.get("AIF ID", "")) == aif_id]
+                if aif_ncs:
+                    aif_nc = _str(aif_ncs[0].get("AIF national code", "") or aif_ncs[0].get("AIF National Code", ""))
+            if aif_nc:
+                report.set_field("17", aif_nc, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 18: AIF Name
             aif_name = _str(aif.get("AIF Name", ""))
             if aif_name:
-                report.set_field("2", aif_name, source="m_adapter", priority=SourcePriority.IMPORTED)
+                report.set_field("18", aif_name, source="m_adapter", priority=SourcePriority.IMPORTED)
 
-            # Q3: Domicile
+            # Field 19: AIF EEA Flag
             domicile = (_str(aif.get("Domicile of the AIF", "")) or
                        _str(aif.get("AIF Domicile", "")) or
                        _str(aif.get("Domicile", "")) or
-                       self.aifm_jurisdiction or
-                       self.reporting_member_state)
+                       self.aifm_jurisdiction or rms)
+            eea_flag = str(_is_eea(domicile)).lower()
+            report.set_field("19", eea_flag, source="m_adapter", priority=SourcePriority.DERIVED)
+
+            # Field 20: AIF reporting code
+            aif_reporting_code = _str(aif.get("AIF Reporting Code", "") or aif.get("AIF reporting code", ""))
+            if aif_reporting_code:
+                report.set_field("20", aif_reporting_code, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 21: Domicile of the AIF
             if domicile:
-                report.set_field("3", domicile, source="m_adapter", priority=SourcePriority.IMPORTED)
+                report.set_field("21", domicile, source="m_adapter", priority=SourcePriority.IMPORTED)
 
-            # Q4: Content Type
-            content_type = _str(aif.get("AIF Content Type", "") or aif.get("AIF content type", ""))
-            if content_type:
-                report.set_field("4", content_type, source="m_adapter", priority=SourcePriority.IMPORTED)
+            # Field 22: Inception Date
+            inception_date = _str(aif.get("Inception date", "") or aif.get("Inception Date", ""))
+            if inception_date:
+                report.set_field("22", inception_date, source="m_adapter", priority=SourcePriority.IMPORTED)
 
-            # Q5: LEI
+            # Field 23: AIF no reporting flag
+            no_reporting = _str(aif.get("AIF no reporting flag", "") or
+                               aif.get("AIF no reporting flag (Nothing to report)", ""))
+            if no_reporting:
+                report.set_field("23", no_reporting, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 24: AIF LEI code
             aif_lei = _str(aif.get("AIF LEI code", "") or aif.get("AIF LEI Code", ""))
             if aif_lei:
-                report.set_field("5", aif_lei, source="m_adapter", priority=SourcePriority.IMPORTED)
+                report.set_field("24", aif_lei, source="m_adapter", priority=SourcePriority.IMPORTED)
 
-            # Q6: Investment Strategy Code
-            strategy_code = _str(aif.get("Investment strategy code", ""))
-            if strategy_code:
-                report.set_field("6", strategy_code, source="m_adapter", priority=SourcePriority.IMPORTED)
+            # Field 25: AIF ISIN code
+            aif_isin = _str(aif.get("AIF ISIN code", "") or aif.get("AIF ISIN Code", ""))
+            if aif_isin:
+                report.set_field("25", aif_isin, source="m_adapter", priority=SourcePriority.IMPORTED)
 
-            # Q7: AIF Type
-            aif_type = _str(aif.get("AIF Type", ""))
-            if aif_type:
-                report.set_field("7", aif_type, source="m_adapter", priority=SourcePriority.IMPORTED)
+            # Field 26: AIF CUSIP code
+            aif_cusip = _str(aif.get("AIF CUSIP code", "") or aif.get("AIF CUSIP Code", ""))
+            if aif_cusip:
+                report.set_field("26", aif_cusip, source="m_adapter", priority=SourcePriority.IMPORTED)
 
-            # Q8: Base Currency
-            base_ccy = self._get_base_currency(aif_id)
-            if base_ccy:
-                report.set_field("8", base_ccy, source="m_adapter", priority=SourcePriority.IMPORTED)
+            # Field 27: AIF SEDOL code
+            aif_sedol = _str(aif.get("AIF SEDOL code", "") or aif.get("AIF SEDOL Code", ""))
+            if aif_sedol:
+                report.set_field("27", aif_sedol, source="m_adapter", priority=SourcePriority.IMPORTED)
 
-            # Q9: Total AuM
+            # Field 28: AIF Bloomberg Code
+            aif_bloomberg = _str(aif.get("AIF Bloomberg Code", "") or aif.get("AIF Bloomberg code", ""))
+            if aif_bloomberg:
+                report.set_field("28", aif_bloomberg, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 29: AIF Reuters code
+            aif_reuters = _str(aif.get("AIF Reuters code", "") or aif.get("AIF Reuters Code", ""))
+            if aif_reuters:
+                report.set_field("29", aif_reuters, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 30: AIF ECB code
+            aif_ecb = _str(aif.get("AIF ECB code", "") or aif.get("AIF ECB Code", ""))
+            if aif_ecb:
+                report.set_field("30", aif_ecb, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # ── Share class and Master/Feeder (fields 31-44) ─────────────
+
+            # Field 31: Old AIF national identifier - Reporting Member State
+            old_aif_rms = _str(aif.get("Old AIF national identifier - Reporting Member State", ""))
+            if old_aif_rms:
+                report.set_field("31", old_aif_rms, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 32: Old AIF national identifier - National code
+            old_aif_nc = _str(aif.get("Old AIF national identifier - National code", ""))
+            if old_aif_nc:
+                report.set_field("32", old_aif_nc, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 33: AIF share class flag
+            share_class_flag = _str(aif.get("AIF share class flag", "") or aif.get("Share class flag", ""))
+            if share_class_flag:
+                report.set_field("33", share_class_flag, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Fields 34-40: Share class details (repeating) — stored via groups below
+
+            # Field 41: Master feeder status
+            master_feeder = _str(aif.get("Master feeder status", "") or aif.get("Master Feeder Status", ""))
+            if master_feeder:
+                report.set_field("41", master_feeder, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 42: Master AIF name
+            master_name = _str(aif.get("Master AIF name", "") or aif.get("Master AIF Name", ""))
+            if master_name:
+                report.set_field("42", master_name, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 43: Master AIF national identifier - RMS
+            master_rms = _str(aif.get("Master AIF national identifier - Reporting Member State", ""))
+            if master_rms:
+                report.set_field("43", master_rms, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 44: Master AIF national identifier - National code
+            master_nc = _str(aif.get("Master AIF national identifier - National code", ""))
+            if master_nc:
+                report.set_field("44", master_nc, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # ── Prime brokers (fields 45-47) — stored via groups below ───
+
+            # ── AIF financial data (fields 48-53) ────────────────────────
+
+            # Field 48: Total AuM amount of the AIF in base currency
             if self.template_type == "FULL":
                 aum_val = aif.get("Total AuM amount of the AIF in base currency")
                 aum = _int_round(aum_val) if aum_val else self._calc_aum(self._positions_for_aif(aif_id))
             else:
                 aum = self._calc_aum(self._positions_for_aif(aif_id))
             if aum:
-                report.set_field("9", str(aum), source="m_adapter", priority=SourcePriority.IMPORTED)
+                report.set_field("48", str(aum), source="m_adapter", priority=SourcePriority.IMPORTED)
 
-            # Q10: NAV
+            # Field 49: Base currency of the AIF
+            base_ccy = self._get_base_currency(aif_id)
+            if base_ccy:
+                report.set_field("49", base_ccy, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 50: Base currency / EUR FX rate
+            fx_rate = _str(aif.get("FX Rate", "") or aif.get("Base currency / EUR FX rate", ""))
+            if fx_rate:
+                report.set_field("50", fx_rate, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 51: FX reference rate type
+            fx_rate_type = _str(aif.get("FX Rate Type", "") or
+                               aif.get("Base currency / EUR FX reference rate type", ""))
+            if fx_rate_type:
+                report.set_field("51", fx_rate_type, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 52: FX reference rate description for no ECB rates
+            fx_rate_desc = _str(aif.get("FX Rate Description", "") or
+                               aif.get("Base currency / EUR FX reference rate description for no ECB rates", ""))
+            if fx_rate_desc:
+                report.set_field("52", fx_rate_desc, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 53: Total Net Asset Value of the AIF (NAV)
             if self.template_type == "FULL":
                 nav_val = aif.get("Total Net Asset Value of the AIF (NAV)")
                 nav = _int_round(nav_val) if nav_val else self._calc_nav(self._positions_for_aif(aif_id))
             else:
                 nav = self._calc_nav(self._positions_for_aif(aif_id))
             if nav:
-                report.set_field("10", str(nav), source="m_adapter", priority=SourcePriority.IMPORTED)
+                report.set_field("53", str(nav), source="m_adapter", priority=SourcePriority.IMPORTED)
 
-            # Q11: AIF Reporting Code
-            aif_reporting_code = _str(aif.get("AIF Reporting Code", ""))
-            if aif_reporting_code:
-                report.set_field("11", aif_reporting_code, source="m_adapter", priority=SourcePriority.IMPORTED)
+            # ── Funding sources (fields 54-56) ───────────────────────────
+            funding_1 = _str(aif.get("First funding source country", ""))
+            if funding_1:
+                report.set_field("54", funding_1, source="m_adapter", priority=SourcePriority.IMPORTED)
+            funding_2 = _str(aif.get("Second funding source country", ""))
+            if funding_2:
+                report.set_field("55", funding_2, source="m_adapter", priority=SourcePriority.IMPORTED)
+            funding_3 = _str(aif.get("Third funding source country", ""))
+            if funding_3:
+                report.set_field("56", funding_3, source="m_adapter", priority=SourcePriority.IMPORTED)
 
-            # Q12: Inception Date
-            inception_date = _str(aif.get("Inception date", "") or aif.get("Inception Date", ""))
-            if inception_date:
-                report.set_field("12", inception_date, source="m_adapter", priority=SourcePriority.IMPORTED)
+            # Field 57: Predominant AIF Type
+            predominant = _str(aif.get("Predominant AIF Type", "") or aif.get("AIF Type", ""))
+            if predominant:
+                report.set_field("57", predominant, source="m_adapter", priority=SourcePriority.IMPORTED)
 
-            # Q13: Last Reporting Flag
-            aif_last_reporting = _str(aif.get("Last Reporting Flag", ""))
-            if aif_last_reporting:
-                report.set_field("13", aif_last_reporting, source="m_adapter", priority=SourcePriority.IMPORTED)
+            # Field 58: Investment strategy code — stored in strategies group
 
-            # Store complete AIF dict as a special group for perfect roundtrip
-            # We store the dict as a JSON string to preserve types
+            # Field 62: Number of transactions under HFT
+            hft_count = _str(aif.get("Number of transactions under HFT", "")
+                            or aif.get("HFT transaction count", ""))
+            if hft_count:
+                report.set_field("62", hft_count, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # Field 63: Market value of buys and sells under HFT
+            hft_value = _str(aif.get("Market value of buys and sells in base currency under HFT", "")
+                            or aif.get("HFT market value", ""))
+            if hft_value:
+                report.set_field("63", hft_value, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # ── Leverage (fields 294-295) ────────────────────────────────
+            leverage_gross = _str(aif.get("Leverage under gross method", ""))
+            if leverage_gross:
+                report.set_field("294", leverage_gross, source="m_adapter", priority=SourcePriority.IMPORTED)
+            leverage_commit = _str(aif.get("Leverage under commitment method", ""))
+            if leverage_commit:
+                report.set_field("295", leverage_commit, source="m_adapter", priority=SourcePriority.IMPORTED)
+
+            # ── Store complete AIF dict as group for roundtrip ────────────
             import json
             aif_all_data = {}
             for key, val in aif.items():
                 if val is not None:
                     aif_all_data[key] = val
             if aif_all_data:
-                # Store as JSON to preserve types
                 aif_json = json.dumps(aif_all_data, default=str)
                 report.add_group_item("_aif_complete_data", {"_json": aif_json}, source="m_adapter",
                                     priority=SourcePriority.IMPORTED)
