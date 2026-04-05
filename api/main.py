@@ -114,38 +114,42 @@ async def upload_and_validate(file: UploadFile = File(...)):
 
 
 def _format_validation(validation) -> dict | None:
-    """Format PipelineValidationResult into JSON-serializable dict."""
+    """Format PipelineValidationResult into JSON-serializable dict.
+
+    PipelineValidationResult is a dataclass with:
+      - file_results: list[FileValidationResult]
+      - xsd_valid_count, xsd_invalid_count: int properties
+      - total_dqf_pass, total_dqf_fail: int properties
+      - has_critical_failures: bool property
+      - all_findings: list[ValidationFinding] property
+    """
     if validation is None:
         return None
 
     try:
-        xsd_results = getattr(validation, "xsd_results", [])
-        dqf_results = getattr(validation, "dqf_results", [])
-
-        xsd_valid = sum(1 for r in xsd_results if r.get("valid", False))
-        xsd_invalid = sum(1 for r in xsd_results if not r.get("valid", True))
-
-        dqf_pass = sum(1 for r in dqf_results if r.get("status") == "PASS")
-        dqf_fail = sum(1 for r in dqf_results if r.get("status") == "FAIL")
-
-        # Get first few DQF failures for display
+        # Get first 20 DQF failures for display
         failures = [
             {
-                "rule": r.get("rule_id", ""),
-                "field": r.get("field", ""),
-                "message": r.get("message", ""),
-                "severity": r.get("severity", ""),
+                "rule": f.rule_id,
+                "field": f.field_path,
+                "message": f.message,
+                "severity": f.severity,
             }
-            for r in dqf_results
-            if r.get("status") == "FAIL"
-        ][:20]  # Limit to first 20
+            for f in validation.all_findings
+            if f.status == "FAIL"
+        ][:20]
 
         return {
-            "xsd": {"valid": xsd_valid, "invalid": xsd_invalid},
-            "dqf": {"pass": dqf_pass, "fail": dqf_fail},
+            "xsd": {
+                "valid": validation.xsd_valid_count,
+                "invalid": validation.xsd_invalid_count,
+            },
+            "dqf": {
+                "pass": validation.total_dqf_pass,
+                "fail": validation.total_dqf_fail,
+            },
             "failures": failures,
-            "has_critical": getattr(validation, "has_critical_failures", False),
+            "has_critical": validation.has_critical_failures,
         }
-    except Exception:
-        # If validation object structure differs, return raw string
-        return {"raw": str(validation)}
+    except Exception as e:
+        return {"raw": str(validation), "error": str(e)}
