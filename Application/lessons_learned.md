@@ -404,3 +404,18 @@ Result: AIF fields went from 18/302 (6%) to 133/302 (44%) — the 44% represents
 3. **Completeness percentage should reflect reality.** 44% is correct for this fund — it doesn't have share classes, prime brokers, controlled structures, etc. Don't chase 100% by filling in phantom data.
 
 5. **Validate before you display.** Running validation after upload (not just on button click) catches field-level issues immediately. The DQF column in the UI should never be empty when a report is first viewed.
+
+## 2026-04-05: Report Viewer UI polish — 6 fixes in one pass
+
+### What was fixed
+1. **Repeating groups not displayed.** Backend already stored groups_json (instruments, exposures, strategies, risk measures, etc.) but the frontend never rendered them. Added `GroupTable` component with collapsible blue-accented tables.
+2. **Value column misalignment.** Each section's table computed column widths independently. Fixed with `table-fixed` layout and consistent `<colgroup>` widths.
+3. **Optional fields shown when empty.** Fields like 14 (assumptions), 34-40 (share classes) appeared even when empty. Tightened visibility: O (optional) and F (free) fields with no value are hidden in the default "Filled + Required" view.
+4. **Empty fields incorrectly editable.** Field 61 (Other strategy description), 122, 127 etc. showed as editable despite being empty optionals. Now: empty optional fields are read-only with a dash indicator.
+5. **Inconsistent value text color.** Non-editable values were gray (text-gray-400), editable had no explicit color. Now all values are text-gray-900 (near-black).
+6. **DQF indicator only showed errors.** Backend only passed FAIL findings. Now also passes WARNING. Frontend uses 3-color dots: green (pass), orange (warning), red (error) instead of emoji checkmarks.
+
+### Lessons for next time
+1. **Don't collect only FAILs from the validator.** WARNING findings are just as important for the reviewer. Always include all severity levels in the validation_map.
+2. **Use table-fixed layout when multiple sections share the same column structure.** Auto layout causes every section to compute its own widths, creating visual jumps.
+3. **Empty optional ≠ editable.** If a field has no value because the source data doesn't provide it, making it editable creates a false sense of control — the field would just be overwritten on the next regeneration.

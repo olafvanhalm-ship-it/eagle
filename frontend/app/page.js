@@ -47,13 +47,23 @@ function ProvenanceIcon({ priority, source }) {
 
 function ValidationBadge({ validation }) {
   if (!validation) return <span className="text-gray-300" title="Not validated yet">○</span>;
-  if (validation.status === "PASS") return <span className="text-green-500" title="Validation passed">✅</span>;
-  return (
+  if (validation.status === "PASS") return <span title="Validation passed" style={{ color: "#16a34a" }}>●</span>;
+  if (validation.status === "WARNING") return (
     <span
-      className="text-red-500 cursor-help"
+      className="cursor-help"
+      style={{ color: "#ea980c" }}
       title={`${validation.rule_id}: ${validation.message}\n${validation.fix_suggestion || ""}`}
     >
-      ❌ <span className="text-xs font-mono">{validation.rule_id}</span>
+      ● <span className="text-xs font-mono" style={{ color: "#ea980c" }}>{validation.rule_id}</span>
+    </span>
+  );
+  return (
+    <span
+      className="cursor-help"
+      style={{ color: "#dc2626" }}
+      title={`${validation.rule_id}: ${validation.message}\n${validation.fix_suggestion || ""}`}
+    >
+      ● <span className="text-xs font-mono" style={{ color: "#dc2626" }}>{validation.rule_id}</span>
     </span>
   );
 }
@@ -92,7 +102,7 @@ function EditableCell({ value, field, onSave, editable, dataType, format: fmt, a
   const [error, setError] = useState("");
 
   if (!editable) {
-    return <span className="text-gray-400 bg-gray-50 px-2 py-1 rounded text-sm">{value ?? "—"}</span>;
+    return <span className="text-gray-900 bg-gray-50 px-2 py-1 rounded text-sm">{value ?? <span className="text-gray-300 italic">—</span>}</span>;
   }
 
   if (editing) {
@@ -192,7 +202,7 @@ function EditableCell({ value, field, onSave, editable, dataType, format: fmt, a
   // Display mode — click to edit
   return (
     <span
-      className="px-2 py-1 rounded text-sm cursor-pointer hover:bg-blue-50 border border-transparent hover:border-blue-200 transition"
+      className="text-gray-900 px-2 py-1 rounded text-sm cursor-pointer hover:bg-blue-50 border border-transparent hover:border-blue-200 transition"
       onClick={() => { setDraft(value ?? ""); setEditing(true); }}
       title="Click to edit"
     >
@@ -214,14 +224,14 @@ function FieldRow({ field, onEdit, cascaded }) {
 
   return (
     <tr className={`border-b border-gray-100 hover:bg-gray-50 ${cascaded ? "cascade-highlight" : ""}`}>
-      <td className="px-3 py-2 text-xs font-mono text-gray-400 w-10">{field.field_id}</td>
-      <td className="px-3 py-2 text-sm text-gray-700 max-w-xs">
+      <td className="px-3 py-2 text-xs font-mono text-gray-400">{field.field_id}</td>
+      <td className="px-3 py-2 text-sm text-gray-700 truncate">
         <Tip text={`${field.obligation === "M" ? "Mandatory" : field.obligation === "C" ? "Conditional" : "Optional"} | ${field.xsd_element || ""}`}>
           {field.field_name}
           {field.obligation === "M" && <span className="text-red-500 ml-1">*</span>}
         </Tip>
       </td>
-      <td className="px-3 py-2">
+      <td className="px-3 py-2 overflow-hidden">
         <EditableCell
           value={field.value}
           field={field}
@@ -233,10 +243,10 @@ function FieldRow({ field, onEdit, cascaded }) {
           referenceValues={[]}
         />
       </td>
-      <td className="px-2 py-2 text-center w-8">
+      <td className="px-2 py-2 text-center">
         <ProvenanceIcon priority={field.priority} source={field.source} />
       </td>
-      <td className="px-2 py-2 text-center w-8">
+      <td className="px-2 py-2 text-center">
         <ValidationBadge validation={field.validation} />
       </td>
       <td className="px-3 py-2 text-xs text-gray-400">
@@ -280,14 +290,22 @@ function SectionAccordion({ name, fields, onEdit, cascadedFields }) {
         </div>
       </button>
       {open && (
-        <table className="w-full">
+        <table className="w-full" style={{ tableLayout: "fixed" }}>
+          <colgroup>
+            <col style={{ width: "48px" }} />
+            <col style={{ width: "35%" }} />
+            <col style={{ width: "auto" }} />
+            <col style={{ width: "36px" }} />
+            <col style={{ width: "64px" }} />
+            <col style={{ width: "60px" }} />
+          </colgroup>
           <thead>
             <tr className="bg-gray-50 text-xs text-gray-500 uppercase">
-              <th className="px-3 py-2 text-left w-10">#</th>
+              <th className="px-3 py-2 text-left">#</th>
               <th className="px-3 py-2 text-left">Field</th>
               <th className="px-3 py-2 text-left">Value</th>
-              <th className="px-2 py-2 text-center w-8" title="Data source">Src</th>
-              <th className="px-2 py-2 text-center w-8" title="Validation status">DQF</th>
+              <th className="px-2 py-2 text-center" title="Data source">Src</th>
+              <th className="px-2 py-2 text-center" title="Validation status">DQF</th>
               <th className="px-3 py-2 text-left" title="NCA-specific deviations">NCA</th>
             </tr>
           </thead>
@@ -302,6 +320,79 @@ function SectionAccordion({ name, fields, onEdit, cascadedFields }) {
             ))}
           </tbody>
         </table>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Group Table — renders repeating groups (instruments, exposures, etc.)
+// ============================================================================
+
+const GROUP_LABELS = {
+  main_instruments: "Main instruments traded",
+  principal_exposures: "Principal exposures",
+  portfolio_concentrations: "Portfolio concentrations",
+  counterparty_exposures: "Top 5 counterparty exposures",
+  ccp_exposures: "CCP exposures",
+  individual_exposures: "Individual exposures",
+  turnovers: "Turnover by asset class",
+  borrowing_sources: "Largest borrowing sources",
+  funding_jurisdictions: "Funding source jurisdictions",
+  market_risk_measures: "Market risk measures",
+  strategies: "Investment strategies",
+  share_classes: "Share classes",
+  aifm_principal_markets: "Principal markets (AIFM)",
+  monthly_returns: "Monthly returns",
+  monthly_navs: "Monthly NAVs",
+};
+
+function GroupTable({ groupName, rows }) {
+  const [open, setOpen] = useState(true);
+  if (!rows || rows.length === 0) return null;
+
+  const label = GROUP_LABELS[groupName] || groupName.replace(/_/g, " ");
+  const columns = Object.keys(rows[0]).filter((k) => k !== "field_id");
+
+  return (
+    <div className="border border-blue-100 rounded-lg mb-2 overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-blue-50 hover:bg-blue-100 transition"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-blue-400">{open ? "▼" : "▶"}</span>
+          <span className="font-medium text-blue-800 text-sm">{label}</span>
+        </div>
+        <span className="text-xs text-blue-500">{rows.length} row{rows.length !== 1 ? "s" : ""}</span>
+      </button>
+      {open && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-blue-50 text-xs text-blue-600 uppercase">
+                <th className="px-3 py-2 text-left w-8">#</th>
+                {columns.map((col) => (
+                  <th key={col} className="px-3 py-2 text-left">
+                    {col.replace(/_/g, " ")}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, idx) => (
+                <tr key={idx} className="border-b border-blue-50 hover:bg-gray-50">
+                  <td className="px-3 py-2 text-xs text-gray-400">{idx + 1}</td>
+                  {columns.map((col) => (
+                    <td key={col} className="px-3 py-2 text-gray-900">
+                      {row[col] != null && row[col] !== "" ? String(row[col]) : <span className="text-gray-300">—</span>}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
@@ -587,6 +678,8 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit }) {
 
   const sections = report.sections || {};
   const sectionNames = Object.keys(sections);
+  const groups = report.groups || {};
+  const groupNames = Object.keys(groups).filter((g) => groups[g]?.length > 0);
 
   return (
     <div>
@@ -630,6 +723,16 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit }) {
           cascadedFields={cascadedFields}
         />
       ))}
+
+      {/* Repeating group tables */}
+      {groupNames.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">Repeating Groups</h3>
+          {groupNames.map((gName) => (
+            <GroupTable key={gName} groupName={gName} rows={groups[gName]} />
+          ))}
+        </div>
+      )}
 
       {/* Empty sections badge */}
       {report.empty_section_count > 0 && !showAll && (

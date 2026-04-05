@@ -39,7 +39,22 @@ def _build_field_response(
 
     # Get classification (entity, composite, report)
     category = classification.get(field_id, {}).get("category", "report")
-    editable = category == "entity" or (category == "report" and not _is_system_field(field_id, report_type))
+    has_value = field_value.get("value") is not None and field_value.get("value") != ""
+
+    # Editable: entity fields and non-system report fields WITH data, or mandatory/conditional
+    # Empty optional/conditional fields that are derived/calculated should not be editable
+    is_system = _is_system_field(field_id, report_type)
+    if category == "entity":
+        editable = True
+    elif is_system:
+        editable = False
+    elif category == "composite":
+        editable = False
+    elif fdef and fdef.obligation.value == "O" and not has_value:
+        # Empty optional fields: not editable (data must come from source)
+        editable = False
+    else:
+        editable = True
 
     # Validation status
     val_response = None
@@ -129,9 +144,13 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
             # Only include findings for the current report type
             if path_type != report_type:
                 continue
-            if fid and finding.get("status") == "FAIL":
+            fstatus = finding.get("status", "")
+            if fid and fstatus in ("FAIL", "WARNING"):
+                # Don't overwrite a FAIL with a WARNING for the same field
+                if fid in validation_map and validation_map[fid].status == "FAIL":
+                    continue
                 validation_map[fid] = FieldValidationResponse(
-                    status="FAIL",
+                    status=fstatus,
                     rule_id=finding.get("rule_id", ""),
                     message=finding.get("message", ""),
                     fix_suggestion=_generate_fix_suggestion(finding, registry, report_type),
@@ -187,10 +206,12 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
 
         # Determine visibility
         if not show_all:
-            # Show: mandatory, conditional-that-apply, filled, failed
-            if not has_value and not fdef.mandatory and not has_failure:
-                if fdef.obligation.value == "C":
-                    # Show conditional if it applies (section has other filled fields)
+            ob = fdef.obligation.value
+            if not has_value and not has_failure:
+                if ob == "M":
+                    pass  # Always show mandatory
+                elif ob == "C":
+                    # Show conditional only if its section has data
                     section_has_data = any(
                         f2id in fields_data
                         for f2id, f2def in all_fields.items()
@@ -199,6 +220,7 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
                     if not section_has_data:
                         continue
                 else:
+                    # O (optional) or F (free): hide when empty
                     continue
 
         field_value = fields_data.get(fid, {"value": None, "source": "", "priority": "IMPORTED"})
