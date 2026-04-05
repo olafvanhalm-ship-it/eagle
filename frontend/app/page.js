@@ -102,7 +102,7 @@ function EditableCell({ value, field, onSave, editable, dataType, format: fmt, a
   const [error, setError] = useState("");
 
   if (!editable) {
-    return <span className="text-gray-900 bg-gray-50 px-2 py-1 rounded text-sm">{value ?? <span className="text-gray-300 italic">—</span>}</span>;
+    return <span className="text-gray-900 bg-gray-50 px-1.5 py-0.5 rounded text-sm">{value ?? <span className="text-gray-300 italic">—</span>}</span>;
   }
 
   if (editing) {
@@ -202,7 +202,7 @@ function EditableCell({ value, field, onSave, editable, dataType, format: fmt, a
   // Display mode — click to edit
   return (
     <span
-      className="text-gray-900 px-2 py-1 rounded text-sm cursor-pointer hover:bg-blue-50 border border-transparent hover:border-blue-200 transition"
+      className="text-gray-900 px-1.5 py-0.5 rounded text-sm cursor-pointer hover:bg-blue-50 border border-transparent hover:border-blue-200 transition"
       onClick={() => { setDraft(value ?? ""); setEditing(true); }}
       title="Click to edit"
     >
@@ -224,14 +224,14 @@ function FieldRow({ field, onEdit, cascaded }) {
 
   return (
     <tr className={`border-b border-gray-100 hover:bg-gray-50 ${cascaded ? "cascade-highlight" : ""}`}>
-      <td className="px-3 py-2 text-xs font-mono text-gray-400">{field.field_id}</td>
-      <td className="px-3 py-2 text-sm text-gray-700 truncate">
+      <td className="px-2 py-1 text-xs font-mono text-gray-400">{field.field_id}</td>
+      <td className="px-2 py-1 text-sm text-gray-700 truncate">
         <Tip text={`${field.obligation === "M" ? "Mandatory" : field.obligation === "C" ? "Conditional" : "Optional"} | ${field.xsd_element || ""}`}>
           {field.field_name}
           {field.obligation === "M" && <span className="text-red-500 ml-1">*</span>}
         </Tip>
       </td>
-      <td className="px-3 py-2 overflow-hidden">
+      <td className="px-2 py-1 overflow-hidden">
         <EditableCell
           value={field.value}
           field={field}
@@ -243,20 +243,11 @@ function FieldRow({ field, onEdit, cascaded }) {
           referenceValues={[]}
         />
       </td>
-      <td className="px-2 py-2 text-center">
+      <td className="px-1 py-1 text-center">
         <ProvenanceIcon priority={field.priority} source={field.source} />
       </td>
-      <td className="px-2 py-2 text-center">
+      <td className="px-1 py-1 text-center">
         <ValidationBadge validation={field.validation} />
-      </td>
-      <td className="px-3 py-2 text-xs text-gray-400">
-        {field.nca_deviations && Object.keys(field.nca_deviations).length > 0
-          ? Object.entries(field.nca_deviations).map(([cc, val]) => (
-              <span key={cc} className="inline-block bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded mr-1">
-                {cc}:{val}
-              </span>
-            ))
-          : null}
       </td>
     </tr>
   );
@@ -276,10 +267,10 @@ function SectionAccordion({ name, fields, onEdit, cascadedFields }) {
     <div className="border border-gray-200 rounded-lg mb-2 overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 transition"
+        className="w-full flex items-center justify-between px-3 py-2 bg-white hover:bg-gray-50 transition"
       >
-        <div className="flex items-center gap-3">
-          <span className="text-gray-400">{open ? "▼" : "▶"}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-gray-400 text-xs">{open ? "▼" : "▶"}</span>
           <span className="font-medium text-gray-800 text-sm">{name}</span>
         </div>
         <div className="flex items-center gap-3 text-xs">
@@ -292,21 +283,19 @@ function SectionAccordion({ name, fields, onEdit, cascadedFields }) {
       {open && (
         <table className="w-full" style={{ tableLayout: "fixed" }}>
           <colgroup>
-            <col style={{ width: "48px" }} />
-            <col style={{ width: "35%" }} />
+            <col style={{ width: "40px" }} />
+            <col style={{ width: "38%" }} />
             <col style={{ width: "auto" }} />
             <col style={{ width: "36px" }} />
-            <col style={{ width: "64px" }} />
-            <col style={{ width: "60px" }} />
+            <col style={{ width: "36px" }} />
           </colgroup>
           <thead>
             <tr className="bg-gray-50 text-xs text-gray-500 uppercase">
-              <th className="px-3 py-2 text-left">#</th>
-              <th className="px-3 py-2 text-left">Field</th>
-              <th className="px-3 py-2 text-left">Value</th>
-              <th className="px-2 py-2 text-center" title="Data source">Src</th>
-              <th className="px-2 py-2 text-center" title="Validation status">DQF</th>
-              <th className="px-3 py-2 text-left" title="NCA-specific deviations">NCA</th>
+              <th className="px-2 py-1 text-left">#</th>
+              <th className="px-2 py-1 text-left">Field</th>
+              <th className="px-2 py-1 text-left">Value</th>
+              <th className="px-1 py-1 text-center" title="Data source">Source</th>
+              <th className="px-1 py-1 text-center" title="Validation status">DQF</th>
             </tr>
           </thead>
           <tbody>
@@ -347,18 +336,24 @@ const GROUP_LABELS = {
   monthly_navs: "Monthly NAVs",
 };
 
-function GroupTable({ groupName, rows }) {
+function GroupTable({ groupName, rows, columnNames }) {
   const [open, setOpen] = useState(true);
   if (!rows || rows.length === 0) return null;
 
   const label = GROUP_LABELS[groupName] || groupName.replace(/_/g, " ");
   const columns = Object.keys(rows[0]).filter((k) => k !== "field_id");
 
+  // Use columnNames from backend (field_id → human name), fallback to field_id
+  const colHeader = (col) => {
+    if (columnNames && columnNames[col]) return columnNames[col];
+    return col.replace(/_/g, " ");
+  };
+
   return (
     <div className="border border-blue-100 rounded-lg mb-2 overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-blue-50 hover:bg-blue-100 transition"
+        className="w-full flex items-center justify-between px-4 py-2 bg-blue-50 hover:bg-blue-100 transition"
       >
         <div className="flex items-center gap-3">
           <span className="text-blue-400">{open ? "▼" : "▶"}</span>
@@ -368,13 +363,13 @@ function GroupTable({ groupName, rows }) {
       </button>
       {open && (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-xs">
             <thead>
-              <tr className="bg-blue-50 text-xs text-blue-600 uppercase">
-                <th className="px-3 py-2 text-left w-8">#</th>
+              <tr className="bg-blue-50 text-xs text-blue-600">
+                <th className="px-2 py-1 text-left w-8">#</th>
                 {columns.map((col) => (
-                  <th key={col} className="px-3 py-2 text-left">
-                    {col.replace(/_/g, " ")}
+                  <th key={col} className="px-2 py-1 text-left font-medium" title={`Field ${col}`}>
+                    {colHeader(col)}
                   </th>
                 ))}
               </tr>
@@ -382,9 +377,9 @@ function GroupTable({ groupName, rows }) {
             <tbody>
               {rows.map((row, idx) => (
                 <tr key={idx} className="border-b border-blue-50 hover:bg-gray-50">
-                  <td className="px-3 py-2 text-xs text-gray-400">{idx + 1}</td>
+                  <td className="px-2 py-1 text-gray-400">{idx + 1}</td>
                   {columns.map((col) => (
-                    <td key={col} className="px-3 py-2 text-gray-900">
+                    <td key={col} className="px-2 py-1 text-gray-900">
                       {row[col] != null && row[col] !== "" ? String(row[col]) : <span className="text-gray-300">—</span>}
                     </td>
                   ))}
@@ -679,7 +674,39 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit }) {
   const sections = report.sections || {};
   const sectionNames = Object.keys(sections);
   const groups = report.groups || {};
+  const groupColumns = report.group_columns || {};
   const groupNames = Object.keys(groups).filter((g) => groups[g]?.length > 0);
+
+  // Derive reporting obligation from content type (field 5)
+  const allFields = Object.values(sections).flat();
+  const getFieldValue = (fid) => allFields.find((f) => f.field_id === fid)?.value;
+
+  const CT_LABELS_AIF = {
+    "1": "Header only",
+    "2": "Art 24(1)",
+    "3": "Art 24(1)(2)",
+    "4": "Art 24(1)(2)(4)",
+    "5": "Art 24(1)(4)",
+  };
+  const CT_LABELS_AIFM = {
+    "1": "Registered (Art 3(3)(d))",
+    "2": "Authorised (Art 7)",
+  };
+  const CT_LABELS = reportType === "AIFM" ? CT_LABELS_AIFM : CT_LABELS_AIF;
+  const FREQ_LABELS = {
+    Q1: "Quarterly", Q2: "Quarterly", Q3: "Quarterly", Q4: "Quarterly",
+    H1: "Half-yearly", H2: "Half-yearly",
+    Y1: "Annual", X1: "Transitional", X2: "Transitional",
+  };
+  const contentType = getFieldValue("5") || "";
+  const periodType = getFieldValue("8") || "";
+  const obligation = CT_LABELS[contentType] || contentType;
+  const frequency = FREQ_LABELS[periodType] || periodType;
+
+  // Use AIF Name (field 18) for AIF, AIFM Name (field 16 = national code, use entity_name) for AIFM
+  const displayName = (reportType === "AIF" ? getFieldValue("18") : null)
+    || report.entity_name
+    || (reportType === "AIFM" ? "Manager Report" : "Fund Report");
 
   return (
     <div>
@@ -687,10 +714,12 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit }) {
       <div className="bg-white rounded-lg border p-4 mb-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-gray-800">{report.entity_name || (reportType === "AIFM" ? "Manager Report" : "Fund Report")}</h2>
+            <h2 className="text-lg font-semibold text-gray-800">{displayName}</h2>
             <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
               {report.nca_codes?.length > 0 && <span>NCA: {report.nca_codes.join(", ")}</span>}
               <span>Type: {report.report_type}</span>
+              {obligation && <span>Reporting obligation: {obligation}</span>}
+              {frequency && <span>Frequency: {frequency}</span>}
             </div>
           </div>
           <CompletionBar pct={report.completeness} filled={report.filled_count} total={report.field_count} />
@@ -729,7 +758,7 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit }) {
         <div className="mt-6">
           <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">Repeating Groups</h3>
           {groupNames.map((gName) => (
-            <GroupTable key={gName} groupName={gName} rows={groups[gName]} />
+            <GroupTable key={gName} groupName={gName} rows={groups[gName]} columnNames={groupColumns[gName]} />
           ))}
         </div>
       )}
@@ -997,7 +1026,7 @@ export default function EagleApp() {
             </div>
           )}
         </div>
-        {sessionData && (
+        {sessionData && sessionId && (
           <div className="max-w-7xl mx-auto px-4 pb-2 text-xs text-gray-500 flex gap-4">
             <span>File: {sessionData.filename}</span>
             <span>AIFM: {sessionData.aifm_name}</span>

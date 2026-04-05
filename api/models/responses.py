@@ -90,7 +90,9 @@ class ReportDetailResponse(BaseModel):
     filled_count: int
     sections: dict[str, list[ReportFieldResponse]]
     groups: dict[str, list[dict[str, Any]]]
+    group_columns: dict[str, dict[str, str]] = {}  # group_name → {field_id: field_name}
     empty_section_count: int
+    validation_run: bool = False
 
 
 class SourceEntityResponse(BaseModel):

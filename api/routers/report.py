@@ -133,9 +133,11 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
 
     # Get latest validation results for inline indicators.
     # Findings have field_path like "AIFM.4" or "AIF.17" — filter by report_type.
-    validation_map = {}
+    validation_map: dict[str, FieldValidationResponse] = {}
+    validation_run = False
     latest_val = store.get_latest_validation(session_id)
-    if latest_val and latest_val.findings_json:
+    if latest_val and latest_val.findings_json is not None:
+        validation_run = True
         for finding in latest_val.findings_json:
             field_path = finding.get("field_path", "")
             if not field_path or "." not in field_path:
@@ -156,6 +158,12 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
                     fix_suggestion=_generate_fix_suggestion(finding, registry, report_type),
                     severity=finding.get("severity", "MEDIUM"),
                 )
+
+    # If validation has been run, add implicit PASS for valued fields without findings
+    if validation_run:
+        for fid in (report.fields_json or {}):
+            if fid not in validation_map:
+                validation_map[fid] = FieldValidationResponse(status="PASS")
 
     # Build sections from fields
     sections: dict[str, list[ReportFieldResponse]] = {}
@@ -204,24 +212,13 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
             if not has_value:
                 continue  # skip inapplicable empty fields
 
-        # Determine visibility
+        # Determine visibility in default view
         if not show_all:
-            ob = fdef.obligation.value
             if not has_value and not has_failure:
-                if ob == "M":
-                    pass  # Always show mandatory
-                elif ob == "C":
-                    # Show conditional only if its section has data
-                    section_has_data = any(
-                        f2id in fields_data
-                        for f2id, f2def in all_fields.items()
-                        if f2def.section == fdef.section
-                    )
-                    if not section_has_data:
-                        continue
+                if fdef.obligation.value == "M":
+                    pass  # Always show mandatory even when empty
                 else:
-                    # O (optional) or F (free): hide when empty
-                    continue
+                    continue  # Hide all empty non-mandatory (C, O, F)
 
         field_value = fields_data.get(fid, {"value": None, "source": "", "priority": "IMPORTED"})
         field_resp = _build_field_response(fid, field_value, registry, classification, report_type, validation_map)
@@ -240,8 +237,22 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
     visible_sections = set(sections.keys())
     empty_section_count = len(all_sections - visible_sections)
 
-    # Groups
+    # Groups — resolve field_id column headers to human-readable names
     groups_data = report.groups_json or {}
+    group_columns: dict[str, dict[str, str]] = {}
+    for gname, rows in groups_data.items():
+        if not rows:
+            continue
+        col_map: dict[str, str] = {}
+        for col_id in rows[0]:
+            fdef_col = None
+            if registry:
+                fdef_col = (
+                    registry.aifm_field(col_id) if report_type == "AIFM"
+                    else registry.aif_field(col_id)
+                )
+            col_map[col_id] = fdef_col.field_name if fdef_col else f"Field {col_id}"
+        group_columns[gname] = col_map
 
     # Compute completeness dynamically:
     # (applicable required fields − errors) / applicable required fields × 100
@@ -286,7 +297,9 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
         filled_count=required_count - error_count,
         sections=sections,
         groups=groups_data,
+        group_columns=group_columns,
         empty_section_count=empty_section_count,
+        validation_run=validation_run,
     )
 
 
