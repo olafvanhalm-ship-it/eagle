@@ -1,0 +1,827 @@
+# =============================================================================
+# Project Eagle — Technology Stack Baseline
+# Version:  2.1
+# Date:     2026-03-23
+# Owner:    CTO / CPO & Head of Engineering
+# Status:   Ratified — supersedes Baseline v2.0
+# Classification: Confidential — Internal Use Only
+#
+# Scope:
+#   Ratified technology stack for Project Eagle. Covers 19 infrastructure
+#   components and 11 operational software tools. Preferred (baseline) options
+#   only — evaluated alternatives are documented in the companion memo
+#   (eagle_techstack_baseline_v2_1.docx). All components are long-term fits;
+#   no component is an interim solution planned for replacement.
+#
+# Related documents:
+#   - eagle_company_requirements_v1_0_baseline_final.yaml
+#   - eagle_dev_security_guidelines_v2_0_corrected.yaml
+#   - project_eagle_compliance_risk_v1_4.md
+#
+# Architecture constraints (non-negotiable):
+#   1. No interim solutions — every component chosen as correct long-term fit
+#   2. Compliance-proof by design (P8) — 10-year audit trail, GDPR tenant
+#      isolation, DORA detection ≤5 min, EU AI Act non-high-risk, ISAE 3402
+#   3. Platform-first portability (P15) — no unresolvable lock-in; AI model
+#      swap is a configuration change (REQ-MOD-002)
+# =============================================================================
+
+metadata:
+  title:    "Project Eagle — Technology Stack Baseline"
+  version:  "2.1"
+  date:     "2026-03-23"
+  owner:    "CTO / CPO"
+  status:   "Ratified"
+  from:     ["CTO / CPO", "Head of Engineering"]
+  to:       ["CEO", "CFO", "COO", "Head of Compliance & Risk"]
+
+# =============================================================================
+# 1.  INFRASTRUCTURE COMPONENTS (1–19)
+# =============================================================================
+
+infrastructure:
+
+  - id: 1
+    name: "Cloud Infrastructure & Edge Security"
+    baseline: "AWS — Graviton ARM64"
+    detail:
+      compute:      "ECS Fargate (arm64 platform)"
+      database_instances: "db.t4g family (Graviton)"
+      cache_instances:    "cache.t3 family"
+      waf:          "AWS WAF with OWASP Core Rule Set — satisfies REQ-ISO-010"
+      cdn:          "CloudFront for portal CDN"
+      ddos:         "AWS Shield Standard (no additional cost)"
+      networking:   "VPC with private subnets for all application components per REQ-ISO-010"
+      shell_access: "ECS Exec via AWS SSM — sole diagnostic shell path for Fargate containers; port 22 never opened; all sessions IAM-authenticated and CloudTrail-logged (ISO 27001 6.7 / P16)"
+      regions:      {primary: "eu-west-1 (Frankfurt)", dr_target: "eu-west-1 (Dublin)"}
+      api_rate_limiting: "AWS WAF rate-based rules on ALB per IP; FastAPI middleware enforces per-user rate limits on trial activation and submission trigger endpoints (ISO 27001 8.23)"
+    opex_phase1_mo: "€380–560"
+    covers: [REQ-SEC-001, REQ-ISO-010, REQ-RES-001]
+    compliance_red_line: false
+
+  - id: 2
+    name: "Relational Database"
+    baseline: "PostgreSQL RDS db.t4g.small Graviton Multi-AZ"
+    detail:
+      instance:     "db.t4g.small — 2 vCPU burst, 2 GB RAM"
+      multi_az:     true
+      failover:     "Automatic failover <60s — satisfies REQ-RES-001"
+      isolation:    "Row-Level Security (RLS) on all tenant-scoped tables — tenant isolation enforced at DB layer, not application layer (REQ-TEN-001)"
+      audit_log:    "append-only audit_events table with PostgreSQL policies revoking UPDATE/DELETE; write-once enforcement for ISAE 3402 evidence"
+      scaling_path: "db.t4g.medium at ~15+ concurrent clients; Aurora PostgreSQL evaluation at Phase 3 (>100 clients)"
+      backup:       "Nightly export to S3 with Object Lock"
+    opex_phase1_mo: "€120–220"
+    covers: [REQ-TEN-001, "REQ-GDPR-001--008", REQ-AUD-001]
+    compliance_red_line: true
+    red_line_reason: "GDPR Art.32 tenant isolation at DB layer; DORA resilience during NCA submission windows; ISAE 3402 certification pre-condition"
+
+  - id: 3
+    name: "Caching Layer"
+    baseline: "Redis ElastiCache cache.t3.micro Multi-AZ"
+    detail:
+      multi_az:     true
+      failover:     "Automatic Multi-AZ failover"
+      ttl:          "Aligned to REQ-REF-001 staleness thresholds (ECB: 2-day AMBER, 10-day RED)"
+      persistence:  "AOF persistence for session durability"
+      dual_purpose: ["Reference data caching with TTL-based expiry", "Temporal activity queue broker"]
+    opex_phase1_mo: "€60–120"
+    covers: [REQ-REF-001, "pipeline session management"]
+    compliance_red_line: true
+    red_line_reason: "Single AZ failure must not stall pipeline at NCA submission deadline — DORA MAJOR risk"
+
+  - id: 4
+    name: "File Storage"
+    baseline: "AWS S3 — four dedicated buckets"
+    detail:
+      buckets:
+        s3_eagle_uploads:
+          purpose:   "Inbound client data (SFTP, web UI) — temporary staging only"
+          retention: "Delete after successful ingestion (REQ-GDPR-003); 7-day lifecycle rule safety net"
+          opex:      "<€5/mo"
+        s3_eagle_archive:
+          purpose:   "Submission packages, validation reports, review gate records, NCA acknowledgements"
+          retention: "S3 Object Lock — Compliance mode, 10-year (REQ-DAT-004)"
+          integrity: "SHA-256 checksums per object"
+          tiering:   "Glacier Instant Retrieval after 90 days"
+          opex:      "€20–60/mo (grows with submissions)"
+        s3_eagle_delivery:
+          purpose:   "SFTP_EAGLE_SERVER and S3_EAGLE_BUCKET delivery channel files"
+          retention: "Delete after client download confirmation or 7 days (REQ-GDPR-003)"
+          opex:      "<€5/mo"
+        s3_eagle_iac_state:
+          purpose:   "Terraform state files and deployment artifacts"
+          versioning: true
+          logging:   "CloudTrail logging"
+          public_access: false
+          opex:      "<€3/mo"
+      common_config:
+        encryption:   "SSE-KMS"
+        versioning:   true
+        public_access_block: true
+        cloudtrail_logging: true
+    opex_phase1_mo: "€40–100"
+    covers: [REQ-DAT-004, REQ-DORA-003, REQ-GDPR-003]
+    compliance_red_line: true
+    red_line_reason: "S3 Object Lock Compliance mode on archive bucket is ISAE 3402 pre-condition and regulatory evidence requirement"
+
+  - id: 5
+    name: "Backend Application Framework"
+    baseline: "Python 3.12 / FastAPI"
+    detail:
+      key_dependencies:
+        - "anthropic SDK — Claude API integration"
+        - "pydantic v2 — canonical data model enforcement"
+        - "sqlalchemy + asyncpg — async PostgreSQL"
+        - "redis-py — cache and Temporal broker"
+        - "lxml — ESMA XSD schema validation"
+        - "weasyprint — PDF generation (REQ-LIN-003, REQ-MJ-003)"
+        - "boto3 — AWS SDK"
+      api_rate_limiting: "WAF rate-based rules + FastAPI per-user middleware on trial activation and submission trigger endpoints"
+      justification: "Only viable choice for AI-native regulatory reporting engine with Anthropic SDK first-class support, Pydantic validation model, and regulatory data processing libraries"
+    opex_phase1_mo: "Included in compute"
+    covers: ["All pipeline layers L1–L11"]
+    compliance_red_line: false
+
+  - id: 6
+    name: "Frontend Application Framework"
+    baseline: "Next.js 14 (App Router, React 18, TypeScript)"
+    detail:
+      modules_served: [MOD-CLIENT, MOD-MANAGEMENT, MOD-ADMIN]
+      key_dependencies:
+        - "AG Grid — validation result tables"
+        - "React Hook Form + Zod — structured data entry"
+        - "Recharts — operational dashboards"
+        - "Cognito Hosted UI — authentication flow"
+      performance_target: "REQ-DSH-001: dashboard loads <2s for 50 AIFs; REQ-DSH-002: validation report printable as PDF; mobile-responsive"
+    opex_phase1_mo: "Included in compute"
+    covers: [MOD-CLIENT, MOD-MANAGEMENT, MOD-ADMIN]
+    compliance_red_line: false
+
+  - id: 7
+    name: "Authentication & MFA"
+    baseline: "Amazon Cognito User Pools"
+    detail:
+      mfa:              "TOTP-based (not SMS) — mandatory for COMPLIANCE_REVIEWER, TENANT_ADMIN, EAGLE_ADMIN"
+      session_timeout:  "30-minute inactivity timeout"
+      lockout:          "After 5 consecutive failures via Cognito advanced security features"
+      login_logging:    "Login events logged to CloudWatch and audit_events table (REQ-USR-002, REQ-AUD-001)"
+      user_pools:       "Per-tenant provisioning"
+      pre_launch:       "SES production access requested pre-launch; sandbox exit 1–2 day process"
+    opex_phase1_mo: "€10–30"
+    covers: [REQ-USR-001, REQ-USR-002, REQ-ISO-013]
+    compliance_red_line: false
+
+  - id: 8
+    name: "Email Service"
+    baseline: "AWS SES"
+    detail:
+      sending_domain:   "notifications@eagle-platform.com (or equivalent)"
+      region:           "EU (Frankfurt)"
+      dns_config:       ["SPF", "DKIM", "DMARC"]
+      templates:        "Version-controlled Jinja2 HTML in application code"
+      delivery_logging: "All delivery events (send, delivery, bounce, complaint) streamed to CloudWatch and audit_events (REQ-NOT-001)"
+      bounce_alert:     "CloudWatch alarm on bounce rate >5% → EAGLE_ADMIN alert"
+      pre_launch:       "SES production access (sandbox exit) requested before go-live"
+      use_cases:
+        - "Deadline reminders T-30/T-14/T-7/T-2 (REQ-OBL-002)"
+        - "Trial account activation and warning emails T-7/T-3/T-1 (REQ-TRIAL-001)"
+        - "DORA breach communications (REQ-GDPR-002)"
+        - "Sub-processor change notifications (REQ-DORA-006)"
+        - "Release communications (REQ-REL-007)"
+    opex_phase1_mo: "€5–20"
+    covers: [REQ-NOT-001, REQ-OBL-002, REQ-GDPR-002]
+    compliance_red_line: false
+
+  - id: 9
+    name: "AI / LLM Layer"
+    baseline: "Anthropic Claude API — Haiku-first governance policy"
+    detail:
+      default_model:    "claude-haiku-4-5 — handles ≥80% of transformation tasks"
+      escalation_model: "claude-sonnet-4-6 — requires documented justification per call, logged in AI component register (REQ-AIACT-001)"
+      abstraction:      "Model adapter interface per REQ-MOD-002 — model swap is a configuration change, not a code change"
+      eu_endpoint:      "EU inference endpoint configured — GDPR data flow map entry required"
+      inference_logging: "Every call logged: {model_id, model_version, prompt_hash (SHA-256), response_hash, pipeline_step, escalation_reason}"
+      eu_ai_act:        "Non-high-risk classification preserved by mandatory deterministic validation gate at L3"
+      use_cases:
+        - "Unstructured document parsing (REQ-ING-004)"
+        - "Legacy template interpretation (REQ-LEG-001–006)"
+        - "Data transformation and field enrichment"
+    opex_phase1_mo: "€50–150"
+    covers: [REQ-ING-004, REQ-MOD-002, "REQ-AIACT-001--006"]
+    compliance_red_line: false
+
+  - id: 10
+    name: "Pipeline Orchestration"
+    baseline: "Temporal — self-hosted on AWS ECS"
+    detail:
+      deployment:       "2 ECS tasks: temporal-server (sharing existing RDS Postgres via dedicated schema) + temporal-ui"
+      sdk:              "Python Temporal SDK"
+      pipeline_layers:  "L1–L8 implemented as Temporal workflows with activities"
+      long_running:     "NCA portal robot and reference data batch updates as long-running activities with timeouts"
+      temporal_ui:      "Accessible to EAGLE_ADMIN and COO for workflow visibility — VPC-internal port only; not exposed through ALB or WAF; no public internet access"
+      durable_execution: "Workflow state survives process crashes; immutable execution history satisfies audit trail requirements without additional logging logic"
+      no_silent_failures: "Zero silent failures by design — every step logged, retryable, and recoverable"
+      migration_path:   "Temporal Cloud evaluation at Phase 3 when operational overhead justifies"
+      rationale:        "Durable execution model and immutable workflow history are structural requirements given DORA audit trail obligations. Learning curve (3–4 weeks) is cheaper than Celery-to-Temporal migration at Phase 1.5"
+    opex_phase1_mo: "Included in ECS compute (~€30–60 for Temporal server tasks)"
+    covers: [L9_ORCHESTRATION, REQ-REL-001, "DORA no silent failures"]
+    compliance_red_line: false
+
+  - id: 11
+    name: "SFTP Server"
+    baseline: "Self-hosted OpenSSH on EC2 t4g.nano (ARM, Graviton)"
+    detail:
+      backend:          "S3 — inbound files trigger S3 event → Lambda → pipeline ingestion"
+      key_management:   "Client SSH keys managed via AWS Secrets Manager"
+      monitoring:       "CloudWatch for connection monitoring and EAGLE_ADMIN alerts"
+      patching:         "SSM Patch Manager for automated OS patching"
+      shell_access:     "SSM Session Manager — sole interactive shell path; port 22 not open in any security group in any environment (ISO 27001 6.7 / P16)"
+      use_cases:
+        - "Inbound client data (REQ-ING-001 SFTP_INBOUND channel)"
+        - "Outbound NCA delivery (REQ-DEL-001 SFTP_EAGLE_SERVER channel)"
+      ha_note:          "Single instance — no HA in Phase 1; SFTP is not a real-time channel; downtime is not a DORA MAJOR event"
+      migration_path:   "AWS Transfer Family when operational evidence justifies (same S3 backend; no client reconfiguration required)"
+    opex_phase1_mo: "€15–30"
+    covers: [REQ-ING-001, REQ-DEL-001, REQ-NCA-001]
+    compliance_red_line: false
+
+  - id: 12
+    name: "NCA Portal Robot"
+    baseline: "Playwright (Python, headless Chromium)"
+    detail:
+      deployment:       "Isolated ECS task per NCA submission session"
+      credential_handling: "Retrieved from AWS Secrets Manager vault for session duration; cleared on session end (REQ-NCA-003)"
+      fallback:         "3 consecutive failures or 10-minute timeout → automatic MANUAL fallback → client notification within 15 minutes → EAGLE_ADMIN alert within 5 minutes (REQ-NCA-002)"
+      captcha:          "CAPTCHA must never be bypassed (REQ-NCA-001 explicit constraint)"
+      recording:        "Video recording for debugging portal failures"
+      dual_use:         "Same framework as E2E testing (Component 18) — one skill set, two uses"
+    opex_phase1_mo: "Included in ECS compute"
+    covers: [REQ-NCA-001, REQ-NCA-002]
+    compliance_red_line: false
+
+  - id: 13
+    name: "Secrets Management & NCA Credential Vault"
+    baseline: "AWS Secrets Manager + per-tenant KMS CMKs"
+    detail:
+      encryption:       "Envelope encryption — each NCA credential encrypted under a tenant-specific Customer Managed Key"
+      audit:            "Full CloudTrail audit log for every secret access event (vault reference only, never plaintext)"
+      access_control:   "Resource-based policies enforce tenant isolation"
+      rotation_schedule:
+        db_credentials: "Annual automated rotation"
+        app_secrets:    "90 days"
+        claude_api_key: "90 days per REQ-ISO-014"
+      nca_credentials:  "Versioned secrets; write-only for TENANT_ADMIN"
+      key_compromise:   "Revocation within 1 hour; replacement within 4 hours"
+    opex_phase1_mo: "€60–120"
+    covers: [REQ-NCA-003, REQ-SEC-001, REQ-ISO-014]
+    compliance_red_line: true
+    red_line_reason: "NCA credential compromise enables fraudulent regulatory submissions; DORA Art.18 MAJOR incident trigger; irreversible reputational risk"
+
+  - id: 14
+    name: "Audit Log & Long-Term Archive"
+    baseline: "PostgreSQL append-only + S3 Object Lock"
+    detail:
+      primary_store:
+        type:           "PostgreSQL audit_events table"
+        immutability:   "RLS policies + revoked UPDATE/DELETE privileges + row-level triggers (DB-enforced append-only)"
+        query:          "Fast SQL queries over recent events"
+      archive_store:
+        type:           "S3 Object Lock — Compliance mode, 10-year retention"
+        export:         "Nightly export from PostgreSQL to s3-eagle-archive"
+        integrity:      "SHA-256 checksums per export"
+        tiering:        "Glacier Instant Retrieval after 2 years"
+        search_api:     "Archive search API per REQ-DAT-004"
+      alerting:         "EAGLE_ADMIN alert on export failure within 5 minutes"
+      compliance:       "ISAE 3402 auditors accept S3 Object Lock Compliance mode as evidence"
+    opex_phase1_mo: "Included in RDS + €30–80 (S3 Glacier)"
+    covers: ["REQ-AUD-001--004", REQ-DAT-004, REQ-ISAE-001]
+    compliance_red_line: true
+    red_line_reason: "10-year WORM retention is ISAE 3402 / SOC 2 pre-condition; NCA enquiry evidence unavailable if violated"
+
+  - id: 15
+    name: "CI/CD Pipeline"
+    baseline: "GitHub Actions + GitHub Advanced Security (GHAS)"
+    detail:
+      ghas_features:    ["CodeQL SAST (build failure on HIGH/CRITICAL per REQ-SEC-002)", "Dependabot automated dependency PRs", "Secret scanning with push protection"]
+      deployment:       "OIDC-based AWS deployment — no long-lived credentials in CI/CD (passwordless deploy to ECS/ECR per REQ-SEC-001)"
+      pipeline_stages:
+        - "lint"
+        - "unit tests"
+        - "integration tests (Docker Compose)"
+        - "CodeQL SAST"
+        - "ARM64 container build"
+        - "push to ECR"
+        - "staging Terraform apply"
+        - "DAST (OWASP ZAP)"
+        - "production Terraform apply (requires manual approval)"
+      artifact_retention: "All Terraform plan/apply outputs stored as GitHub Actions artifacts — 5-year retention per REQ-REL-008"
+    opex_phase1_mo: "€0–40"
+    covers: ["REQ-REL-001--010", REQ-ENG-001]
+    compliance_red_line: false
+
+  - id: 16
+    name: "Security Scanning"
+    baseline: "GHAS + Trivy + Checkov + OWASP ZAP"
+    detail:
+      ghas_codesql:     "SAST — build failure on HIGH/CRITICAL (REQ-SEC-002)"
+      dependabot:       "Automated dependency vulnerability PRs (REQ-SEC-002)"
+      ghas_secrets:     "Push protection — prevents credential commits"
+      trivy:            "Container image scanning in CI/CD build step; CVE database updated daily; CRITICAL fails build"
+      checkov:          "Terraform and CloudFormation IaC policy scanning; CRITICAL findings fail terraform plan; includes custom policy blocking port 22 and non-approved base images"
+      owasp_zap:        "DAST against staging before every production release"
+      supply_chain:     "All Python and Node.js dependencies pinned via lock files (requirements.txt / package-lock.json); Dependabot PRs must pass full test suite before merge; only PyPI and npm official registries permitted"
+      base_images:      "Only AWS ECR Public Gallery or Docker Hub verified publisher base images permitted; enforced via Checkov custom policy"
+      evidence:         "All scan results stored as GitHub Actions artifacts for ISAE 3402 evidence"
+      coverage:         "Full REQ-SEC-002 coverage at zero marginal cost"
+      future_path:      "Snyk can be added as unified security dashboard when team size warrants it"
+    opex_phase1_mo: "€0"
+    covers: [REQ-SEC-002, REQ-ISO-011, REQ-REL-008]
+    compliance_red_line: false
+
+  - id: 17
+    name: "Infrastructure as Code"
+    baseline: "Terraform + S3/DynamoDB backend"
+    detail:
+      state_storage:    "S3 with versioning (preserves full state history) + DynamoDB state lock"
+      audit_trail:      "CloudTrail logs every state read/write — auditor-accessible per REQ-REL-008"
+      structure:        "Modular: one Terraform root module per environment (dev, staging, prod) with shared child modules"
+      policy_enforcement: "Checkov in CI/CD pipeline (sentinel-equivalent policy-as-code)"
+      drift_detection:  "Daily terraform plan in GitHub Actions; CloudWatch alert to EAGLE_ADMIN within 1 hour of detected drift (REQ-REL-009)"
+      iac_coverage:     "Satisfies REQ-REL-008 (environment separation) and REQ-ISO-007"
+    opex_phase1_mo: "€0–10"
+    covers: [REQ-REL-008, REQ-REL-009, REQ-ISO-007]
+    compliance_red_line: false
+
+  - id: 18
+    name: "Testing Framework"
+    baseline: "pytest + Playwright"
+    detail:
+      pytest_plugins:   ["hypothesis (property-based testing of validation rules)", "pytest-parametrize (data-driven ESMA rule tests from YAML)", "pytest-benchmark (validation engine performance)", "pytest-asyncio (FastAPI async endpoint testing)"]
+      playwright:       "E2E portal testing of critical submission workflows; dual-use as NCA portal robot (Component 12)"
+      test_data:        "100% synthetic per REQ-ISO-008 — no real client data in any test"
+      coverage_targets:
+        core_pipeline:  "≥90% line coverage on L2/L3/L4/L6/L7 (REQ-ENG-001)"
+        all_other:      "≥80% line coverage on all other production code (REQ-ENG-001)"
+        validation_rules: "100% of ESMA validation rules have PASS and CAF/CAM tests (REQ-REL-001)"
+    opex_phase1_mo: "€0"
+    covers: [REQ-ENG-001, REQ-REL-001, REQ-ISO-008]
+    compliance_red_line: false
+
+  - id: 19
+    name: "Monitoring & Observability"
+    baseline: "CloudWatch + X-Ray + Managed Grafana"
+    detail:
+      cloudwatch:       "Container Insights: ECS task metrics (CPU/memory/network per service); Logs Insights: security anomaly detection per REQ-ISO-009 (repeated failed logins, anomalous API key usage); Alarms + SNS: 5-minute DORA alerting chain (EAGLE_ADMIN, PagerDuty, Slack)"
+      xray:             "Distributed trace sampling across pipeline layers L1–L8 Temporal workflow traces"
+      grafana:          "Pre-built CloudWatch data source for COO pipeline dashboard, Head of Engineering SLO dashboard, security dashboard"
+      go_live_gates:
+        - "COO pipeline dashboard operational (Temporal status, queue depth, SLA status, pipeline stage latency, exception volume)"
+        - "5-minute DORA alert chain tested end-to-end"
+        - "REQ-REF-001 staleness alerts tested (ECB ≥2d AMBER, ≥10d RED)"
+        - "Security anomaly detection alerts tested per REQ-ISO-009"
+      data_residency:   "All metrics, logs, and traces remain within Eagle's AWS account"
+      future_path:      "Datadog evaluation at Phase 3 (>100 clients) if CloudWatch cannot meet requirements at that scale"
+    opex_phase1_mo: "€60–120"
+    covers: [REQ-ENG-003, REQ-ISO-009, REQ-CPL-001]
+    compliance_red_line: false
+
+# =============================================================================
+# 2.  SOFTWARE STACK (operational SaaS tools)
+#     Selection constraints: (1) cloud-based and location-accessible (P16);
+#     (2) EU data residency where personal/client data processed (GDPR);
+#     (3) no unresolvable vendor dependency
+# =============================================================================
+
+software:
+
+  - id: "S1"
+    category: "Productivity suite"
+    tool: "Google Workspace (Business Starter)"
+    opex_mo: "€6–12/user"
+    eu_data_residency: true
+    detail:
+      components:       ["Gmail (company email)", "Google Meet (video calls)", "Google Drive (internal documents)", "Google Docs / Sheets (operational documentation)"]
+      constraints:
+        - "Async-first backbone per P16 — Google Meet for scheduled calls only"
+        - "No client submission data or regulated outputs stored in Drive (P14 — all regulated outputs in Eagle platform DB and S3)"
+        - "EU data residency must be configured in Workspace admin"
+    compliance_red_line: false
+
+  - id: "S2"
+    category: "Team communication"
+    tool: "Slack (Pro)"
+    opex_mo: "€8/user"
+    eu_data_residency: true
+    detail:
+      channels:         ["#engineering", "#ops", "#compliance", "#incidents", "#general"]
+      incident_use:     "CloudWatch → SNS → Slack #incidents for DORA incident alerting"
+      constraints:
+        - "No client personal data or submission content in Slack channels"
+        - "Message retention: 1 year"
+        - "Pro plan required for message history >90 days and advisor guest access"
+    compliance_red_line: false
+
+  - id: "S3"
+    category: "Source code management"
+    tool: "GitHub (Team + GHAS)"
+    opex_mo: "€0–40"
+    eu_data_residency: false
+    detail:
+      note:             "Also documented as infrastructure Component 15 (CI/CD) and 16 (Security Scanning)"
+      access_control:
+        - "All repositories private"
+        - "Branch protection on main: no direct push; PR + 1 reviewer required"
+        - "Organisation SSO via Google Workspace SAML — access revoked automatically on offboarding"
+    compliance_red_line: false
+
+  - id: "S4"
+    category: "CRM"
+    tool: "Pipedrive (Essential)"
+    opex_mo: "€15–30/user"
+    eu_data_residency: true
+    gdpr_blocker: true
+    detail:
+      use:              "Pipeline and deal management for CRO/CEO"
+      integration:      "Receives webhook events from Eagle platform for trial HOT/WARM triggers and deal stage sync (REQ-INT-001, REQ-INT-002)"
+      data:             "Holds prospect PII (name, company, email)"
+      constraints:
+        - "RoPA entry signed off by Head of Compliance & Risk required before any prospect PII flows to Pipedrive (REQ-GTM-002 GDPR blocker)"
+        - "EU data residency must be configured in Pipedrive account settings"
+        - "Webhook endpoint and auth token are configuration-driven per REQ-MOD-001"
+    compliance_red_line: false
+
+  - id: "S5"
+    category: "Password management"
+    tool: "1Password (Teams)"
+    opex_mo: "€4/user"
+    eu_data_residency: true
+    detail:
+      use:              "Mandatory for all team members — all company credentials not held in AWS Secrets Manager"
+      mfa:              "TOTP MFA enforced on all accounts"
+      vaults:           "Role-scoped shared vaults for shared operational credentials; personal vaults for all staff"
+      iso_27001_ref:    "ISO 27001 6.7 teleworking policy (EL-006)"
+    compliance_red_line: true
+    red_line_reason: "No team member may store company credentials outside 1Password or AWS Secrets Manager — not in browsers, plaintext files, or spreadsheets"
+
+  - id: "S6"
+    category: "Endpoint security (EDR)"
+    tool: "CrowdStrike Falcon Go"
+    opex_mo: "€5–8/device"
+    eu_data_residency: true
+    detail:
+      use:              "Mandatory next-generation AV, malware protection, and threat detection"
+      scope:            "All company-owned and BYOD devices used to access Eagle systems or client data"
+      iso_27001_refs:   ["ISO 27001 6.7 (EL-006)", "ISO 27001 8.7"]
+      enforcement:      "Non-compliant devices blocked from company SSO"
+      alternatives:     ["SentinelOne One", "Microsoft Defender for Business"]
+    compliance_red_line: true
+    red_line_reason: "No device without an active CrowdStrike agent may access production AWS, the AWS Console, or client data"
+
+  - id: "S7"
+    category: "MDM / device management"
+    tool: "Google Workspace MDM (built-in)"
+    opex_mo: "Included in Google Workspace"
+    detail:
+      capabilities:     ["Remote wipe", "Screen lock enforcement", "App access policy"]
+      scope:            "Phase 1: company-managed devices"
+      complement:       "MDM handles device enrolment and policy; CrowdStrike (S6) handles real-time threat detection"
+      upgrade_path:     "Jamf (macOS) or Microsoft Intune at Phase 2 if BYOD grows or ISAE 3402 requires more granular device compliance evidence"
+    compliance_red_line: false
+
+  - id: "S8"
+    category: "e-Signature / contracts"
+    tool: "DocuSign (or PandaDoc)"
+    opex_mo: "€10–25/mo"
+    eu_data_residency: true
+    gdpr_blocker: true
+    detail:
+      use_cases:        ["Client contracts (SLA, DPA, DORA Art.30 provisions)", "Employment contracts"]
+      signature_standard: "eIDAS-compliant Advanced Electronic Signature (AES) required for contracts with regulated AIFMs — simple click-to-sign is insufficient"
+      data:             "Signatory name and email only — no client submission data"
+      storage:          "Signed contracts archived in Google Drive (legal folder, restricted access)"
+      constraints:
+        - "RoPA entry required before use"
+    compliance_red_line: false
+
+  - id: "S9"
+    category: "Accounting / finance"
+    tool: "Exact Online (preferred for NL entity) or Xero"
+    opex_mo: "€30–60/mo"
+    eu_data_residency: true
+    detail:
+      use:              "Cloud accounting for P&L, invoicing, VAT, and management accounts per CFO mandate"
+      exact_online_note: "Preferred for Dutch GAAP and BTW filing integration (NL entity)"
+      xero_note:        "Acceptable for English-first international accounting"
+      access:           "CFO and external accountant only — MFA enforced"
+      constraints:
+        - "No client submission data stored here"
+    compliance_red_line: false
+
+  - id: "S10"
+    category: "DNS / domain registrar"
+    tool: "Cloudflare (Free / Pro)"
+    opex_mo: "€0–20/mo"
+    detail:
+      manages:
+        - "SPF/DKIM/DMARC records for AWS SES (Component 8)"
+        - "CNAME records for CloudFront (Component 1)"
+        - "MX records for Google Workspace (S1)"
+      security:
+        - "Dashboard access restricted to CTO + one backup"
+        - "2FA enforced on all admin accounts — verified in go-live pre-condition #16"
+        - "Domain registrar lock enabled — verified in go-live pre-condition #16"
+        - "Cloudflare credentials stored in 1Password team vault (S5), never in personal accounts"
+      criticality:      "Infrastructure-critical: loss of DNS control classified as a DORA MAJOR incident"
+    compliance_red_line: false
+
+  - id: "S11"
+    category: "Async video"
+    tool: "Loom (Starter)"
+    opex_mo: "€0–10/user"
+    detail:
+      use_cases:        ["Engineering walkthroughs", "Onboarding documentation", "Client training videos"]
+      p16_note:         "Supports async-first operating model per P16"
+      constraints:
+        - "No client personal data, NCA credentials, or submission content may appear in recordings"
+        - "Recordings with internal operational detail marked internal-only; not shared externally"
+        - "Loom is not a system of record — all process documentation in Google Drive or GitHub (P10, P14)"
+    compliance_red_line: false
+
+# =============================================================================
+# 3.  COMPLIANCE RED LINES
+#     Cannot be downgraded, deferred, or substituted without a written
+#     compliance impact assessment from Head of Compliance & Risk and CEO approval.
+# =============================================================================
+
+compliance_red_lines:
+
+  - id: "CRL-1"
+    component: "PostgreSQL Multi-AZ with Row-Level Security (Component 2)"
+    requirements: [REQ-TEN-001, REQ-RES-001]
+    consequence_if_violated: "GDPR Art.32 control failure; potential cross-tenant data exposure; DORA MAJOR if RDS fails at submission deadline; ISAE 3402 certification blocked"
+
+  - id: "CRL-2"
+    component: "S3 Object Lock — Compliance mode, 10-year (Component 4 / Component 14)"
+    requirements: [REQ-DAT-004, REQ-ISAE-001]
+    consequence_if_violated: "Certification blocked; NCA enquiry evidence unavailable; regulatory exposure for client AIFMs"
+
+  - id: "CRL-3"
+    component: "AWS Secrets Manager + per-tenant KMS CMKs (Component 13)"
+    requirements: [REQ-NCA-003, REQ-ISO-014]
+    consequence_if_violated: "NCA credential exposure → fraudulent regulatory submission risk; DORA Art.18 MAJOR incident; irreversible reputational damage"
+
+  - id: "CRL-4"
+    component: "Redis ElastiCache Multi-AZ (Component 3)"
+    requirements: [REQ-RES-001]
+    consequence_if_violated: "NCA deadline missed; DORA MAJOR incident; SLA breach; client notification within 4 hours required"
+
+  - id: "CRL-5"
+    component: "SAST in CI/CD with build failure on HIGH/CRITICAL (Component 15/16)"
+    requirements: [REQ-SEC-002]
+    consequence_if_violated: "Security vulnerability deployed to production; potential data breach; ISAE 3402 control failure; NIS2 Art.21 compliance failure"
+
+  - id: "CRL-6"
+    component: "≤5-minute monitoring alerting (Component 19)"
+    requirements: [REQ-ISO-009, REQ-CPL-001]
+    consequence_if_violated: "DORA Art.18 notification deadline missed; NIS2 Art.23 early warning failure"
+
+  - id: "CRL-7"
+    component: "1Password — company credential storage (Software S5)"
+    requirements: [REQ-SEC-001, REQ-ISO-014, EL-006]
+    consequence_if_violated: "Credential exposure risk; ISO 27001 6.7 teleworking policy violation; ISAE 3402 control failure"
+
+  - id: "CRL-8"
+    component: "CrowdStrike Falcon Go — endpoint security (Software S6)"
+    requirements: [REQ-SEC-001, EL-006]
+    consequence_if_violated: "Unprotected device accessing production systems or client data; ISO 27001 6.7 / 8.7 violation; potential malware vector into regulated environment"
+
+# =============================================================================
+# 4.  DTAP ENVIRONMENT DESIGN
+# =============================================================================
+
+dtap:
+
+  environments:
+
+    development:
+      aws_account:      "eagle-dev"
+      purpose:          "Local developer machines with shared cloud resources for integration"
+      compute:          "No ECS required — developers run services locally via Docker Compose"
+      data:             "Synthetic data only; no client data"
+      az:               "Single-AZ for all resources"
+      ephemeral:        true
+      rebuild_target:   "<60 minutes from IaC"
+      access:           "Developer access via IAM Identity Center with limited permissions"
+
+    test:
+      aws_account:      "eagle-dev (shared)"
+      purpose:          "Automated test execution in CI/CD pipeline"
+      compute:          "GitHub Actions runners with Docker Compose"
+      rds_redis:        "Replaced by Docker containers in CI"
+      data:             "Synthetic test data per REQ-ISO-008"
+      ephemeral:        true
+      cost:             "GitHub Actions compute time only — no standing cloud resources"
+
+    staging:
+      aws_account:      "eagle-staging"
+      purpose:          "Pre-production validation; all production components deployed at smaller instance sizes"
+      data:             "Synthetic data only (REQ-ISO-007, REQ-ISO-008)"
+      s3_object_lock:   false  # 7-day lifecycle instead for test flexibility
+      access:           "EAGLE_ADMIN engineers only"
+      used_for:         ["DAST", "Integration testing", "Go-live qualification tests per REQ-AIFMD-006"]
+
+    production:
+      aws_account:      "eagle-production"
+      purpose:          "Live client environment"
+      developer_access: "Standing access prohibited (REQ-ISO-007) — all shell access via SSM Session Manager or ECS Exec"
+      changes:          "Via CI/CD pipeline only — no console changes"
+      compliance_red_lines: "All enforced"
+      encryption:       "Full — per REQ-SEC-001"
+
+  pre_live_costs:
+    description: "Estimated monthly infrastructure costs during build phase before first client"
+    environment_totals:
+      development:   "€55–145/mo"
+      staging:       "€283–525/mo"
+      production:    "€590–1,110/mo"
+    combined_total:  "~€930–1,780/mo"
+    midpoint_6mo_build_cost: "~€8,100 in infrastructure (CFO cash flow model input)"
+
+# =============================================================================
+# 5.  COST SCALING MODEL
+# =============================================================================
+
+cost_scaling:
+
+  description: >
+    Monthly infrastructure cost at representative scale milestones.
+    Fixed costs do not change with client count; variable costs scale
+    with submission volume or tenant count.
+
+  submission_basis: >
+    Average AIFM: 10 AIFs × 2 NCA registrations × 4 reporting periods/year
+    = ~80 AIF submissions + 8 AIFM submissions/year (~88 submissions/year/client).
+    AI cost per submission: ~5 Haiku API calls × ~€0.003/call = ~€0.015.
+
+  milestones:
+    - clients: 5
+      submissions_per_year: ~440
+      fixed_costs_mo:    "€550–800"
+      variable_costs_mo: "€110–560"
+      total_infra_mo:    "€660–1,360"
+      cost_per_submission: "€18–37"
+
+    - clients: 10
+      submissions_per_year: ~880
+      fixed_costs_mo:    "€560–820"
+      variable_costs_mo: "€330–1,010"
+      total_infra_mo:    "€890–1,830"
+      cost_per_submission: "€12–25"
+
+    - clients: 25
+      submissions_per_year: ~2,200
+      fixed_costs_mo:    "€700–1,000"
+      variable_costs_mo: "€700–1,800"
+      total_infra_mo:    "€1,400–2,800"
+      cost_per_submission: "€8–15"
+
+    - clients: 50
+      submissions_per_year: ~4,400
+      fixed_costs_mo:    "€900–1,300"
+      variable_costs_mo: "€1,200–2,800"
+      total_infra_mo:    "€2,100–4,100"
+      cost_per_submission: "€6–11"
+
+    - clients: 100
+      submissions_per_year: ~8,800
+      fixed_costs_mo:    "€1,200–1,800"
+      variable_costs_mo: "€2,000–4,500"
+      total_infra_mo:    "€3,200–6,300"
+      cost_per_submission: "€4–9"
+
+  unit_economics_note: >
+    At 25 clients (~Phase 2), infrastructure cost per submission ~€8–15/month.
+    At typical subscription price €5,000–15,000/year per AIFM, gross
+    infrastructure margin per client exceeds 95%. CFO tracks:
+    (1) Anthropic API cost/submission, (2) total infrastructure cost ÷ total
+    submissions, (3) Anthropic API as % of gross margin.
+
+# =============================================================================
+# 6.  GO-LIVE TECHNICAL PRE-CONDITIONS
+#     All must be verified and documented before first paid client activation.
+#     Evidence retained for ISAE 3402 / SOC 2 Type I review.
+# =============================================================================
+
+go_live_preconditions:
+
+  - id: 1
+    condition: "Production environment created from IaC in <60 minutes with zero manual steps. No console-created resources in production account."
+    owner: "CTO"
+    evidence: "terraform apply output log; AWS Config 'no manually created resources' check"
+
+  - id: 2
+    condition: "COO pipeline dashboard operational — Temporal workflow status, submission queue depth, SLA status, pipeline stage latency, exception volume. All panels populated with synthetic test run data."
+    owner: "Head of Engineering"
+    evidence: "Screenshot of live dashboard with test data; COO sign-off"
+
+  - id: 3
+    condition: "DORA 5-minute alerting tested end-to-end. Simulated MAJOR incident (ECS task kill during synthetic submission) generates CloudWatch Alarm → SNS → PagerDuty/Slack alert within 5 minutes."
+    owner: "CTO + Head of Engineering"
+    evidence: "Alert delivery timestamp log; test scenario document; Head of Compliance & Risk sign-off"
+
+  - id: 4
+    condition: "Reference data staleness alerts tested. ECB rate batch failure → EAGLE_ADMIN alert in ≤5 minutes. Staleness at 2 business days → AMBER. Staleness at 10 business days → RED + pipeline block."
+    owner: "Head of Engineering"
+    evidence: "Test run log; alert delivery timestamps; verified against REQ-REF-001 thresholds"
+
+  - id: 5
+    condition: "S3 Object Lock verified. Archive bucket in Compliance mode, 10-year retention lock. Test object written, deletion attempt returns AccessDenied. Checksum verification job operational."
+    owner: "CTO"
+    evidence: "AWS S3 console Object Lock status screenshot; deletion test log; Head of Compliance & Risk sign-off"
+
+  - id: 6
+    condition: "PostgreSQL RLS verified. Automated test suite confirms TENANT_A service role cannot access TENANT_B data under any query pattern including common injection vectors."
+    owner: "CTO"
+    evidence: "CI/CD test output showing all cross-tenant query tests return empty or error; test coverage report"
+
+  - id: 7
+    condition: "Amazon Cognito MFA verified. COMPLIANCE_REVIEWER, TENANT_ADMIN, and EAGLE_ADMIN users cannot authenticate without completing TOTP MFA. 5-failure lockout and 30-minute inactivity timeout tested."
+    owner: "Head of Engineering"
+    evidence: "Test scenario log showing MFA enforcement; lockout test result; Cognito CloudWatch logs"
+
+  - id: 8
+    condition: "AWS SES production mode active. SPF, DKIM, DMARC DNS records verified. Test delivery to external mailbox confirmed. Bounce rate alert configured. Delivery logging to CloudWatch and audit_events verified."
+    owner: "Head of Engineering"
+    evidence: "SES sending statistics; DNS verification screenshot; delivery log entry in audit_events"
+
+  - id: 9
+    condition: "Temporal pipeline end-to-end verified. Test submission traverses all 8 pipeline layers (L1–L8) with full Temporal workflow history visible in Temporal UI. Crash recovery tested — worker kill mid-pipeline, idempotent restart completes workflow."
+    owner: "Head of Engineering"
+    evidence: "Temporal UI workflow history screenshot; crash recovery test log; audit_events integrity check"
+
+  - id: 10
+    condition: "Security scanning pipeline verified. CodeQL SAST build failure on artificially injected HIGH vulnerability confirmed. Trivy container scan CRITICAL failure confirmed. Checkov IaC critical policy failure confirmed. DAST ZAP scan against staging completed with no HIGH/CRITICAL findings."
+    owner: "Head of Engineering"
+    evidence: "GitHub Actions run logs showing each gate triggering correctly; ZAP scan report"
+
+  - id: 11
+    condition: "AI governance policy implemented. All pipeline AI calls use Haiku by default. Sonnet escalation requires explicit parameter. Test inference call logged with all required fields: model_id, model_version, prompt_hash, response_hash, pipeline_step. Post-market monitoring plan v1.0 signed off by Head of Compliance & Risk per REQ-AIACT-005."
+    owner: "CTO"
+    evidence: "Sample AI inference log entry; code review confirmation; Head of Compliance & Risk sign-off on post-market monitoring plan"
+
+  - id: 12
+    condition: "NCA go-live qualification test completed per REQ-AIFMD-006. Test submission to AFM and/or CSSF UAT environment passed. Qualification test record stored. Robot fallback to MANUAL verified."
+    owner: "CTO + Head of Engineering"
+    evidence: "Qualification test record in nca_qualification_tests table; robot fallback test log; CTO sign-off"
+
+  - id: 13
+    condition: "AWS WAF operational. OWASP Core Rule Set active on ALB/CloudFront. Test requests matching OWASP Top 10 patterns blocked. WAF logs routing to CloudWatch."
+    owner: "CTO"
+    evidence: "WAF rule group configuration screenshot; blocked request test log; CloudWatch WAF metric dashboard"
+
+  - id: 14
+    condition: "Remote shell access verified (ISO 27001 6.7 / P16). No security group in any environment opens port 22. SSM Session Manager verified as sole interactive shell path to SFTP EC2 instance — test session established and logged to CloudTrail. ECS Exec verified as sole diagnostic shell path to Fargate containers — test exec session established and logged to CloudTrail. IAM Identity Center access confirmed operational for EAGLE_ADMIN role."
+    owner: "CTO + Head of Engineering"
+    evidence: "AWS Security Hub / Config screenshot confirming no port 22 open in any SG; CloudTrail log entry from SSM Session Manager test session; CloudTrail log entry from ECS Exec test session; Head of Compliance & Risk sign-off"
+
+  - id: 15
+    condition: "External penetration test completed (REQ-SEC-004). Scope: Eagle platform API, web portal, Cognito authentication, AWS infrastructure perimeter, SFTP endpoint. All CRITICAL and HIGH findings remediated and retested by independent party. No open CRITICAL or HIGH findings at first client activation."
+    owner: "Head of Compliance & Risk (vendor selection) + CTO (technical scope)"
+    evidence: "Signed pentest report from independent third party; remediation evidence for all CRITICAL/HIGH findings; retest confirmation; Head of Compliance & Risk sign-off confirming zero open critical/high findings"
+
+  - id: 16
+    condition: "Cloudflare account security verified (F-03 / EL-006). 2FA confirmed active for all Cloudflare admin users. Domain registrar lock confirmed enabled for all Eagle domains. Cloudflare admin credentials confirmed stored in 1Password team vault, not in any personal account."
+    owner: "CTO"
+    evidence: "Cloudflare account 2FA screenshot; registrar lock status screenshot per Eagle domain; 1Password vault entry confirmation; Head of Compliance & Risk sign-off"
+
+# =============================================================================
+# CHANGELOG
+# =============================================================================
+
+changelog:
+  - version: "2.1"
+    date: "2026-03-23"
+    changes:
+      - "Section 8 (Software Stack) added — 11 operational SaaS tools with rationale, GDPR constraints, and 3 compliance red lines"
+      - "Component 1 — ECS Exec via SSM documented as sole Fargate diagnostic shell path; port 22 never opened; API rate limiting added"
+      - "Component 5 — API rate limiting via WAF + FastAPI middleware documented"
+      - "Component 10 — Temporal web UI confirmed VPC-internal only"
+      - "Component 11 — SSM Session Manager as sole SFTP EC2 shell path; port 22 blocked in all SGs"
+      - "Component 16 — supply chain lock file policy and base image provenance controls added"
+      - "Go-live pre-condition #14 (SSM/ECS Exec), #15 (external pentest REQ-SEC-004), #16 (Cloudflare 2FA) added"
+      - "Software stack compliance red lines CRL-7 (1Password) and CRL-8 (CrowdStrike) added"
+
+  - version: "2.0"
+    date: "2026-03-23"
+    changes:
+      - "Phasing eliminated — every component is the long-term choice"
+      - "Four missing components added: Authentication/MFA (Cognito), Email Service (AWS SES), WAF (merged into Component 1), CDN (CloudFront, merged into Component 1)"
+      - "DTAP environment design with pre-live cost model added"
+      - "Cost scaling model (5/10/25/50/100 clients) added"
+      - "Requirements cross-reference confirming 165 Phase 1 requirements covered"
+      - "Component count: 16 → 19"
+
+  - version: "1.0"
+    date: "2026-03-23"
+    changes:
+      - "Initial 19-component baseline. Graviton ARM, Haiku-first AI policy, S3 Terraform state, Temporal, CloudWatch+Grafana as permanent decisions."

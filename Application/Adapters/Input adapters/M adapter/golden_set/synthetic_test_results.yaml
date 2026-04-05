@@ -1,0 +1,1700 @@
+synthetic_amnd_nl:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_NL_BJQ306_20251231.xml
+  - AIF_NL_50020108_20251231.xml
+  - AIF_NL_50020109_20251231.xml
+  - AIF_NL_50020110_20251231.xml
+  - AIF_NL_50020111_20251231.xml
+  - AIF_NL_50020112_20251231.xml
+  - AIF_NL_50020113_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_cancel_nl:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 0
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_NL_BJQ306_20251231.xml
+  - AIF_NL_50020108_20251231.xml
+  - AIF_NL_50020109_20251231.xml
+  - AIF_NL_50020110_20251231.xml
+  - AIF_NL_50020111_20251231.xml
+  - AIF_NL_50020112_20251231.xml
+  - AIF_NL_50020113_20251231.xml
+  - AIF_NL_50020114_20251231.xml
+  - AIF_NL_50020115_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_full_at_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_AT_AT90001_20251231.xml
+  - AIF_AT_AT10001_20251231.xml
+  - AIF_AT_AT10002_20251231.xml
+  - AIF_AT_AT10003_20251231.xml
+  - AIF_AT_AT10004_20251231.xml
+  - AIF_AT_AT10005_20251231.xml
+  - AIF_AT_AT10006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_be_init:
+  dqf_details:
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_BE_0000071453_20251231.xml
+  - AIF_BE_05044-0001_20251231.xml
+  - AIF_BE_05045-0001_20251231.xml
+  - AIF_BE_05046-0001_20251231.xml
+  - AIF_BE_05047-0001_20251231.xml
+  - AIF_BE_05048-0001_20251231.xml
+  - AIF_BE_05049-0001_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_bg_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_BG_BG90001_20251231.xml
+  - AIF_BG_BG10001_20251231.xml
+  - AIF_BG_BG10002_20251231.xml
+  - AIF_BG_BG10003_20251231.xml
+  - AIF_BG_BG10004_20251231.xml
+  - AIF_BG_BG10005_20251231.xml
+  - AIF_BG_BG10006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_cy_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_CY_CY90001_20251231.xml
+  - AIF_CY_CY10001_20251231.xml
+  - AIF_CY_CY10002_20251231.xml
+  - AIF_CY_CY10003_20251231.xml
+  - AIF_CY_CY10004_20251231.xml
+  - AIF_CY_CY10005_20251231.xml
+  - AIF_CY_CY10006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_cz_init:
+  dqf_details:
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_CZ_CZ90001_20251231.xml
+  - AIF_CZ_CZ10001_20251231.xml
+  - AIF_CZ_CZ10002_20251231.xml
+  - AIF_CZ_CZ10003_20251231.xml
+  - AIF_CZ_CZ10004_20251231.xml
+  - AIF_CZ_CZ10005_20251231.xml
+  - AIF_CZ_CZ10006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_de_init:
+  dqf_details:
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_DE_40031432_20251231.xml
+  - AIF_DE_70148498_20251231.xml
+  - AIF_DE_70148499_20251231.xml
+  - AIF_DE_70148500_20251231.xml
+  - AIF_DE_70148501_20251231.xml
+  - AIF_DE_70148502_20251231.xml
+  - AIF_DE_70148503_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 7
+    zips: 0
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_dk_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_DK_35993_20251231.xml
+  - AIF_DK_35001_20251231.xml
+  - AIF_DK_35002_20251231.xml
+  - AIF_DK_35003_20251231.xml
+  - AIF_DK_35004_20251231.xml
+  - AIF_DK_35005_20251231.xml
+  - AIF_DK_35006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_ee_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_EE_EE90001_20251231.xml
+  - AIF_EE_EE10001_20251231.xml
+  - AIF_EE_EE10002_20251231.xml
+  - AIF_EE_EE10003_20251231.xml
+  - AIF_EE_EE10004_20251231.xml
+  - AIF_EE_EE10005_20251231.xml
+  - AIF_EE_EE10006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_es_init:
+  dqf_details:
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_ES_ES90001_20251231.xml
+  - AIF_ES_ES10001_20251231.xml
+  - AIF_ES_ES10002_20251231.xml
+  - AIF_ES_ES10003_20251231.xml
+  - AIF_ES_ES10004_20251231.xml
+  - AIF_ES_ES10005_20251231.xml
+  - AIF_ES_ES10006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_fi_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_FI_8506386_20251231.xml
+  - AIF_FI_8506386#001_20251231.xml
+  - AIF_FI_8506386#002_20251231.xml
+  - AIF_FI_8506386#003_20251231.xml
+  - AIF_FI_8506386#004_20251231.xml
+  - AIF_FI_8506386#005_20251231.xml
+  - AIF_FI_8506386#006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_fr_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_FR_FR90001_20251231.xml
+  - AIF_FR_FR10001_20251231.xml
+  - AIF_FR_FR10002_20251231.xml
+  - AIF_FR_FR10003_20251231.xml
+  - AIF_FR_FR10004_20251231.xml
+  - AIF_FR_FR10005_20251231.xml
+  - AIF_FR_FR10006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_gb_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_GB_123456_20251231.xml
+  - AIF_GB_800001_20251231.xml
+  - AIF_GB_800002_20251231.xml
+  - AIF_GB_800003_20251231.xml
+  - AIF_GB_800004_20251231.xml
+  - AIF_GB_800005_20251231.xml
+  - AIF_GB_800006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_gr_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_GR_GR90001_20251231.xml
+  - AIF_GR_GR10001_20251231.xml
+  - AIF_GR_GR10002_20251231.xml
+  - AIF_GR_GR10003_20251231.xml
+  - AIF_GR_GR10004_20251231.xml
+  - AIF_GR_GR10005_20251231.xml
+  - AIF_GR_GR10006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_hr_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_HR_HR90001_20251231.xml
+  - AIF_HR_HR10001_20251231.xml
+  - AIF_HR_HR10002_20251231.xml
+  - AIF_HR_HR10003_20251231.xml
+  - AIF_HR_HR10004_20251231.xml
+  - AIF_HR_HR10005_20251231.xml
+  - AIF_HR_HR10006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_hu_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_HU_HU90001_20251231.xml
+  - AIF_HU_HU10001_20251231.xml
+  - AIF_HU_HU10002_20251231.xml
+  - AIF_HU_HU10003_20251231.xml
+  - AIF_HU_HU10004_20251231.xml
+  - AIF_HU_HU10005_20251231.xml
+  - AIF_HU_HU10006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_ie_init:
+  dqf_details:
+  - 'File: 1 FAIL, 0 WARNING, 2 PASS'
+  - 'File: 1 FAIL, 0 WARNING, 2 PASS'
+  - 'File: 1 FAIL, 0 WARNING, 2 PASS'
+  - 'File: 1 FAIL, 0 WARNING, 2 PASS'
+  - 'File: 1 FAIL, 0 WARNING, 2 PASS'
+  - 'File: 1 FAIL, 0 WARNING, 2 PASS'
+  - 'File: 1 FAIL, 0 WARNING, 2 PASS'
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 7
+  files:
+  - AIFM_IE_C548423_20251231.xml
+  - AIF_IE_C548001_20251231.xml
+  - AIF_IE_C548002_20251231.xml
+  - AIF_IE_C548003_20251231.xml
+  - AIF_IE_C548004_20251231.xml
+  - AIF_IE_C548005_20251231.xml
+  - AIF_IE_C548006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_is_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_IS_5501012345_20251231.xml
+  - AIF_IS_5501019001_20251231.xml
+  - AIF_IS_5501019002_20251231.xml
+  - AIF_IS_5501019003_20251231.xml
+  - AIF_IS_5501019004_20251231.xml
+  - AIF_IS_5501019005_20251231.xml
+  - AIF_IS_5501019006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_it_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_IT_IT90001_20251231.xml
+  - AIF_IT_IT10001_20251231.xml
+  - AIF_IT_IT10002_20251231.xml
+  - AIF_IT_IT10003_20251231.xml
+  - AIF_IT_IT10004_20251231.xml
+  - AIF_IT_IT10005_20251231.xml
+  - AIF_IT_IT10006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_li_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_LI_LI90001_20251231.xml
+  - AIF_LI_LI10001_20251231.xml
+  - AIF_LI_LI10002_20251231.xml
+  - AIF_LI_LI10003_20251231.xml
+  - AIF_LI_LI10004_20251231.xml
+  - AIF_LI_LI10005_20251231.xml
+  - AIF_LI_LI10006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_lt_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_LT_LT90001_20251231.xml
+  - AIF_LT_LT10001_20251231.xml
+  - AIF_LT_LT10002_20251231.xml
+  - AIF_LT_LT10003_20251231.xml
+  - AIF_LT_LT10004_20251231.xml
+  - AIF_LT_LT10005_20251231.xml
+  - AIF_LT_LT10006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_lu_init:
+  dqf_details:
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_LU_A00007891_20251231.xml
+  - AIF_LU_O00012345_00003001_20251231.xml
+  - AIF_LU_O00012345_00003002_20251231.xml
+  - AIF_LU_O00012345_00003003_20251231.xml
+  - AIF_LU_O00012345_00003004_20251231.xml
+  - AIF_LU_O00012345_00003005_20251231.xml
+  - AIF_LU_O00012345_00003006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_lv_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_LV_LV90001_20251231.xml
+  - AIF_LV_LV10001_20251231.xml
+  - AIF_LV_LV10002_20251231.xml
+  - AIF_LV_LV10003_20251231.xml
+  - AIF_LV_LV10004_20251231.xml
+  - AIF_LV_LV10005_20251231.xml
+  - AIF_LV_LV10006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_mt_init:
+  dqf_details:
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_MT_IS12345_20251231.xml
+  - AIF_MT_CIS0001A_20251231.xml
+  - AIF_MT_CIS0002A_20251231.xml
+  - AIF_MT_CIS0003A_20251231.xml
+  - AIF_MT_CIS0004A_20251231.xml
+  - AIF_MT_CIS0005A_20251231.xml
+  - AIF_MT_CIS0006A_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_nl_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_NL_BJQ306_20251231.xml
+  - AIF_NL_50020108_20251231.xml
+  - AIF_NL_50020109_20251231.xml
+  - AIF_NL_50020110_20251231.xml
+  - AIF_NL_50020111_20251231.xml
+  - AIF_NL_50020112_20251231.xml
+  - AIF_NL_50020113_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_no_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_NO_FT00123456_20251231.xml
+  - AIF_NO_FT00654001_20251231.xml
+  - AIF_NO_FT00654002_20251231.xml
+  - AIF_NO_FT00654003_20251231.xml
+  - AIF_NO_FT00654004_20251231.xml
+  - AIF_NO_FT00654005_20251231.xml
+  - AIF_NO_FT00654006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_pl_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_PL_PL90001_20251231.xml
+  - AIF_PL_PL10001_20251231.xml
+  - AIF_PL_PL10002_20251231.xml
+  - AIF_PL_PL10003_20251231.xml
+  - AIF_PL_PL10004_20251231.xml
+  - AIF_PL_PL10005_20251231.xml
+  - AIF_PL_PL10006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_pt_init:
+  dqf_details:
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_PT_PT90001_20251231.xml
+  - AIF_PT_A12345001_20251231.xml
+  - AIF_PT_A12345002_20251231.xml
+  - AIF_PT_A12345003_20251231.xml
+  - AIF_PT_A12345004_20251231.xml
+  - AIF_PT_A12345005_20251231.xml
+  - AIF_PT_A12345006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_ro_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_RO_RO90001_20251231.xml
+  - AIF_RO_RO10001_20251231.xml
+  - AIF_RO_RO10002_20251231.xml
+  - AIF_RO_RO10003_20251231.xml
+  - AIF_RO_RO10004_20251231.xml
+  - AIF_RO_RO10005_20251231.xml
+  - AIF_RO_RO10006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_se_init:
+  dqf_details:
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_SE_12345_20251231.xml
+  - AIF_SE_54001_20251231.xml
+  - AIF_SE_54002_20251231.xml
+  - AIF_SE_54003_20251231.xml
+  - AIF_SE_54004_20251231.xml
+  - AIF_SE_54005_20251231.xml
+  - AIF_SE_54006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_si_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_SI_SI90001_20251231.xml
+  - AIF_SI_SI10001_20251231.xml
+  - AIF_SI_SI10002_20251231.xml
+  - AIF_SI_SI10003_20251231.xml
+  - AIF_SI_SI10004_20251231.xml
+  - AIF_SI_SI10005_20251231.xml
+  - AIF_SI_SI10006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_full_sk_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 41
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_SK_SK90001_20251231.xml
+  - AIF_SK_SK10001_20251231.xml
+  - AIF_SK_SK10002_20251231.xml
+  - AIF_SK_SK10003_20251231.xml
+  - AIF_SK_SK10004_20251231.xml
+  - AIF_SK_SK10005_20251231.xml
+  - AIF_SK_SK10006_20251231.xml
+  generation:
+    aif: 6
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 7
+synthetic_light_at_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_AT_AT90001_20251231.xml
+  - AIF_AT_AT10001_20251231.xml
+  - AIF_AT_AT10002_20251231.xml
+  - AIF_AT_AT10003_20251231.xml
+  - AIF_AT_AT10004_20251231.xml
+  - AIF_AT_AT10005_20251231.xml
+  - AIF_AT_AT10006_20251231.xml
+  - AIF_AT_AT10007_20251231.xml
+  - AIF_AT_AT10008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_be_init:
+  dqf_details:
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_BE_0000071453_20251231.xml
+  - AIF_BE_05044-0001_20251231.xml
+  - AIF_BE_05045-0001_20251231.xml
+  - AIF_BE_05046-0001_20251231.xml
+  - AIF_BE_05047-0001_20251231.xml
+  - AIF_BE_05048-0001_20251231.xml
+  - AIF_BE_05049-0001_20251231.xml
+  - AIF_BE_05050-0001_20251231.xml
+  - AIF_BE_05051-0001_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_bg_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_BG_BG90001_20251231.xml
+  - AIF_BG_BG10001_20251231.xml
+  - AIF_BG_BG10002_20251231.xml
+  - AIF_BG_BG10003_20251231.xml
+  - AIF_BG_BG10004_20251231.xml
+  - AIF_BG_BG10005_20251231.xml
+  - AIF_BG_BG10006_20251231.xml
+  - AIF_BG_BG10007_20251231.xml
+  - AIF_BG_BG10008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_cy_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_CY_CY90001_20251231.xml
+  - AIF_CY_CY10001_20251231.xml
+  - AIF_CY_CY10002_20251231.xml
+  - AIF_CY_CY10003_20251231.xml
+  - AIF_CY_CY10004_20251231.xml
+  - AIF_CY_CY10005_20251231.xml
+  - AIF_CY_CY10006_20251231.xml
+  - AIF_CY_CY10007_20251231.xml
+  - AIF_CY_CY10008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_cz_init:
+  dqf_details:
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_CZ_CZ90001_20251231.xml
+  - AIF_CZ_CZ10001_20251231.xml
+  - AIF_CZ_CZ10002_20251231.xml
+  - AIF_CZ_CZ10003_20251231.xml
+  - AIF_CZ_CZ10004_20251231.xml
+  - AIF_CZ_CZ10005_20251231.xml
+  - AIF_CZ_CZ10006_20251231.xml
+  - AIF_CZ_CZ10007_20251231.xml
+  - AIF_CZ_CZ10008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_de_init:
+  dqf_details:
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  - 'File: 1 WARNING, 3 PASS'
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_DE_40031432_20251231.xml
+  - AIF_DE_70148498_20251231.xml
+  - AIF_DE_70148499_20251231.xml
+  - AIF_DE_70148500_20251231.xml
+  - AIF_DE_70148501_20251231.xml
+  - AIF_DE_70148502_20251231.xml
+  - AIF_DE_70148503_20251231.xml
+  - AIF_DE_70148504_20251231.xml
+  - AIF_DE_70148505_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 9
+    zips: 0
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_dk_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_DK_35993_20251231.xml
+  - AIF_DK_35001_20251231.xml
+  - AIF_DK_35002_20251231.xml
+  - AIF_DK_35003_20251231.xml
+  - AIF_DK_35004_20251231.xml
+  - AIF_DK_35005_20251231.xml
+  - AIF_DK_35006_20251231.xml
+  - AIF_DK_35007_20251231.xml
+  - AIF_DK_35008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_ee_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_EE_EE90001_20251231.xml
+  - AIF_EE_EE10001_20251231.xml
+  - AIF_EE_EE10002_20251231.xml
+  - AIF_EE_EE10003_20251231.xml
+  - AIF_EE_EE10004_20251231.xml
+  - AIF_EE_EE10005_20251231.xml
+  - AIF_EE_EE10006_20251231.xml
+  - AIF_EE_EE10007_20251231.xml
+  - AIF_EE_EE10008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_es_init:
+  dqf_details:
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_ES_ES90001_20251231.xml
+  - AIF_ES_ES10001_20251231.xml
+  - AIF_ES_ES10002_20251231.xml
+  - AIF_ES_ES10003_20251231.xml
+  - AIF_ES_ES10004_20251231.xml
+  - AIF_ES_ES10005_20251231.xml
+  - AIF_ES_ES10006_20251231.xml
+  - AIF_ES_ES10007_20251231.xml
+  - AIF_ES_ES10008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_fi_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_FI_8506386_20251231.xml
+  - AIF_FI_8506386#001_20251231.xml
+  - AIF_FI_8506386#002_20251231.xml
+  - AIF_FI_8506386#003_20251231.xml
+  - AIF_FI_8506386#004_20251231.xml
+  - AIF_FI_8506386#005_20251231.xml
+  - AIF_FI_8506386#006_20251231.xml
+  - AIF_FI_8506386#007_20251231.xml
+  - AIF_FI_8506386#008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_fr_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_FR_FR90001_20251231.xml
+  - AIF_FR_FR10001_20251231.xml
+  - AIF_FR_FR10002_20251231.xml
+  - AIF_FR_FR10003_20251231.xml
+  - AIF_FR_FR10004_20251231.xml
+  - AIF_FR_FR10005_20251231.xml
+  - AIF_FR_FR10006_20251231.xml
+  - AIF_FR_FR10007_20251231.xml
+  - AIF_FR_FR10008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_gb_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_GB_123456_20251231.xml
+  - AIF_GB_800001_20251231.xml
+  - AIF_GB_800002_20251231.xml
+  - AIF_GB_800003_20251231.xml
+  - AIF_GB_800004_20251231.xml
+  - AIF_GB_800005_20251231.xml
+  - AIF_GB_800006_20251231.xml
+  - AIF_GB_800007_20251231.xml
+  - AIF_GB_800008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_gr_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_GR_GR90001_20251231.xml
+  - AIF_GR_GR10001_20251231.xml
+  - AIF_GR_GR10002_20251231.xml
+  - AIF_GR_GR10003_20251231.xml
+  - AIF_GR_GR10004_20251231.xml
+  - AIF_GR_GR10005_20251231.xml
+  - AIF_GR_GR10006_20251231.xml
+  - AIF_GR_GR10007_20251231.xml
+  - AIF_GR_GR10008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_hr_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_HR_HR90001_20251231.xml
+  - AIF_HR_HR10001_20251231.xml
+  - AIF_HR_HR10002_20251231.xml
+  - AIF_HR_HR10003_20251231.xml
+  - AIF_HR_HR10004_20251231.xml
+  - AIF_HR_HR10005_20251231.xml
+  - AIF_HR_HR10006_20251231.xml
+  - AIF_HR_HR10007_20251231.xml
+  - AIF_HR_HR10008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_hu_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_HU_HU90001_20251231.xml
+  - AIF_HU_HU10001_20251231.xml
+  - AIF_HU_HU10002_20251231.xml
+  - AIF_HU_HU10003_20251231.xml
+  - AIF_HU_HU10004_20251231.xml
+  - AIF_HU_HU10005_20251231.xml
+  - AIF_HU_HU10006_20251231.xml
+  - AIF_HU_HU10007_20251231.xml
+  - AIF_HU_HU10008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_ie_init:
+  dqf_details:
+  - 'File: 1 FAIL, 0 WARNING, 2 PASS'
+  - 'File: 1 FAIL, 0 WARNING, 2 PASS'
+  - 'File: 1 FAIL, 0 WARNING, 2 PASS'
+  - 'File: 1 FAIL, 0 WARNING, 2 PASS'
+  - 'File: 1 FAIL, 0 WARNING, 2 PASS'
+  - 'File: 1 FAIL, 0 WARNING, 2 PASS'
+  - 'File: 1 FAIL, 0 WARNING, 2 PASS'
+  - 'File: 1 FAIL, 0 WARNING, 2 PASS'
+  - 'File: 1 FAIL, 0 WARNING, 2 PASS'
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 9
+  files:
+  - AIFM_IE_C548423_20251231.xml
+  - AIF_IE_C548001_20251231.xml
+  - AIF_IE_C548002_20251231.xml
+  - AIF_IE_C548003_20251231.xml
+  - AIF_IE_C548004_20251231.xml
+  - AIF_IE_C548005_20251231.xml
+  - AIF_IE_C548006_20251231.xml
+  - AIF_IE_C548007_20251231.xml
+  - AIF_IE_C548008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_is_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_IS_5501012345_20251231.xml
+  - AIF_IS_5501019001_20251231.xml
+  - AIF_IS_5501019002_20251231.xml
+  - AIF_IS_5501019003_20251231.xml
+  - AIF_IS_5501019004_20251231.xml
+  - AIF_IS_5501019005_20251231.xml
+  - AIF_IS_5501019006_20251231.xml
+  - AIF_IS_5501019007_20251231.xml
+  - AIF_IS_5501019008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_it_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_IT_IT90001_20251231.xml
+  - AIF_IT_IT10001_20251231.xml
+  - AIF_IT_IT10002_20251231.xml
+  - AIF_IT_IT10003_20251231.xml
+  - AIF_IT_IT10004_20251231.xml
+  - AIF_IT_IT10005_20251231.xml
+  - AIF_IT_IT10006_20251231.xml
+  - AIF_IT_IT10007_20251231.xml
+  - AIF_IT_IT10008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_li_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_LI_LI90001_20251231.xml
+  - AIF_LI_LI10001_20251231.xml
+  - AIF_LI_LI10002_20251231.xml
+  - AIF_LI_LI10003_20251231.xml
+  - AIF_LI_LI10004_20251231.xml
+  - AIF_LI_LI10005_20251231.xml
+  - AIF_LI_LI10006_20251231.xml
+  - AIF_LI_LI10007_20251231.xml
+  - AIF_LI_LI10008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_lt_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_LT_LT90001_20251231.xml
+  - AIF_LT_LT10001_20251231.xml
+  - AIF_LT_LT10002_20251231.xml
+  - AIF_LT_LT10003_20251231.xml
+  - AIF_LT_LT10004_20251231.xml
+  - AIF_LT_LT10005_20251231.xml
+  - AIF_LT_LT10006_20251231.xml
+  - AIF_LT_LT10007_20251231.xml
+  - AIF_LT_LT10008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_lu_init:
+  dqf_details:
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_LU_A00007891_20251231.xml
+  - AIF_LU_O00012345_00003001_20251231.xml
+  - AIF_LU_O00012345_00003002_20251231.xml
+  - AIF_LU_O00012345_00003003_20251231.xml
+  - AIF_LU_O00012345_00003004_20251231.xml
+  - AIF_LU_O00012345_00003005_20251231.xml
+  - AIF_LU_O00012345_00003006_20251231.xml
+  - AIF_LU_O00012345_00003007_20251231.xml
+  - AIF_LU_O00012345_00003008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_lv_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_LV_LV90001_20251231.xml
+  - AIF_LV_LV10001_20251231.xml
+  - AIF_LV_LV10002_20251231.xml
+  - AIF_LV_LV10003_20251231.xml
+  - AIF_LV_LV10004_20251231.xml
+  - AIF_LV_LV10005_20251231.xml
+  - AIF_LV_LV10006_20251231.xml
+  - AIF_LV_LV10007_20251231.xml
+  - AIF_LV_LV10008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_mt_init:
+  dqf_details:
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_MT_IS12345_20251231.xml
+  - AIF_MT_CIS0001A_20251231.xml
+  - AIF_MT_CIS0002A_20251231.xml
+  - AIF_MT_CIS0003A_20251231.xml
+  - AIF_MT_CIS0004A_20251231.xml
+  - AIF_MT_CIS0005A_20251231.xml
+  - AIF_MT_CIS0006A_20251231.xml
+  - AIF_MT_CIS0007A_20251231.xml
+  - AIF_MT_CIS0008A_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_nl_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_NL_BJQ306_20251231.xml
+  - AIF_NL_50020108_20251231.xml
+  - AIF_NL_50020109_20251231.xml
+  - AIF_NL_50020110_20251231.xml
+  - AIF_NL_50020111_20251231.xml
+  - AIF_NL_50020112_20251231.xml
+  - AIF_NL_50020113_20251231.xml
+  - AIF_NL_50020114_20251231.xml
+  - AIF_NL_50020115_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_no_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_NO_FT00123456_20251231.xml
+  - AIF_NO_FT00654001_20251231.xml
+  - AIF_NO_FT00654002_20251231.xml
+  - AIF_NO_FT00654003_20251231.xml
+  - AIF_NO_FT00654004_20251231.xml
+  - AIF_NO_FT00654005_20251231.xml
+  - AIF_NO_FT00654006_20251231.xml
+  - AIF_NO_FT00654007_20251231.xml
+  - AIF_NO_FT00654008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_pl_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_PL_PL90001_20251231.xml
+  - AIF_PL_PL10001_20251231.xml
+  - AIF_PL_PL10002_20251231.xml
+  - AIF_PL_PL10003_20251231.xml
+  - AIF_PL_PL10004_20251231.xml
+  - AIF_PL_PL10005_20251231.xml
+  - AIF_PL_PL10006_20251231.xml
+  - AIF_PL_PL10007_20251231.xml
+  - AIF_PL_PL10008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_pt_init:
+  dqf_details:
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_PT_PT90001_20251231.xml
+  - AIF_PT_A12345001_20251231.xml
+  - AIF_PT_A12345002_20251231.xml
+  - AIF_PT_A12345003_20251231.xml
+  - AIF_PT_A12345004_20251231.xml
+  - AIF_PT_A12345005_20251231.xml
+  - AIF_PT_A12345006_20251231.xml
+  - AIF_PT_A12345007_20251231.xml
+  - AIF_PT_A12345008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_ro_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_RO_RO90001_20251231.xml
+  - AIF_RO_RO10001_20251231.xml
+  - AIF_RO_RO10002_20251231.xml
+  - AIF_RO_RO10003_20251231.xml
+  - AIF_RO_RO10004_20251231.xml
+  - AIF_RO_RO10005_20251231.xml
+  - AIF_RO_RO10006_20251231.xml
+  - AIF_RO_RO10007_20251231.xml
+  - AIF_RO_RO10008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_se_init:
+  dqf_details:
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  - 'File: 1 WARNING, 2 PASS'
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_SE_12345_20251231.xml
+  - AIF_SE_54001_20251231.xml
+  - AIF_SE_54002_20251231.xml
+  - AIF_SE_54003_20251231.xml
+  - AIF_SE_54004_20251231.xml
+  - AIF_SE_54005_20251231.xml
+  - AIF_SE_54006_20251231.xml
+  - AIF_SE_54007_20251231.xml
+  - AIF_SE_54008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_si_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_SI_SI90001_20251231.xml
+  - AIF_SI_SI10001_20251231.xml
+  - AIF_SI_SI10002_20251231.xml
+  - AIF_SI_SI10003_20251231.xml
+  - AIF_SI_SI10004_20251231.xml
+  - AIF_SI_SI10005_20251231.xml
+  - AIF_SI_SI10006_20251231.xml
+  - AIF_SI_SI10007_20251231.xml
+  - AIF_SI_SI10008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_light_sk_init:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 72
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_SK_SK90001_20251231.xml
+  - AIF_SK_SK10001_20251231.xml
+  - AIF_SK_SK10002_20251231.xml
+  - AIF_SK_SK10003_20251231.xml
+  - AIF_SK_SK10004_20251231.xml
+  - AIF_SK_SK10005_20251231.xml
+  - AIF_SK_SK10006_20251231.xml
+  - AIF_SK_SK10007_20251231.xml
+  - AIF_SK_SK10008_20251231.xml
+  generation:
+    aif: 8
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 0
+  xsd_valid: 9
+synthetic_negative_crossfield:
+  dqf_details: []
+  dqf_fail: 0
+  dqf_missing: 0
+  dqf_warning: 0
+  error: null
+  file_naming_fail: 0
+  files:
+  - AIFM_NL_BJQ306_20251231.xml
+  - AIF_NL_50020108_20251231.xml
+  - AIF_NL_50020109_20251231.xml
+  - AIF_NL_50020110_20251231.xml
+  generation:
+    aif: 3
+    aifm: 1
+    gz: 0
+    zips: 1
+  naming_issues: []
+  xsd_invalid: 1
+  xsd_valid: 3

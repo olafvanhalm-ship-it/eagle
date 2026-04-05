@@ -1,0 +1,73 @@
+################################################################################
+# NCA-SPECIFIC OVERRIDES — MFSA (MT)
+# Version: v1 — 2026-04-03
+# Base YAML: aifmd_validation_rules.yaml
+#
+# Source: Online research of NCA documentation and ESMA guidelines
+# National code: AIFM: ISXXXXX (MFSA license number); AIF: CISXXXA; NAIF: ROC entity ID
+# Portal: MFSA Licence Holder Portal (LH Portal)
+# File packaging: XML
+# Deadline: Standard 30 days; late submissions trigger regulatory action
+################################################################################
+nca_overrides:
+  nca: MFSA
+  country: MT
+  base_yaml: aifmd_validation_rules.yaml
+  base_yaml_version: '1.0'
+  source_document:
+    title: AIFMD Annex IV Reporting Requirements — Malta Financial Services Authority (MFSA)
+    version: '1.0'
+    date: '2026-04-03'
+    publisher: Malta Financial Services Authority (MFSA)
+    url: https://www.mfsa.mt
+  transmission:
+    portal: MFSA Licence Holder Portal (LH Portal)
+    method: XML upload
+  file_format:
+    packaging: XML
+    national_code_info: 'AIFM: ISXXXXX (MFSA license number); AIF: CISXXXA; NAIF: ROC entity ID'
+  changelog:
+  - version: v1
+    date: '2026-04-03'
+    changes:
+    - Initial MFSA NCA override file — based on web research of latest documentation
+  nca_rules:
+  - rule_id: NCA-MFSA-MT-ReportingMemberState
+    base_rule_id: AIFM-1
+    field_id: '1'
+    field_name: Reporting Member State
+    xsd_element: <ReportingMemberState>
+    severity: CRITICAL
+    overrides_esma: true
+    status: active
+    nca_source_doc: Malta Financial Services Authority (MFSA) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: For reports submitted to MFSA the value must always be MT.
+    validation_rules: ReportingMemberState = "MT"
+  - rule_id: NCA-MFSA-MT-AIFMNationalCode
+    base_rule_id: AIFM-18
+    field_id: '18'
+    field_name: AIFM National Code
+    xsd_element: <AIFMNationalCode>
+    severity: HIGH
+    overrides_esma: false
+    status: active
+    nca_source_doc: Malta Financial Services Authority (MFSA) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: MFSA assigns AIFM codes as ISXXXXX (IS prefix + MFSA license number without punctuation). AIF codes
+      use CISXXXA format. NAIFs use Registry of Companies (ROC) entity ID with sub-fund suffix (e.g. SV456A).
+    validation_rules: 'MFSA license number format: ISXXXXX (without punctuation)'
+  - rule_id: NCA-MFSA-MT-ValidationReject
+    base_rule_id: ''
+    field_id: VALIDATION
+    field_name: Content Validation Rejection
+    xsd_element: ''
+    severity: HIGH
+    overrides_esma: false
+    status: active
+    nca_source_doc: Malta Financial Services Authority (MFSA) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: MFSA performs content validation checks beyond XSD schema validation. Files that fail content validation
+      are rejected and must be resubmitted. Incorrect submissions treated as failure to submit per Article 16A of Investment
+      Services Act 1994.
+    validation_rules: MFSA performs content validation; invalid files rejected and must be resubmitted

@@ -1,0 +1,497 @@
+# =============================================================================
+# Project Eagle — Data Ingestion and Processing (MOD-DATA)
+# Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml
+# Cross-cutting requirements defined in: eagle_requirements_overview.yaml
+# Manual controls: eagle_manual_controls_v1_1.yaml
+# =============================================================================
+
+metadata:
+  module: MOD-DATA
+  name: "Data Ingestion and Processing"
+  primary_users: [DATA_PREPARER, COMPLIANCE_REVIEWER]
+  pipeline_layers: [L1_INGESTION, L1B_ADAPTER, L2_TRANSFORMATION]
+  module_req_count: 17
+  cross_req_count: 17
+  total_applicable: 34
+
+# =============================================================================
+# MODULE REQUIREMENTS  (17 requirements)
+# =============================================================================
+
+requirements:
+
+  # -------------------------------------------------------------------------
+  # Data ingestion channels
+  # -------------------------------------------------------------------------
+  data_ingestion_channels:
+
+    - id: REQ-ING-001
+      title: "REST API data ingestion"
+      layer: [L1_INGESTION, L10_API]
+      priority: MUST
+      phase: 1
+      principles: [P2, P6, P9]
+      regulatory: [DORA, GDPR]
+      requirements:
+        - "OpenAPI 3.0 specification published and versioned at /api/docs"
+        - "Accepts AIFM-level, AIF-level and position dataset payloads"
+        - "Idempotent submission via idempotency key"
+        - "Partial payloads accepted; missing fields produce validation warnings"
+        - "All API calls logged with key identifier, payload hash and result"
+
+    - id: REQ-ING-002
+      title: "Structured file upload"
+      layer: [L1_INGESTION]
+      priority: MUST
+      phase: 1
+      principles: [P1, P2, P6]
+      regulatory: [GDPR]
+      requirements:
+        - "Supports .xlsx, UTF-8 CSV, and Eagle canonical JSON schema"
+        - "Eagle-provided templates downloadable per report type"
+        - "Custom column mapping configurable per tenant and reusable across uploads"
+        - "File size limit 50 MB; source files deleted after successful ingestion"
+
+    - id: REQ-ING-003
+      title: "Manual data entry via web UI"
+      layer: [L1_INGESTION]
+      priority: SHOULD
+      phase: 2
+      principles: [P1, P3]
+      regulatory: []
+      requirements:
+        - "Forms for AIFM-level, AIF-level and position-level sections"
+        - "Enumeration fields as validated dropdowns; inline format validation on blur"
+        - "Auto-save draft every 60 seconds"
+        - "Functionally equivalent to API ingestion — same canonical record produced"
+
+    - id: REQ-ING-004
+      title: "AI-assisted unstructured data ingestion"
+      layer: [L1_INGESTION, L2_TRANSFORMATION]
+      priority: MUST
+      phase: 1
+      principles: [P5, P6, P8, P11]
+      regulatory: [AI_ACT, GDPR]
+      description: >
+        Clients upload unstructured documents. Claude produces a candidate canonical
+        mapping with per-field confidence scores. Human confirmation required per field
+        before entry into the validation core. AI output never flows to NCA without
+        human review.
+      requirements:
+        - "LOW confidence fields require explicit user confirmation before pipeline proceeds"
+        - "AI extraction rationale and source text stored in audit trail per field"
+        - "System prompt version-controlled; changes require compliance sign-off"
+        - "Prompt injection prevention: output confined to extraction schema; suspicious documents pre-screened"
+        - "AI_PROPOSED fields not yet confirmed by user treated as missing values at L3"
+        - "Source documents deleted immediately after extraction"
+      acceptance_criteria:
+        - "UI labels all AI proposals as pending review — never presented as validated data"
+
+
+  # -------------------------------------------------------------------------
+  # Legacy template adapters
+  # -------------------------------------------------------------------------
+  legacy_template_adapters:
+
+    - id: REQ-LEG-001
+      title: "Legacy template adapter architecture"
+      layer: [L1B_ADAPTER]
+      priority: MUST
+      phase: 1
+      principles: [P6, P10]
+      regulatory: []
+      description: >
+        Known legacy formats processed by pluggable independently versioned adapters.
+        Interface: input = raw file bytes, output = normalised intermediate JSON.
+        Fully deterministic. Adapter registry is a configuration file. New format
+        requires only a new adapter.
+      acceptance_criteria:
+        - "New adapter integrates without modifying existing adapters or pipeline code"
+        - "Audit trail includes per-field before/after values for all calculations"
+
+    - id: REQ-LEG-002
+      title: "Automatic import format detection"
+      layer: [L1_INGESTION, L1B_ADAPTER]
+      priority: MUST
+      phase: 1
+      principles: [P1, P2, P5]
+      regulatory: []
+      description: >
+        3-factor detection: sheet names, header patterns, version cells. Result
+        confirmed by user. User can override. Undetected files offered for manual
+        column mapping or AI transformation.
+      acceptance_criteria:
+        - "Detection accuracy >= 99% on known-format test set"
+        - "Detection runs in < 2 seconds for files up to 50 MB"
+
+    - id: REQ-LEG-003
+      title: "Deterministic enrichment calculations for legacy templates"
+      layer: [L1B_ADAPTER]
+      priority: MUST
+      phase: 1
+      principles: [P5, P8, P10]
+      regulatory: [AIFMD, CDR231]
+      calculations:
+        aum_aggregation:
+          method: "Sum position market values converted to base currency; cross-check against template total cell; discrepancy >0.1% flags DQ warning"
+          legal_basis: "CDR 231/2013 Art.2, Arts.110-127"
+        leverage_gross:
+          method: "Sum of absolute market values plus derivative notionals divided by NAV times 100 per CDR Art.7"
+          legal_basis: "CDR 231/2013 Art.7"
+        leverage_commitment:
+          method: "CDR Art.8 netting rules applied; non-nettable positions treated gross; conservative default for ambiguous positions"
+          legal_basis: "CDR 231/2013 Art.8"
+        currency_conversion:
+          source: "ECB reference rates from reference data store per REQ-REF-001"
+          rate_date: "ECB rate for last business day of reporting period"
+          fallback: "Calculation halts if rate unavailable; no silent substitution"
+      acceptance_criteria:
+        - "Enrichment review step shows original and calculated values before canonical entry"
+        - "Leverage results consistent with ESMA DQEF reference test cases"
+        - "User can accept or reject enrichment results before pipeline proceeds"
+
+    - id: REQ-LEG-004
+      title: "M registered manager template adapter"
+      layer: [L1B_ADAPTER]
+      priority: MUST
+      phase: 1
+      principles: [P3, P6]
+      regulatory: [AIFMD]
+      enrichment_applied: [aum_aggregation, currency_conversion]
+      acceptance_criteria:
+        - "All M registered template fields mapped with documented field-by-field translation"
+
+    - id: REQ-LEG-005
+      title: "M authorised manager template adapter"
+      layer: [L1B_ADAPTER]
+      priority: MUST
+      phase: 1
+      principles: [P3, P6]
+      regulatory: [AIFMD, CDR231]
+      enrichment_applied: [aum_aggregation, leverage_gross, leverage_commitment, currency_conversion]
+      acceptance_criteria:
+        - "Leverage derivation produces values consistent with ESMA methodology"
+
+    - id: REQ-LEG-006
+      title: "ESMA legacy template adapter"
+      layer: [L1B_ADAPTER]
+      priority: MUST
+      phase: 1
+      principles: [P3, P6]
+      regulatory: [AIFMD, IT_TECH_R6]
+      enrichment_applied: [currency_conversion]
+      notes: "Field name translation table documented and version-controlled; Rev.6 absent fields listed after import"
+      acceptance_criteria:
+        - "Translation table reviewable by compliance; Rev.6 absent fields listed for manual completion"
+
+
+  # -------------------------------------------------------------------------
+  # Position data and derived calculations
+  # -------------------------------------------------------------------------
+  position_data_and_derived_calculations:
+
+    - id: REQ-POS-001
+      title: "Position-level data model and ingestion"
+      layer: [L1_INGESTION, L1B_ADAPTER]
+      priority: MUST
+      phase: 1
+      principles: [P4, P5, P6]
+      regulatory: [AIFMD, CDR231]
+      description: >
+        Position data is a versioned dataset linked to (AIF, reporting_period,
+        NCA_registration). Incremental updates trigger automatic recalculation
+        of derived fields. All ingestion channels supported including SFTP.
+      position_fields:
+        instrument_id:      "Internal or external identifier"
+        asset_type_code:    "SubAssetType per AIFMD Table 1"
+        long_short:         "LONG or SHORT"
+        market_value:       "In position currency; negative for short positions"
+        currency:           "ISO 4217"
+        market_value_base:  "Converted to AIF base currency — calculated"
+        is_encumbered:      "Boolean — pledged or encumbered"
+        notional_value:     "For derivatives: gross notional"
+        counterparty_lei:   "LEI of counterparty"
+        is_nettable:        "Boolean — CDR Art.8 Commitment Method netting eligibility"
+        position_date:      "Valuation date"
+      acceptance_criteria:
+        - "5,000-position dataset ingested via API in under 30 seconds"
+        - "Incremental update of 50 positions triggers recalculation within 30 seconds"
+
+    - id: REQ-POS-002
+      title: "Deterministic derived field calculation engine"
+      layer: [L2_TRANSFORMATION]
+      priority: MUST
+      phase: 1
+      principles: [P5, P8, P10]
+      regulatory: [AIFMD, CDR231, ESMA_GUIDE]
+      description: >
+        Derives Annex IV reportable fields from position data. All calculations are
+        rule-based, versioned, independently testable, and logged with engine and
+        dataset version. Missing inputs produce DATA_INCOMPLETE warning rather than
+        a silent wrong value.
+      calculations:
+        principal_market_rankings:
+          fields: "PrincipalMarkets and PrincipalInstruments at AIFM and AIF level"
+          method: "Sum market values by SubAssetType (Table 1) and MIC code; rank by absolute value; top 5 instruments, top 3 markets"
+          legal_basis: "CDR 231/2013 Arts.24(1) and 24(2); ESMA Guidelines ranking methodology"
+        leverage_gross:
+          method: "Sum absolute market values plus derivative notionals divided by NAV times 100"
+          legal_basis: "CDR 231/2013 Art.7"
+        leverage_commitment:
+          method: "CDR Art.8 netting applied; non-nettable positions treated gross"
+          legal_basis: "CDR 231/2013 Art.8"
+        unencumbered_cash:
+          method: "Sum of SEC_CSH_CSH positions where is_encumbered = false"
+          legal_basis: "CDR 231/2013 Art.110; ESMA Guidelines"
+        turnover_by_asset_type:
+          method: "Sum transaction values by TurnoverSubAssetType (Table 2); requires buy/sell transaction data"
+          note: "Left blank with manual completion flag if transaction data absent"
+        aum_and_nav:
+          method: "Sum of all position market values converted to base currency"
+      acceptance_criteria:
+        - "Rankings for 500-position fund calculated in < 5 seconds"
+        - "Leverage results consistent with ESMA DQEF reference test cases"
+
+    - id: REQ-POS-003
+      title: "AIFM report aggregation from underlying AIF records"
+      layer: [L2_TRANSFORMATION]
+      priority: MUST
+      phase: 1
+      principles: [P4, P5]
+      regulatory: [AIFMD, CDR231]
+      description: >
+        AIFM-level fields (TotalAuM, PrincipalMarkets, PrincipalInstruments,
+        NumberOfFunds) are aggregated automatically from AIF records. AIFM workflow
+        is not locked on AIF completion. Aggregation recalculates on any AIF update.
+        Status shown as COMPLETE, PARTIAL, or MANUAL.
+      acceptance_criteria:
+        - "AIFM with 50 AIFs re-aggregates within 10 seconds of any underlying AIF record update"
+        - "PARTIAL status clearly lists which AIFs are missing their contribution"
+
+    - id: REQ-POS-004
+      title: "Field provenance model — full traceability per canonical field"
+      layer: [L2_TRANSFORMATION, L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P4, P5, P8, P10]
+      regulatory: [AIFMD, AI_ACT, DORA]
+      description: >
+        Every field in the canonical record carries a structured provenance record
+        capturing how its value was produced, which logic or source was applied,
+        and the complete change history. Provenance is the foundation for field-level
+        audit trails, the UI lineage view (REQ-LIN-001), the logic transparency panel
+        (REQ-LIN-002), and the review gate field summary. It enables any stakeholder —
+        reviewer, NCA auditor, or ISAE auditor — to trace any reported value back
+        to its source without accessing raw data.
+      provenance_values:
+        DERIVED:
+          description: "Calculated by the deterministic calculation engine from position data"
+          traceability_record:
+            engine_version: "Calculation engine version identifier"
+            formula_id: "Named formula applied (e.g. GROSS_LEVERAGE_CDR_ART7)"
+            formula_description: "Human-readable description of the calculation"
+            legal_basis: "CDR article or ESMA guideline reference"
+            input_fields: "List of position dataset fields and their values used as inputs"
+            input_dataset_version: "Position dataset version identifier"
+            reference_data_used: "e.g. ECB rate EUR/USD = 1.0823 as of 2026-03-19"
+            calculation_timestamp: "UTC timestamp of calculation run"
+          recalculation: "Overwritten on each calculation run unless field is LOCKED"
+          ui_indicator: "Formula icon (∑); click opens logic transparency panel"
+        AI_PROPOSED:
+          description: "Extracted by Claude from an unstructured document; not yet confirmed by user"
+          traceability_record:
+            model_name: "Claude (Anthropic)"
+            model_version: "Model version at time of extraction"
+            confidence_level: "HIGH / MEDIUM / LOW"
+            confidence_score: "Numeric score 0.00–1.00"
+            source_text: "Verbatim text fragment from source document that produced this value"
+            source_document_hash: "Hash of source document (document itself deleted per REQ-SEC-003)"
+            source_page_or_location: "Page number or section reference if determinable"
+            extraction_timestamp: "UTC timestamp"
+          recalculation: "Replaced if calculation engine can derive the field; AI value is fallback only"
+          ui_indicator: "AI badge with confidence chip; click opens AI extraction detail"
+          pipeline_constraint: "AI_PROPOSED fields not confirmed by user are treated as missing at L3"
+        MANUALLY_ENTERED:
+          description: "Value typed directly by a DATA_PREPARER, COMPLIANCE_REVIEWER, or TENANT_ADMIN"
+          traceability_record:
+            entered_by_role: "Role of user who entered the value"
+            entered_by_user_id: "Pseudonymous user reference"
+            entry_timestamp: "UTC timestamp"
+            entry_channel: "WEB_UI or API"
+          recalculation: "Protected from automatic overwrite"
+          ui_indicator: "Pencil icon"
+        MANUALLY_OVERRIDDEN:
+          description: "Field had a DERIVED, AI_PROPOSED, or IMPORTED value; user changed it"
+          traceability_record:
+            original_provenance: "The provenance value the field held before the override"
+            original_value: "The value before override"
+            overridden_by_role: "Role of user who overrode"
+            overridden_by_user_id: "Pseudonymous user reference"
+            override_timestamp: "UTC timestamp"
+            override_reason: "Free text entered by user at override time (mandatory for DERIVED overrides)"
+          recalculation: "LOCKED — not overwritten by any automatic process"
+          ui_indicator: "Override icon (amber); hover shows original value and override reason"
+        IMPORTED:
+          description: "Value produced by a legacy template adapter (REQ-LEG-001 through LEG-006)"
+          traceability_record:
+            adapter_id: "Adapter identifier (e.g. M_AUTHORISED_V2)"
+            adapter_version: "Adapter version"
+            source_template_field: "Original field name in the source template"
+            source_cell_reference: "Excel cell reference or column name if determinable"
+            import_timestamp: "UTC timestamp"
+            enrichment_applied: "List of enrichment calculations applied (e.g. CURRENCY_CONVERSION, AUM_AGGREGATION)"
+          recalculation: "Overwritten if calculation engine can derive the field"
+          ui_indicator: "Import icon; click shows adapter and source field mapping"
+        SMART_DEFAULT:
+          description: "Value populated by a smart default rule based on fund characteristics"
+          traceability_record:
+            rule_id: "Smart default rule identifier"
+            rule_version: "Rule version at time of application"
+            rule_description: "Human-readable condition and default value description"
+            trigger_condition: "The fund characteristic that triggered this rule"
+            applied_timestamp: "UTC timestamp"
+          recalculation: "Overwritten if user enters a value or calculation engine can derive a value"
+          ui_indicator: "Default icon; click shows rule description and trigger condition"
+        LOCKED:
+          description: "Field explicitly locked by user against all automatic recalculation"
+          traceability_record:
+            locked_by_user_id: "Pseudonymous user reference"
+            locked_timestamp: "UTC timestamp"
+            lock_reason: "Optional free text"
+            underlying_provenance: "The provenance the field held when it was locked"
+          recalculation: "Never overwritten by any process"
+          ui_indicator: "Lock icon"
+      field_history:
+        description: >
+          Every field maintains a complete ordered history of provenance changes.
+          Each entry in the history is immutable and contains the full provenance
+          record at the time of the change, including the value held and who or
+          what changed it. The history is accessible from the field lineage view.
+        retention: "10 years — same as canonical record retention"
+      override_behaviour:
+        edit_derived_field:
+          step_1: "Warning: 'This value was calculated from your position data. Editing it will lock the field. The calculated value was [X]. Continue?'"
+          step_2: "User confirms; free-text override reason required"
+          step_3: "Provenance changes to MANUALLY_OVERRIDDEN; original value and reason stored in history"
+        restore_calculation:
+          action: "User clicks Unlock and recalculate"
+          result: "Provenance returns to DERIVED; calculation runs immediately; override history retained"
+      requirements:
+        - "Every canonical field stores its complete provenance record as a structured object"
+        - "Provenance record is updated atomically with the field value — no field value exists without a provenance record"
+        - "Full field history retained and immutable for the 10-year retention period"
+        - "Provenance records stored in the audit trail per REQ-AUD-001"
+        - "AI_PROPOSED fields display their confidence level and source text in the UI before confirmation"
+        - "Review gate presents a field-level summary: count of fields per provenance type, count of MANUALLY_OVERRIDDEN fields"
+      acceptance_criteria:
+        - "Every field in a canonical record has a non-null provenance record at all times"
+        - "Editing a DERIVED field triggers the warning, captures the reason, and locks the field"
+        - "Field history for a value changed 3 times shows all 3 historical provenance records in order"
+        - "Review gate summary accurately counts fields per provenance type"
+
+    - id: REQ-POS-005
+      title: "Smart defaults for optional and conditional fields"
+      layer: [L2_TRANSFORMATION]
+      priority: SHOULD
+      phase: 1
+      principles: [P1, P5, P8]
+      regulatory: [AIFMD, ESMA_GUIDE]
+      description: >
+        Smart defaults populate empty optional fields based on known fund
+        characteristics. Applied after derivations, before L3. Never overwrites
+        any existing value regardless of provenance. Each rule is a versioned
+        configuration entry.
+      acceptance_criteria:
+        - "Smart default never overwrites a MANUALLY_ENTERED or MANUALLY_OVERRIDDEN field"
+        - "All smart default fields receive DERIVED provenance"
+
+
+  # -------------------------------------------------------------------------
+  # Transformation and canonical data model
+  # -------------------------------------------------------------------------
+  transformation_and_canonical_data_model:
+
+    - id: REQ-TRN-001
+      title: "Canonical data model as single source of truth"
+      layer: [L2_TRANSFORMATION]
+      priority: MUST
+      phase: 1
+      principles: [P4, P5, P6]
+      regulatory: [AIFMD, IT_TECH_R6]
+      description: >
+        All ingestion channels produce a record conforming to the Eagle canonical
+        data model before validation is applied. XSD serialisation for NCA
+        submission is a downstream transformation of the canonical record.
+        The canonical model is a versioned JSON schema; field names map 1:1 to
+        AIFMD field references in the validation rules YAML.
+      acceptance_criteria:
+        - "No NCA submission is generated from any representation other than the canonical record"
+        - "Schema version mismatch produces a validation warning, not a silent error"
+
+    - id: REQ-TRN-002
+      title: "NCA-specific XSD serialisation and file packaging"
+      layer: [L6_PACKAGING]
+      priority: MUST
+      phase: 1
+      principles: [P3, P6, P10]
+      regulatory: [IT_TECH_R6, AIFMD]
+      description: >
+        The canonical record is serialised to AIFMD Annex IV XML per the active
+        XSD schema (AIFMD_DATMAN_V1_2.xsd and AIFMD_DATAIF_V1_2.xsd) with
+        NCA-specific override profiles applied. Packaging wraps the validated XML
+        into the format required by the target NCA per REQ-FMT-001.
+        All serialisation and packaging logic loaded from configuration files at runtime.
+      acceptance_criteria:
+        - "Schema validation failure blocks submission with a CAF-equivalent error"
+        - "NCA override application logged in submission audit trail"
+        - "Generated XML stored immutably as part of the submission record"
+
+
+# =============================================================================
+# CROSS-CUTTING REQUIREMENTS  (17 applicable)
+# Definitions in eagle_requirements_overview.yaml — references only below.
+# =============================================================================
+
+cross_cutting_requirements_applied:
+
+  # -------------------------------------------------------------------------
+  # Security (REQ-SEC-*)         → eagle_requirements_overview.yaml §5.1
+  # -------------------------------------------------------------------------
+  - REQ-SEC-001  # Encryption in transit and at rest
+  - REQ-SEC-002  # Vulnerability management and security testing programme
+  - REQ-SEC-003  # Data retention and deletion
+
+  # -------------------------------------------------------------------------
+  # Scale (REQ-SCL-*)             → eagle_requirements_overview.yaml §5.3
+  # -------------------------------------------------------------------------
+  - REQ-SCL-001  # Priority queue architecture for pipeline execution
+  - REQ-SCL-002  # Per-client throughput SLA
+
+  # -------------------------------------------------------------------------
+  # Performance (REQ-PER-*)       → eagle_requirements_overview.yaml §5.4
+  # -------------------------------------------------------------------------
+  - REQ-PER-001  # Performance targets
+
+  # -------------------------------------------------------------------------
+  # Modularity (REQ-MOD-*)        → eagle_requirements_overview.yaml §5.5
+  # -------------------------------------------------------------------------
+  - REQ-MOD-001  # Rules, overrides and reference data separated from application code
+  - REQ-MOD-002  # AI model replaceability
+
+  # -------------------------------------------------------------------------
+  # GDPR (REQ-GDPR-*)             → eagle_requirements_overview.yaml §7
+  # -------------------------------------------------------------------------
+  - REQ-GDPR-001  # Data subject rights request workflow
+  - REQ-GDPR-002  # Data breach communication workflow
+  - REQ-GDPR-003  # Systematic data minimisation controls
+  - REQ-GDPR-004  # GDPR DPA existence check at tenant activation
+  - REQ-GDPR-005  # Anthropic sub-processor transfer control
+
+  # -------------------------------------------------------------------------
+  # EU AI Act (REQ-AIACT-*)       → eagle_requirements_overview.yaml §8
+  # -------------------------------------------------------------------------
+  - REQ-AIACT-001  # AI input data quality controls
+  - REQ-AIACT-002  # AI classification safeguard — formal in-application control
+  - REQ-AIACT-003  # AI serious incident reporting to Anthropic
+  - REQ-AIACT-004  # Prompt injection prevention for unstructured ingestion
+

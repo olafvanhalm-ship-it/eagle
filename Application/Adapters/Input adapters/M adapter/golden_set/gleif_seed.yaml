@@ -1,0 +1,82 @@
+# GLEIF seed data for regression testing LEI enrichment.
+#
+# Contains synthetic LEI codes for entity names that appear in the
+# golden set test templates.  These LEIs are format-valid (pass ISO 7064
+# Mod 97-10 checkdigit) but are NOT real GLEIF registrations.
+#
+# Used by: run_regression_suite.py --with-enrichment
+#
+# To verify entries:
+#   python -c "from shared.lei_validator import validate_lei_format; print(validate_lei_format('YOUR_LEI'))"
+
+# ── M example template entities ──────────────────────────────────────
+# These names appear in the fictitious M templates (m_light_nl, m_full_nl, etc.)
+# LEIs are synthetic with valid ISO 7064 check digits.
+
+- lei: "529900REFUNDMGMT0051"
+  legal_name: "Real estate fund Management B.V."
+  entity_status: "ACTIVE"
+  country: "NL"
+
+- lei: "529900GRANITEPEAK011"
+  legal_name: "Granite Peak Capital, LLC"
+  entity_status: "ACTIVE"
+  country: "US"
+
+- lei: "529900COMREALESTA011"
+  legal_name: "Commercial real estate fund B.V."
+  entity_status: "ACTIVE"
+  country: "NL"
+
+- lei: "529900RESREALESTA064"
+  legal_name: "Residential real estate fund B.V."
+  entity_status: "ACTIVE"
+  country: "NL"
+
+- lei: "529900ALPINEPARAL025"
+  legal_name: "Alpine VI Parallel Fund, L.P."
+  entity_status: "ACTIVE"
+  country: "US"
+
+- lei: "529900ALPINEFEEDR089"
+  legal_name: "Alpine VI Parallel Feeder C.V."
+  entity_status: "ACTIVE"
+  country: "NL"
+
+
+# ── Authorised_anon template entities ────────────────────────────────
+# These names appear in anonymised real-client templates.
+# LEIs here match those in the reference XML outputs.
+# NOTE: These LEIs are from the anonymised golden set XMLs; their
+# check digits are intentionally kept as-is (they were generated
+# during anonymisation and are format-valid but not ISO 7064 valid).
+
+- lei: "4227DNMMJBQE7CKW5N16"
+  legal_name: "Cedar Point Advisors"
+  entity_status: "ACTIVE"
+  country: "US"
+
+- lei: "3008V30T9NT3W5UZBI69"
+  legal_name: "Cedar Point Advisors"
+  entity_status: "ACTIVE"
+  country: "US"
+
+- lei: "72110TVBDIVUZZPQK596"
+  legal_name: "Blue Ridge Partners"
+  entity_status: "ACTIVE"
+  country: "HK"
+
+- lei: "22766DPBHSAHXTHV3A20"
+  legal_name: "Blue Ridge Partners"
+  entity_status: "ACTIVE"
+  country: "HK"
+
+- lei: "6171N9XUY41IBLJH7543"
+  legal_name: "Alpha Growth Fund"
+  entity_status: "ACTIVE"
+  country: "US"
+
+- lei: "0652QJ7YHL1C32OC6U54"
+  legal_name: "Delta Value Fund"
+  entity_status: "ACTIVE"
+  country: "US"

@@ -1,0 +1,415 @@
+# =============================================================================
+# Framework Controls: Digital Operational Resilience Act (DORA)
+# Regulation (EU) 2022/2554
+# Version:   1.0
+# Date:      2026-03-23
+# Source:    Official Journal of the EU — OJ L 333, 27.12.2022
+# Scope:     ICT third-party service providers to financial entities (Chapter V)
+#            + financial entities' obligations relevant to service providers
+# Note:      This document is drafted independently of any internal system
+#            documentation and serves as the authoritative regulatory baseline
+#            for gap comparison purposes.
+# =============================================================================
+
+metadata:
+  framework:        "Digital Operational Resilience Act (DORA)"
+  regulation:       "Regulation (EU) 2022/2554"
+  applicable_from:  "2025-01-17"
+  version:          "1.0"
+  scope_note: >
+    Applicable to ICT third-party service providers (ICT-TPP) to financial
+    entities — including fund administrators, AIFMs, and similar regulated
+    firms. Chapter V applies directly to ICT-TPPs designated as critical
+    (CTPP) by ESAs. Chapter II–IV obligations fall on financial entities
+    but define what contractual and operational standards ICT-TPPs must
+    support and evidence.
+
+# =============================================================================
+# CHAPTER II — ICT RISK MANAGEMENT (Arts 5–15)
+# Obligations on financial entities; defines minimum standard an ICT-TPP
+# must contractually support and evidence on behalf of clients.
+# =============================================================================
+
+chapter_ii_ict_risk_management:
+
+  - id: DORA-RM-001
+    article: "Art. 5"
+    title: "ICT risk management framework — governance"
+    obligation_holder: financial_entity
+    tpp_implication: >
+      ICT-TPP must be able to demonstrate to the financial entity that its
+      own ICT risk management framework is documented, approved at board
+      level, and reviewed at least annually.
+    controls:
+      - "Documented ICT risk management framework approved by governing body"
+      - "Clear accountability for ICT risk assigned at senior management level"
+      - "Framework reviewed at minimum annually and after major incidents"
+      - "ICT risk strategy aligned to overall business risk appetite"
+
+  - id: DORA-RM-002
+    article: "Art. 6"
+    title: "ICT risk management framework — content requirements"
+    obligation_holder: financial_entity
+    tpp_implication: >
+      ICT-TPP must maintain equivalent policies covering all components
+      listed in Art. 6(2) and make them available to clients on request.
+    controls:
+      - "ICT risk policies cover: identify, protect, detect, respond, recover"
+      - "Asset inventory: all ICT assets supporting critical functions documented"
+      - "Risk identification and assessment process documented and repeatable"
+      - "Continuous monitoring of ICT systems and ICT-related risks"
+      - "Business impact analysis for ICT disruptions maintained and tested"
+      - "ICT risk policies reviewed and updated after each major incident"
+
+  - id: DORA-RM-003
+    article: "Art. 8"
+    title: "Identification — ICT asset inventory"
+    obligation_holder: financial_entity
+    tpp_implication: "ICT-TPP provides asset list covering systems in scope of service delivery"
+    controls:
+      - "Complete inventory of all hardware, software and ICT assets"
+      - "Asset classification by criticality to supported functions"
+      - "Dependencies between ICT assets documented"
+      - "Configuration of critical ICT assets recorded and maintained"
+
+  - id: DORA-RM-004
+    article: "Art. 9"
+    title: "Protection and prevention"
+    obligation_holder: financial_entity
+    tpp_implication: "ICT-TPP evidences equivalent protective controls to clients"
+    controls:
+      - "Access controls based on need-to-know and least-privilege principles"
+      - "Multi-factor authentication for privileged access"
+      - "Data in transit encrypted using current cryptographic standards"
+      - "Data at rest encrypted for sensitive and critical information"
+      - "Patch and vulnerability management process with defined SLAs"
+      - "Physical and logical segregation of ICT environments (dev/test/prod)"
+      - "Change management controls for ICT systems"
+      - "Software supply chain controls: only trusted and verified sources"
+
+  - id: DORA-RM-005
+    article: "Art. 10"
+    title: "Detection — monitoring and anomaly detection"
+    obligation_holder: financial_entity
+    tpp_implication: "ICT-TPP maintains monitoring covering all systems in scope of service"
+    controls:
+      - "Automated detection mechanisms for ICT anomalies and incidents"
+      - "Comprehensive logging of ICT events including user and system activity"
+      - "Log integrity protected; logs tamper-evident and retained"
+      - "Alerting thresholds and escalation paths defined"
+      - "Monitoring covers network, application and infrastructure layers"
+      - "Threat intelligence feed integrated into monitoring capability"
+
+  - id: DORA-RM-006
+    article: "Art. 11"
+    title: "Response and recovery"
+    obligation_holder: financial_entity
+    tpp_implication: >
+      ICT-TPP ICR plan and BCP/DRP documentation shared with client as part
+      of contractual information pack; client-facing RTO/RPO targets stated.
+    controls:
+      - "ICT business continuity policy and plan documented"
+      - "Recovery Time Objective (RTO) and Recovery Point Objective (RPO) defined per service"
+      - "Business continuity plan tested at minimum annually"
+      - "Disaster recovery plan covering all critical ICT systems"
+      - "Documented response procedures for all major incident categories"
+      - "Communication plan covering clients, regulators and internal stakeholders"
+      - "Post-incident review and lessons-learned process"
+
+  - id: DORA-RM-007
+    article: "Art. 12"
+    title: "Backup policies and recovery methods"
+    obligation_holder: financial_entity
+    tpp_implication: "ICT-TPP backup and restore procedures documented and available to clients"
+    controls:
+      - "Backup policy covering frequency, retention, and geographic placement"
+      - "Backups for critical systems stored in a separate location from primary"
+      - "Regular restore testing with documented results"
+      - "Backup integrity verification automated where possible"
+
+  - id: DORA-RM-008
+    article: "Art. 13"
+    title: "Learning and evolving"
+    obligation_holder: financial_entity
+    tpp_implication: "ICT-TPP provides post-incident reports relevant to client services"
+    controls:
+      - "Post-incident review for all major incidents within defined timeframe"
+      - "Root cause analysis documented with corrective actions tracked"
+      - "Lessons learned integrated into risk management framework updates"
+      - "Threat intelligence used to update protective controls"
+
+  - id: DORA-RM-009
+    article: "Art. 14"
+    title: "Communication"
+    obligation_holder: financial_entity
+    tpp_implication: >
+      ICT-TPP must have a defined client notification plan and execute
+      notifications within timelines agreed in contract.
+    controls:
+      - "Crisis communication plan documented and maintained"
+      - "Client notification timelines defined for each incident severity class"
+      - "Designated point of contact for incident escalation per client"
+      - "Internal escalation paths defined and tested"
+
+# =============================================================================
+# CHAPTER III — ICT-RELATED INCIDENT MANAGEMENT (Arts 17–23)
+# =============================================================================
+
+chapter_iii_incident_management:
+
+  - id: DORA-INC-001
+    article: "Art. 17"
+    title: "ICT-related incident management process"
+    obligation_holder: financial_entity
+    tpp_implication: >
+      ICT-TPP maintains an incident management process meeting Art. 17
+      standards; incident records made available to client on request.
+    controls:
+      - "Formal ICT incident management process documented"
+      - "Incident register maintained with all relevant fields"
+      - "Incident detection → logging → triage → classification → escalation → resolution → closure workflow defined"
+      - "Incident response roles and responsibilities assigned"
+      - "Incident management process reviewed at minimum annually"
+
+  - id: DORA-INC-002
+    article: "Art. 18"
+    title: "Classification of ICT-related incidents and cyber threats"
+    obligation_holder: financial_entity
+    tpp_implication: >
+      ICT-TPP supports client classification by providing timely and accurate
+      incident information; must be able to classify impact on client services.
+    classification_criteria:
+      - "Number of clients or counterparties affected"
+      - "Duration of incident"
+      - "Geographic spread"
+      - "Data loss (availability, confidentiality, integrity)"
+      - "Criticality of affected services"
+      - "Economic impact"
+    severity_levels:
+      major: "Meets thresholds set in RTS under Art.18(3) — mandatory regulatory notification"
+      significant: "Material impact; enhanced internal response; client notification"
+      minor: "Limited impact; standard incident handling"
+    controls:
+      - "Classification decision recorded with justification at incident creation"
+      - "Re-classification possible as new information emerges; change logged"
+      - "MAJOR classification triggers immediate regulatory notification workflow"
+      - "Classification methodology aligned with ESA regulatory technical standards"
+
+  - id: DORA-INC-003
+    article: "Art. 19"
+    title: "Reporting of major ICT-related incidents to competent authorities"
+    obligation_holder: financial_entity
+    tpp_implication: >
+      ICT-TPP provides structured incident data to financial entity client
+      within timelines required to meet the financial entity's own regulatory
+      reporting obligations.
+    notification_timeline:
+      initial_notification:   "Without undue delay, and no later than 4 hours after major incident classification; no later than 24 hours after first detection"
+      intermediate_report:    "Within 72 hours of major incident detection"
+      final_report:           "Within 1 month of intermediate report submission"
+    report_content:
+      initial:
+        - "Incident identifier"
+        - "Initial characterisation of incident"
+        - "Estimated impact on clients"
+        - "Preliminary root cause assessment"
+      intermediate:
+        - "Updated classification and impact assessment"
+        - "Steps taken to remediate"
+        - "Cross-border impact assessment"
+      final:
+        - "Root cause determination"
+        - "Full impact assessment"
+        - "Remediation measures implemented"
+        - "Lessons learned"
+    controls:
+      - "Regulatory notification workflow activated automatically on MAJOR classification"
+      - "Report templates pre-populated from incident record"
+      - "Deadline tracking with automated alerts at defined intervals"
+      - "Submitted notifications stored as immutable audit artefacts"
+      - "Notification submission confirmed with reference number retained"
+
+  - id: DORA-INC-004
+    article: "Art. 20"
+    title: "Harmonisation of reporting content and timelines"
+    obligation_holder: financial_entity
+    controls:
+      - "Incident reporting templates aligned with ESA implementing technical standards"
+      - "Report content fields comply with ITS once published by ESAs"
+
+  - id: DORA-INC-005
+    article: "Art. 23"
+    title: "Voluntary notification of significant cyber threats"
+    obligation_holder: financial_entity
+    controls:
+      - "Process for assessing and escalating significant cyber threats for potential voluntary notification"
+      - "Threat notifications do not automatically require client disclosure"
+
+# =============================================================================
+# CHAPTER IV — DIGITAL OPERATIONAL RESILIENCE TESTING (Arts 24–27)
+# =============================================================================
+
+chapter_iv_resilience_testing:
+
+  - id: DORA-TEST-001
+    article: "Art. 24"
+    title: "General requirements for digital operational resilience testing"
+    obligation_holder: financial_entity
+    tpp_implication: "ICT-TPP cooperates with client testing and provides test environment access where applicable"
+    controls:
+      - "Annual digital operational resilience testing programme documented"
+      - "Testing covers all ICT systems supporting critical functions"
+      - "Testing results recorded and remediation tracked"
+
+  - id: DORA-TEST-002
+    article: "Art. 25"
+    title: "Testing of ICT tools and systems"
+    obligation_holder: financial_entity
+    controls:
+      - "Vulnerability assessments at minimum annually"
+      - "Penetration testing at minimum every 3 years"
+      - "Network security tests"
+      - "Source code reviews (where applicable)"
+      - "Performance and capacity testing"
+      - "End-to-end testing of ICT processes"
+
+  - id: DORA-TEST-003
+    article: "Art. 26"
+    title: "Advanced testing — Threat-Led Penetration Testing (TLPT)"
+    obligation_holder: significant_financial_entities_only
+    controls:
+      - "TLPT conducted at minimum every 3 years for entities in scope"
+      - "TLPT scope includes live production systems"
+      - "External testers qualified per Art. 27 requirements"
+      - "Remediation plan mandatory post-TLPT"
+
+# =============================================================================
+# CHAPTER V — ICT THIRD-PARTY RISK MANAGEMENT (Arts 28–44)
+# Primary chapter applicable directly to ICT-TPPs
+# =============================================================================
+
+chapter_v_third_party_risk:
+
+  - id: DORA-TPP-001
+    article: "Art. 28(2)"
+    title: "Third-party risk management policy"
+    obligation_holder: financial_entity
+    tpp_implication: >
+      Financial entity must have a policy covering selection, onboarding,
+      monitoring and exit of ICT-TPPs. ICT-TPP must support execution of
+      this policy through cooperation and information provision.
+    controls:
+      - "Due diligence process documented for ICT-TPP selection"
+      - "Security and resilience assessment of ICT-TPP at onboarding"
+      - "Ongoing monitoring programme for critical ICT-TPPs"
+      - "Exit strategy and transition plan maintained per ICT-TPP"
+
+  - id: DORA-TPP-002
+    article: "Art. 30"
+    title: "Mandatory contractual provisions — ICT services contracts"
+    obligation_holder: financial_entity_and_tpp
+    contract_must_include:
+      - "Full description of services and service levels (SLAs)"
+      - "Locations where data is processed and stored"
+      - "Data availability, integrity, security, and confidentiality provisions"
+      - "Right of access, inspection and audit by financial entity and competent authorities"
+      - "Implementation and testing of ICT business continuity plans"
+      - "Cooperation with supervisory authorities"
+      - "Sub-contracting: list of sub-processors; notification of changes"
+      - "Termination rights: circumstances under which either party may terminate"
+      - "Exit plan: data portability and migration assistance"
+      - "Support for penetration testing and vulnerability assessments"
+      - "Initial and ongoing performance reporting"
+      - "ICT security requirements including minimum security standards"
+    controls:
+      - "Contract checklist against Art. 30 provisions maintained"
+      - "Contracts reviewed at minimum annually for continued compliance"
+      - "Sub-processor list maintained and communicated to clients on change"
+      - "Audit rights clause exercisable on reasonable notice"
+
+  - id: DORA-TPP-003
+    article: "Art. 30(2)(c)"
+    title: "Sub-processor change notification"
+    obligation_holder: tpp
+    controls:
+      - "Sub-processor register maintained with current entries"
+      - "Client notification triggered on any addition, change or removal of sub-processor"
+      - "Notification timeline defined in contract (DORA requires 'prior notice')"
+      - "Client objection right respected; process for handling objections documented"
+
+  - id: DORA-TPP-004
+    article: "Art. 30(3)"
+    title: "Access and audit rights"
+    obligation_holder: tpp
+    controls:
+      - "Audit rights clause included in all client contracts"
+      - "Right extends to competent supervisory authorities"
+      - "Physical and remote access to facilities, systems and data within scope"
+      - "Response to audit requests within defined timeframe"
+      - "Supporting documentation for auditors maintained and accessible"
+
+  - id: DORA-TPP-005
+    article: "Art. 30(4)"
+    title: "Exit and transition provisions"
+    obligation_holder: financial_entity_and_tpp
+    controls:
+      - "Exit plan documented covering: data export, service migration, transition support"
+      - "Data portability ensured: all client data exportable in machine-readable format"
+      - "Knowledge transfer obligations defined"
+      - "Minimum notice period for termination specified in contract"
+      - "Transition assistance period defined"
+
+  - id: DORA-TPP-006
+    article: "Art. 28(8) / Art. 30(2)(f)"
+    title: "Cooperation with supervisory authorities"
+    obligation_holder: tpp
+    controls:
+      - "Obligation to cooperate with financial entity's competent authority stated in contract"
+      - "Direct supervisory access right included where ICT-TPP designated critical (CTPP)"
+      - "ICT-TPP designated contact for supervisory enquiries identified"
+
+  - id: DORA-TPP-007
+    article: "Arts 31–44"
+    title: "Oversight framework — Critical ICT Third-Party Providers (CTPPs)"
+    obligation_holder: ctpp_designated_only
+    designation_criteria:
+      - "Systemic importance of services provided to EU financial sector"
+      - "Determined by ESAs under Art. 31"
+    if_designated_controls:
+      - "Lead overseer cooperation: respond to information requests within timelines"
+      - "Participate in general investigations and on-site inspections"
+      - "Implement remediation plan within timeframe set by lead overseer"
+      - "Comply with recommendations on concentration risk"
+
+# =============================================================================
+# CROSS-CUTTING CONTROLS
+# =============================================================================
+
+cross_cutting:
+
+  - id: DORA-CC-001
+    article: "Art. 5(2) + Art. 30(2)"
+    title: "Documentation and information sharing to clients"
+    controls:
+      - "ICT risk framework summary available to clients on request"
+      - "Business continuity and disaster recovery plans shared with clients"
+      - "Security policies summary (or equivalent assurance) provided at onboarding"
+      - "Annual information pack updates: BCP, DRP, sub-processors, material changes"
+
+  - id: DORA-CC-002
+    article: "Art. 30(2)(a)"
+    title: "SLA and performance reporting"
+    controls:
+      - "SLAs defined for all critical services: availability, response time, processing accuracy"
+      - "Regular performance reports provided to clients at agreed frequency"
+      - "SLA breach notification to client within defined timeframe"
+      - "Escalation path for persistent SLA failures"
+
+  - id: DORA-CC-003
+    article: "Art. 30(2)(b)"
+    title: "ICT security requirements"
+    controls:
+      - "Minimum security standards documented and available to clients"
+      - "Security standards reviewed and updated at minimum annually"
+      - "Security incidents affecting client services reported per notification timeline"
+      - "Penetration test results summary available to clients on reasonable request"

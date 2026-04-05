@@ -1,0 +1,46 @@
+################################################################################
+# NCA-SPECIFIC OVERRIDES — LB (LT)
+# Version: v1 — 2026-04-03
+# Base YAML: aifmd_validation_rules.yaml
+#
+# Source: Online research of NCA documentation and ESMA guidelines
+# National code: Bank of Lithuania assigned code
+# Portal: Bank of Lithuania reporting forms portal
+# File packaging: ZIP
+# Deadline: Standard 30 days after reporting period end
+################################################################################
+nca_overrides:
+  nca: LB
+  country: LT
+  base_yaml: aifmd_validation_rules.yaml
+  base_yaml_version: '1.0'
+  source_document:
+    title: AIFMD Annex IV Reporting Requirements — Bank of Lithuania (Lietuvos bankas)
+    version: '1.0'
+    date: '2026-04-03'
+    publisher: Bank of Lithuania (Lietuvos bankas)
+    url: https://www.lb.lt
+  transmission:
+    portal: Bank of Lithuania reporting forms portal
+    method: File upload
+  file_format:
+    packaging: ZIP
+    national_code_info: Bank of Lithuania assigned code
+  changelog:
+  - version: v1
+    date: '2026-04-03'
+    changes:
+    - Initial LB NCA override file — based on web research of latest documentation
+  nca_rules:
+  - rule_id: NCA-LB-LT-ReportingMemberState
+    base_rule_id: AIFM-1
+    field_id: '1'
+    field_name: Reporting Member State
+    xsd_element: <ReportingMemberState>
+    severity: CRITICAL
+    overrides_esma: true
+    status: active
+    nca_source_doc: Bank of Lithuania (Lietuvos bankas) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: For reports submitted to Bank of Lithuania the value must always be LT.
+    validation_rules: ReportingMemberState = "LT"

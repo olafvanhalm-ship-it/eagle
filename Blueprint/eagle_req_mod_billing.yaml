@@ -1,0 +1,47 @@
+# =============================================================================
+# Project Eagle — Billing and Subscriptions (MOD-BILLING)
+# Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml
+# Cross-cutting requirements defined in: eagle_requirements_overview.yaml
+# Manual controls: eagle_manual_controls.yaml
+# =============================================================================
+
+metadata:
+  module: MOD-BILLING
+  name: "Billing and Subscriptions"
+  primary_users: [EAGLE_ADMIN, CFO]
+  pipeline_layers: []
+  module_req_count: 0
+  cross_req_count: 7
+  total_applicable: 7
+
+# =============================================================================
+# MODULE REQUIREMENTS  (0 requirements — spec deferred to Phase 1.5)
+# =============================================================================
+
+requirements:
+  # No application requirements in this version.
+  # Trial-to-paid conversion trigger defined in REQ-TRIAL-006 (MOD-TRIAL).
+  # MOD-BILLING spec activation: ~10 clients or first external funding round.
+
+# =============================================================================
+# CROSS-CUTTING REQUIREMENTS  (7 applicable)
+# Definitions in eagle_requirements_overview.yaml — references only below.
+# =============================================================================
+
+cross_cutting_requirements_applied:
+
+  # -------------------------------------------------------------------------
+  # Security (REQ-SEC-*)         → eagle_requirements_overview.yaml §5.1
+  # -------------------------------------------------------------------------
+  - REQ-SEC-001  # Encryption in transit and at rest
+  - REQ-SEC-002  # Vulnerability management and security testing programme
+  - REQ-SEC-003  # Data retention and deletion
+
+  # -------------------------------------------------------------------------
+  # GDPR (REQ-GDPR-*)             → eagle_requirements_overview.yaml §7
+  # -------------------------------------------------------------------------
+  - REQ-GDPR-001  # Data subject rights request workflow
+  - REQ-GDPR-002  # Data breach communication workflow
+  - REQ-GDPR-003  # Systematic data minimisation controls
+  - REQ-GDPR-004  # GDPR DPA existence check at tenant activation
+

@@ -1,0 +1,282 @@
+# =============================================================================
+# Project Eagle — Submission and Delivery (MOD-SUB)
+# Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml
+# Cross-cutting requirements defined in: eagle_requirements_overview.yaml
+# Manual controls: eagle_manual_controls_v1_1.yaml
+# =============================================================================
+
+metadata:
+  module: MOD-SUB
+  name: "Submission and Delivery"
+  primary_users: [EAGLE_ADMIN, COMPLIANCE_REVIEWER]
+  pipeline_layers: [L6_PACKAGING, L7_SUBMISSION]
+  module_req_count: 8
+  cross_req_count: 20
+  total_applicable: 28
+
+# =============================================================================
+# MODULE REQUIREMENTS  (8 requirements)
+# =============================================================================
+
+requirements:
+
+  # -------------------------------------------------------------------------
+  # NCA file format
+  # -------------------------------------------------------------------------
+  nca_file_format:
+
+    - id: REQ-FMT-001
+      title: "NCA-specific file packaging configuration"
+      layer: [L6_PACKAGING]
+      priority: MUST
+      phase: 1
+      principles: [P3, P6, P10, P14]
+      regulatory: [AIFMD, IT_TECH_R6]
+      description: >
+        Packaging is configurable per NCA via override configuration files loaded
+        at runtime. New NCA packaging requires only a new configuration entry.
+        Packaging never alters XML content.
+      packaging_dimensions:
+        xml_structure:
+          single_aif_file: "One XML file per AIF record with AIFM in separate file"
+          multi_aif_file: "All AIF records bundled with AIFM record in single XML (default)"
+        compression:
+          none: "Plain XML files"
+          zip_single: "Single ZIP containing all batch XML files"
+          zip_per_aif: "One ZIP per AIF XML"
+          zip_of_zips: "Master ZIP containing individual AIF ZIPs"
+          gzip: "GZIP-compressed XML"
+        file_naming:
+          pattern: "Configurable template per NCA"
+          variables: ["{aifm_national_code}", "{aif_national_code}", "{reporting_period_type}", "{reporting_period_year}", "{filing_type}", "{submission_timestamp}", "{sequence_number}"]
+        xml_variations: "NCA-specific namespace prefixes, wrapper elements, encoding declarations handled by NCA override serialisation profiles"
+      requirements:
+        - "Packaging configuration in NCA override files — no hard-coded packaging logic"
+        - "File naming templates validated at configuration time"
+        - "Packaging shown to client in submission preview before delivery"
+        - "Checksum (MD5 or SHA-256 per NCA requirement) generated per packaged file and stored in audit record"
+      acceptance_criteria:
+        - "Adding a new NCA packaging profile passes integration tests without modifying existing code"
+
+
+  # -------------------------------------------------------------------------
+  # NCA delivery channels
+  # -------------------------------------------------------------------------
+  nca_delivery_channels:
+
+    - id: REQ-DEL-001
+      title: "Five-channel NCA delivery model"
+      layer: [L7_SUBMISSION]
+      priority: MUST
+      phase: 1
+      principles: [P3, P6, P7]
+      regulatory: [DORA, AIFMD]
+      description: >
+        Each NCA registration has one configured delivery channel. All channels
+        produce an equivalent audit trail record. All credentials for ROBOT,
+        S3, and SFTP channels stored in the credential vault per REQ-NCA-003.
+      channels:
+        DIRECT_API:
+          description: "Eagle calls the NCA REST API endpoint directly using Eagle-managed credentials"
+          failure_fallback: "Retry 3 times with exponential backoff; fall back to MANUAL on persistent failure"
+        ROBOT_PORTAL:
+          description: "Browser automation submits via NCA web portal using client credentials from vault"
+          failure_fallback: "Defined in REQ-NCA-002"
+        S3_CLIENT_BUCKET:
+          description: "Eagle places packaged file in client-provided S3 bucket; client responsible for onward NCA delivery"
+          credentials: "Client IAM role ARN or access key in credential vault"
+          confirmation: "S3 PutObject success recorded; client confirms NCA receipt"
+        S3_EAGLE_BUCKET:
+          description: "Eagle places packaged file in Eagle-managed S3 bucket; client pulls via presigned URL (7-day expiry)"
+          confirmation: "Client records NCA confirmation number in Eagle (PENDING_CONFIRMATION flow)"
+          cleanup: "File deleted after download or after 7 days — whichever comes first"
+        SFTP_EAGLE_SERVER:
+          description: "Client pushes data to Eagle SFTP inbound path; Eagle processes and returns packaged file to client outbound path"
+          inbound_path: "/inbound/{tenant_id}/{aif_id}/"
+          outbound_path: "/outbound/{tenant_id}/{period}/"
+          polling: "Eagle polls inbound path every 5 minutes; new files trigger ingestion pipeline automatically"
+          credentials: "Eagle issues tenant-scoped SSH key pairs; stored in credential vault"
+          confirmation: "Client records NCA confirmation number in Eagle"
+        MANUAL:
+          description: "Eagle generates packaged file for client download; client submits via NCA portal"
+          confirmation: "Client records NCA confirmation number in Eagle"
+      acceptance_criteria:
+        - "All five channels produce equivalent audit trail record structure"
+        - "Channel delivery failure triggers defined fallback within specified timeframe"
+
+    - id: REQ-DEL-002
+      title: "SFTP inbound as automated ingestion trigger"
+      layer: [L1_INGESTION]
+      priority: SHOULD
+      phase: 1
+      principles: [P2, P6]
+      regulatory: [DORA, GDPR]
+      requirements:
+        - "Files deposited to SFTP inbound path trigger ingestion pipeline automatically"
+        - "Auto-detection (REQ-LEG-002) applied to SFTP inbound files"
+        - "Processing status of SFTP-triggered ingestion visible in dashboard"
+        - "Inbound path is tenant- and AIF-scoped; misrouting architecturally impossible"
+        - "Inbound files deleted after successful ingestion"
+      acceptance_criteria:
+        - "File on SFTP appears as ingestion event in dashboard within 10 minutes"
+
+
+  # -------------------------------------------------------------------------
+  # NCA portal robots
+  # -------------------------------------------------------------------------
+  nca_portal_robots:
+
+    - id: REQ-NCA-001
+      title: "NCA portal robot submission"
+      layer: [L7_SUBMISSION]
+      priority: MUST
+      phase: 1
+      principles: [P2, P7, P9, P14]
+      regulatory: [DORA, AIFMD]
+      description: >
+        Browser automation submits validated XML to NCA web portal using client
+        credentials from the encrypted vault. Triggered manually by
+        COMPLIANCE_REVIEWER or TENANT_ADMIN after review gate approval.
+        All robot actions logged. Credentials never logged or retained in memory
+        beyond the session.
+      robot_flow:
+        1: "Review gate approval recorded"
+        2: "Credentials retrieved from vault for session duration"
+        3: "Headless browser opens NCA portal and authenticates"
+        4: "Automation navigates to submission page and uploads XML"
+        5: "NCA portal confirmation number captured and stored"
+        6: "Browser session terminated; credentials cleared from memory"
+      requirements:
+        - "ROBOT mode available per NCA registration configuration"
+        - "Robot scripts version-controlled and subject to change management"
+        - "Eagle does not attempt to bypass CAPTCHAs under any circumstances"
+      acceptance_criteria:
+        - "AFM portal robot tested against AFM test environment before go-live"
+
+    - id: REQ-NCA-002
+      title: "NCA portal robot fallback procedure"
+      layer: [L7_SUBMISSION, L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P7]
+      regulatory: [DORA]
+      failure_scenarios:
+        authentication_failure: "Halt robot; alert EAGLE_ADMIN and client; fall back to MANUAL within 15 minutes"
+        portal_unavailable: "Retry 3 times at 10-minute intervals; alert and fall back to MANUAL"
+        layout_changed: "Halt immediately; alert EAGLE_ADMIN; emergency change process for robot script"
+        captcha_encountered: "Halt immediately; fall back to MANUAL; EAGLE_ADMIN investigates"
+      requirements:
+        - "Fallback to MANUAL is automatic; download link generated and client notified within 15 minutes"
+        - "EAGLE_ADMIN notified within 5 minutes of any robot failure"
+        - "Robot failure within 5 business days of deadline classified as SIGNIFICANT ICT incident"
+        - "Sustained failure rate >10% triggers EAGLE_ADMIN alert and investigation"
+
+
+  # -------------------------------------------------------------------------
+  # Submission mechanics
+  # -------------------------------------------------------------------------
+  submission_mechanics:
+
+    - id: REQ-SUB-001
+      title: "INIT and AMND filing type support"
+      layer: [L7_SUBMISSION]
+      priority: MUST
+      phase: 1
+      principles: [P3, P8, P14]
+      regulatory: [AIFMD, IT_TECH_R6, DQEF]
+      filing_types:
+        INIT: "Initial filing for a reporting period — one INIT per AIFM per period per NCA; duplicate blocked"
+        AMND: "Amendment of a previously accepted INIT — references original; CancelledRecordFlag = C"
+      acceptance_criteria:
+        - "Filing type auto-assigned based on submission history for the period"
+        - "Duplicate INIT blocked with explanatory error"
+
+    - id: REQ-SUB-002
+      title: "Cancellation record support"
+      layer: [L7_SUBMISSION]
+      priority: MUST
+      phase: 1
+      principles: [P8]
+      regulatory: [AIFMD, IT_TECH_R6]
+      requirements:
+        - "CancellationAIFMRecordInfo and CancellationAIFRecordInfo supported"
+        - "CancelledRecordFlag must be C"
+        - "Cannot cancel an already-cancelled record"
+        - "Cancellation requires COMPLIANCE_REVIEWER approval at review gate"
+
+    - id: REQ-SUB-003
+      title: "Batch submission sequencing"
+      layer: [L7_SUBMISSION]
+      priority: MUST
+      phase: 1
+      principles: [P7, P8]
+      regulatory: [AIFMD, DORA]
+      description: >
+        AIFM-level record must be submitted and acknowledged before any AIF-level
+        records in the same batch. NCA-specific rate limits respected.
+      requirements:
+        - "AIFM acknowledgement verified before any AIF records are submitted"
+        - "AIFM submission failure holds all AIF records in the batch"
+        - "NCA rate limit configuration stored in NCA override files (REQ-MOD-001)"
+        - "ROBOT mode: sessions serialised per NCA portal — no parallel sessions"
+
+
+# =============================================================================
+# CROSS-CUTTING REQUIREMENTS  (20 applicable)
+# Definitions in eagle_requirements_overview.yaml — references only below.
+# =============================================================================
+
+cross_cutting_requirements_applied:
+
+  # -------------------------------------------------------------------------
+  # Security (REQ-SEC-*)         → eagle_requirements_overview.yaml §5.1
+  # -------------------------------------------------------------------------
+  - REQ-SEC-001  # Encryption in transit and at rest
+  - REQ-SEC-002  # Vulnerability management and security testing programme
+  - REQ-SEC-003  # Data retention and deletion
+
+  # -------------------------------------------------------------------------
+  # Resilience (REQ-RES-*)        → eagle_requirements_overview.yaml §5.2
+  # -------------------------------------------------------------------------
+  - REQ-RES-001  # Pipeline failure modes and fallback mechanisms
+  - REQ-RES-002  # Service availability targets
+
+  # -------------------------------------------------------------------------
+  # Scale (REQ-SCL-*)             → eagle_requirements_overview.yaml §5.3
+  # -------------------------------------------------------------------------
+  - REQ-SCL-001  # Priority queue architecture for pipeline execution
+  - REQ-SCL-002  # Per-client throughput SLA
+
+  # -------------------------------------------------------------------------
+  # Performance (REQ-PER-*)       → eagle_requirements_overview.yaml §5.4
+  # -------------------------------------------------------------------------
+  - REQ-PER-001  # Performance targets
+
+  # -------------------------------------------------------------------------
+  # DORA operational (REQ-CPL-*)  → eagle_requirements_overview.yaml §5.6
+  # -------------------------------------------------------------------------
+  - REQ-CPL-001  # ICT incident classification and authority reporting workflow
+  - REQ-CPL-002  # DORA Art.30 contractual information pack
+  - REQ-CPL-003  # DORA register of information export for clients
+
+  # -------------------------------------------------------------------------
+  # Change & release (REQ-REL-*)  → eagle_requirements_overview.yaml §5.7
+  # -------------------------------------------------------------------------
+  - REQ-REL-001  # Validation rule and pipeline regression test suite
+  - REQ-REL-004  # Staging acceptance test: mandatory pass criteria before production promotion
+  - REQ-REL-005  # Change freeze window around NCA submission deadlines
+  - REQ-REL-008  # Infrastructure as Code: all environments defined in version-controlled IaC
+
+  # -------------------------------------------------------------------------
+  # ISO 27001 (REQ-ISO-*)         → eagle_requirements_overview.yaml §6
+  # -------------------------------------------------------------------------
+  - REQ-ISO-004  # Formal change management for application, rules and configuration
+  - REQ-ISO-007  # Environment separation and production data protection
+
+  # -------------------------------------------------------------------------
+  # DORA reqs (REQ-DORA-*)        → eagle_requirements_overview.yaml §9
+  # -------------------------------------------------------------------------
+  - REQ-DORA-001  # ICT incident authority notification workflow
+  - REQ-DORA-002  # ICT incident lessons-learned feedback loop
+  - REQ-DORA-003  # Client data export and exit support
+

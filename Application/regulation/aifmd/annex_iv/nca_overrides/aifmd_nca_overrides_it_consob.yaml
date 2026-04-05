@@ -1,0 +1,61 @@
+################################################################################
+# NCA-SPECIFIC OVERRIDES — CONSOB (IT)
+# Version: v1 — 2026-04-03
+# Base YAML: aifmd_validation_rules.yaml
+#
+# Source: Online research of NCA documentation and ESMA guidelines
+# National code: Banca d'Italia AIFM registration code
+# Portal: Banca d'Italia reporting system (dual supervision with CONSOB)
+# File packaging: XML
+# Deadline: Standard 30 days after reporting period end
+################################################################################
+nca_overrides:
+  nca: CONSOB
+  country: IT
+  base_yaml: aifmd_validation_rules.yaml
+  base_yaml_version: '1.0'
+  source_document:
+    title: AIFMD Annex IV Reporting Requirements — Banca d'Italia / CONSOB
+    version: '1.0'
+    date: '2026-04-03'
+    publisher: Banca d'Italia / CONSOB
+    url: https://www.consob.it
+  transmission:
+    portal: Banca d'Italia reporting system (dual supervision with CONSOB)
+    method: XML upload
+  file_format:
+    packaging: XML
+    national_code_info: Banca d'Italia AIFM registration code
+  changelog:
+  - version: v1
+    date: '2026-04-03'
+    changes:
+    - Initial CONSOB NCA override file — based on web research of latest documentation
+  nca_rules:
+  - rule_id: NCA-CONSOB-IT-ReportingMemberState
+    base_rule_id: AIFM-1
+    field_id: '1'
+    field_name: Reporting Member State
+    xsd_element: <ReportingMemberState>
+    severity: CRITICAL
+    overrides_esma: true
+    status: active
+    nca_source_doc: Banca d'Italia / CONSOB reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: 'For reports submitted to Italian authorities the value must always be IT. Italy has dual supervision:
+      Banca d''Italia (prudential/risk) and CONSOB (conduct/transparency).'
+    validation_rules: ReportingMemberState = "IT"
+  - rule_id: NCA-CONSOB-IT-DualSupervision
+    base_rule_id: ''
+    field_id: SUPERVISION
+    field_name: Dual Supervision Structure
+    xsd_element: ''
+    severity: MEDIUM
+    overrides_esma: false
+    status: active
+    nca_source_doc: Banca d'Italia / CONSOB reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: Italy operates a dual supervision model. Banca d'Italia handles risk containment and operational prudential
+      rules. CONSOB handles conduct, transparency, and investor protection. AIFMs should confirm submission channel with their
+      primary supervisor.
+    validation_rules: Reports may be shared between Banca d'Italia and CONSOB

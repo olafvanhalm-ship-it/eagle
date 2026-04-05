@@ -1,0 +1,73 @@
+approved_at: '2026-04-03T13:11:41.410333'
+approved_by: Olaf van Halm
+reason: Added 25 new NCA override files for full EU/EEA coverage (31 total)
+base_rules:
+  path: aifmd_validation_rules.yaml
+  hash: c74fda1d66202d054a8b09fc678e63a670ab72d4ff7159c20214833b5b686afb
+nca_overrides:
+  aifmd_nca_overrides_at_fma.yaml:
+    hash: 15c915dc54efd42a5297f250285868149594aeddc30d1ee6c61483987e7b45eb
+  aifmd_nca_overrides_be_fsma.yaml:
+    hash: 352c681600e9deb74808b8bc5e6885e68aa5b74749444822bcdc855896e629e9
+  aifmd_nca_overrides_bg_fsc.yaml:
+    hash: 3f5958871d161c3d1e5d8213d8abced0f688eaded0c552b4e6311ff56e745ed5
+  aifmd_nca_overrides_cy_cysec.yaml:
+    hash: ccc194ef0090de11872bd0bcaf2c926fc100f35db1d2946247f389c60e554942
+  aifmd_nca_overrides_cz_cnb.yaml:
+    hash: fb167770b40135c8f635d719d327bf4ffd55a53ba1f094b2dd85e35e4fd055da
+  aifmd_nca_overrides_de_bafin.yaml:
+    hash: 5bf294870f7e0f917bfdcd8f46fdef9046b25a64028b151b840506251e1cf41f
+  aifmd_nca_overrides_dk_finanstilsynet.yaml:
+    hash: 90493762ed245cc24dfcf201ba1cb69129790ef50b3708b9bfab06f40964e511
+  aifmd_nca_overrides_ee_fsa.yaml:
+    hash: 8f0abbbb6d0e2d206bad04f34aa5a9b0bf3e83fd14ddc8657f44a27b7c7d5bc5
+  aifmd_nca_overrides_es_cnmv.yaml:
+    hash: 3ae048a117cb59186f7108040c38e20408b8697d2d4c183adfa11e2545cda806
+  aifmd_nca_overrides_fi_finfsa.yaml:
+    hash: 07c6a6399c3804c9017b85c014e6090b9123477b119f54be011f0bcd754a02a0
+  aifmd_nca_overrides_fr_amf.yaml:
+    hash: 7c268e33667295dcda6d45b4bc7a9a3bc680298fcbc73b51e848b563351767e1
+  aifmd_nca_overrides_gb_fca.yaml:
+    hash: f95b7a3a904dc5775d3ba1716fe514b727204314ed222073aed4f24e80008038
+  aifmd_nca_overrides_gr_hcmc.yaml:
+    hash: 5671df6459c7729c0d319d0a5837d93797d9dc5fd8b671d370a2cd75b35ea83c
+  aifmd_nca_overrides_hr_hanfa.yaml:
+    hash: 0974eb366c366922567c9dadb1f41a8537da7448dc8c58566314f67803f29df1
+  aifmd_nca_overrides_hu_mnb.yaml:
+    hash: cdcfe84c0c6eaec4ba1ef2e6466e1fcbd399337eaa927c562bf5b3f665e4416b
+  aifmd_nca_overrides_ie_cbi.yaml:
+    hash: 0fb3d109eed6844548e632ae9ebd7502bc249c9bf9b42b899ebc7da43238b1f4
+  aifmd_nca_overrides_is_cbi.yaml:
+    hash: ba4247d8f87f35ead89abd14b072041ef533c9828352f5953af2c1e606fc3b3d
+  aifmd_nca_overrides_it_consob.yaml:
+    hash: 875c8046c6edc74994add88c267776f5238177aef883621d4cffcf431aff91a3
+  aifmd_nca_overrides_li_fma.yaml:
+    hash: adf2b66096a00ba5b057cdc5ced99977da901fa571fca57429da9f236f05b087
+  aifmd_nca_overrides_lt_lb.yaml:
+    hash: 550ca4fffad9e5ec31ce3a18dbafef7372160fb6c4aac25bbce5e042dc21e0d4
+  aifmd_nca_overrides_lu_cssf.yaml:
+    hash: d89c0265cdd4265ec56c86796becbe400ef485153077d5f6c42277633c61e6c6
+  aifmd_nca_overrides_lv_lb.yaml:
+    hash: 5a72063b97251e14d14801b61069d6fb2ccd9a5b820f6efdbadb0648a1abb576
+  aifmd_nca_overrides_mt_mfsa.yaml:
+    hash: 2214a6cd17d7b912dcdadc3b8645612c9dcdb3019f50018dd18a36be0f536cee
+  aifmd_nca_overrides_nl_afm.yaml:
+    hash: 76a4c13cfcf96e1dd1aeede54a3bee35cf49f7ade58389e711d9130ca796e950
+  aifmd_nca_overrides_no_finanstilsynet.yaml:
+    hash: 74c25a288e3ca0869768f7f52d8f56157df9d84c920e31366dd8178b461d859e
+  aifmd_nca_overrides_pl_knf.yaml:
+    hash: 8f74f594c7ff80c1ad95c5f08ee0aa80afa69a91b2f0b9f0f3aec5307faf0791
+  aifmd_nca_overrides_pt_cmvm.yaml:
+    hash: 60cda97d80da6af148eedd76ef85f63c481d1449b81711021a25257796c6680e
+  aifmd_nca_overrides_ro_asf.yaml:
+    hash: 82fbbe023e2ff96b9bcea8ec419d015a0e6c73e16fdd51eae048ef90bfa0b83e
+  aifmd_nca_overrides_se_fi.yaml:
+    hash: 82016d666e11ead2455a309c0cd9b1105b4e990251ecf815c4467be895e55f2c
+  aifmd_nca_overrides_si_atvp.yaml:
+    hash: 1fb9031b82b12614b63f3048b28b2ead47696523ce99e8862ce050dc0575df9d
+  aifmd_nca_overrides_sk_nbs.yaml:
+    hash: e6c2a7d0e87a126848f6a80b17eeae9ad81503b59468aa19e20a2edeb493ce02
+changes:
+- date: '2026-04-03'
+  description: Added AT, BG, CY, CZ, DK, EE, ES, FI, FR, GR, HR, HU, IS, IT, LI, LT,
+    LV, MT, NO, PL, PT, RO, SE, SI, SK NCA overrides

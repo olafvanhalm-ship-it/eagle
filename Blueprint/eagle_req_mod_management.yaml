@@ -1,0 +1,1518 @@
+# =============================================================================
+# Project Eagle — Company Management Intelligence (MOD-MANAGEMENT)
+# Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml
+# Cross-cutting requirements defined in: eagle_requirements_overview.yaml
+# Manual controls: eagle_manual_controls.yaml
+# =============================================================================
+
+metadata:
+  module: MOD-MANAGEMENT
+  name: "Company Management Intelligence"
+  primary_users: [EAGLE_ADMIN, COO, CCO, CRO, CFO, CCO_DELEGATE]
+  pipeline_layers: [L9_ORCHESTRATION, L8_AUDIT]
+  module_req_count: 38
+  cross_req_count: 20
+  # (cross_req_count unchanged)
+  total_applicable: 58
+
+# =============================================================================
+# MODULE REQUIREMENTS  (34 requirements)
+# =============================================================================
+
+requirements:
+
+  # -------------------------------------------------------------------------
+  # COO operations
+  # -------------------------------------------------------------------------
+  coo_operations:
+
+    - id: REQ-OPS-001
+      title: "EAGLE_ADMIN cross-client operations dashboard"
+      module: MOD-MANAGEMENT
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P1, P2, P4, P10]
+      regulatory: [DORA]
+      description: >
+        A dedicated internal dashboard — visible only to EAGLE_ADMIN — that
+        provides a real-time cross-tenant view of the reporting factory. This
+        is the primary operational control surface for the COO role. It
+        aggregates status across all active clients into a single operational
+        health view, distinct from the per-client compliance dashboard
+        (REQ-DSH-001) which is client-facing.
+      required_elements:
+        factory_overview:
+          - "Total active clients with count of AIFs and NCA registrations"
+          - "Submissions in progress: count by pipeline stage (INGESTING, VALIDATING, REVIEW_PENDING, SUBMITTING)"
+          - "Queue depth: number of records waiting in each stage across all tenants"
+          - "Submission success rate for the current and previous reporting period (% accepted / % rejected / % pending)"
+          - "Automation ratio indicator: current rolling 30-day automation ratio (see REQ-OPS-002)"
+        deadline_pressure_view:
+          - "All NCA deadlines within the next 14 days, sorted by urgency, showing client, NCA, period, status, and days remaining"
+          - "Color-coded urgency: GREEN (>7 days), AMBER (3-7 days), RED (<3 days), BLACK (overdue)"
+          - "One-click drill-down to the client's submission in the admin tenant view"
+        per_client_health_row:
+          - "Table of all clients, each row showing: client name, active AIF count, last submission date, current period status, SLA performance score (last 12 months), open exception count"
+          - "Sortable by any column; filterable by status and SLA score"
+          - "Clients with deteriorating health (SLA score below threshold or open exceptions above threshold) highlighted automatically"
+        ingestion_status:
+          - "Per-client data receipt status for the current period: RECEIVED, PARTIAL, NOT_YET_RECEIVED, OVERDUE"
+          - "Expected vs. received feed counts where clients use scheduled SFTP or API push"
+          - "Flag for clients where ingest is overdue relative to their submission deadline minus configured lead time"
+        reference_data_panel:
+          - "Simplified version of REQ-REF-002: ECB rate freshness, GLEIF freshness, NCA register freshness — with status indicators"
+      requirements:
+        - "Dashboard loads in < 3 seconds for up to 200 active clients"
+        - "All data reflects pipeline state with maximum 60-second refresh lag"
+        - "Dashboard accessible from any authenticated EAGLE_ADMIN session without tenant context"
+        - "Dashboard state (filters, sort) persisted in DB per user — not browser state; consistent across devices and sessions"
+        - "Mobile-responsive layout for on-call access"
+      acceptance_criteria:
+        - "EAGLE_ADMIN sees all active clients in a single scrollable view without navigating per tenant"
+        - "A client with OVERDUE status is prominently distinguishable from the rest within 5 seconds of opening the dashboard"
+        - "Ingestion overdue flag fires correctly when a client's SFTP feed has not arrived within the configured lead time"
+
+    - id: REQ-OPS-002
+      title: "Automation ratio tracking and reporting"
+      module: MOD-MANAGEMENT
+      layer: [L9_ORCHESTRATION, L8_AUDIT]
+      priority: MUST
+      phase: 1
+      principles: [P2, P4, P10, P11]
+      regulatory: [DORA]
+      description: >
+        The automation ratio — the proportion of AIF submissions processed
+        end-to-end without any manual intervention — is the primary operational
+        KPI for the reporting factory (COO document section 8: target >90% by
+        Phase 2). The application must record every manual touchpoint against
+        a submission and compute the automation ratio at multiple granularities.
+        A submission is counted as automated only if it completes all pipeline
+        stages L1 through L7 without any of the defined manual interventions.
+      manual_intervention_types:
+        MANUAL_FIELD_ENTRY:     "Any field entered manually via web UI rather than derived or ingested"
+        MANUAL_FIELD_OVERRIDE:  "Override of a derived or AI-proposed field value"
+        MANUAL_CAF_OVERRIDE:    "Override of a CAF (critical mandatory) validation failure"
+        MANUAL_CAM_OVERRIDE:    "Override of a CAM (critical additional mandatory) validation failure"
+        MANUAL_DQ_ACKNOWLEDGE:  "Explicit acknowledgement of a DQEF DQ-WARNING flag"
+        MANUAL_REVIEW_WITH_FLAGS: "Review gate approval of a record that carries unresolved flags"
+        MANUAL_SUBMISSION:      "Submission via MANUAL download channel (not automated NCA delivery)"
+        MANUAL_EXCEPTION_RESOLUTION: "Any exception in the operational exception log linked to this submission"
+      automation_ratio_definition: >
+        automation_ratio = count(submissions with zero manual_intervention_types) /
+                           count(all completed submissions) * 100
+        Calculated per period, per client, and as a rolling 30-day factory-wide figure.
+        MANUAL_DQ_ACKNOWLEDGE is excluded from the ratio denominator when the DQ flag
+        is a known-good exception documented in the CAM register (REQ-OVR-001).
+      requirements:
+        - "Every manual intervention type is recorded against the submission record at the moment of occurrence"
+        - "Automation ratio computed and stored per (client, reporting_period, NCA_registration) on submission completion"
+        - "Rolling 30-day factory-wide automation ratio available in REQ-OPS-001 dashboard"
+        - "Automation ratio trend chart available in MOD-MANAGEMENT: monthly bars for the last 12 months, factory-wide and per client"
+        - "Breakdown by intervention type available: which manual touchpoints are most frequent and on which clients"
+        - "Automation ratio stored as a first-class record in the management_metrics table per (client, reporting_period, NCA_registration) — queryable directly; no intermediate file store"
+        - "PDF and CSV exports of automation ratio data generated on demand from DB records in MOD-MANAGEMENT; the export is a view of the DB record, not a separate data store"
+        - "EAGLE_ADMIN can set an automation ratio alert threshold; alert fires when the rolling 30-day ratio drops below the threshold"
+      acceptance_criteria:
+        - "A submission where a DATA_PREPARER manually entered one field is correctly counted as non-automated"
+        - "A submission processed entirely via API ingestion, AI transformation confirmed without change, zero validation flags, bulk approved, and delivered via DIRECT_API is counted as automated"
+        - "Monthly automation ratio chart reflects actual intervention data — not estimated"
+        - "Alert fires within 60 minutes of the rolling ratio crossing the configured threshold"
+
+    - id: REQ-OPS-003
+      title: "Per-submission SLA throughput metrics"
+      module: MOD-MANAGEMENT
+      layer: [L9_ORCHESTRATION, L8_AUDIT]
+      priority: MUST
+      phase: 1
+      principles: [P1, P4, P10]
+      regulatory: [DORA]
+      description: >
+        In addition to deadline conformity (whether a submission was made before
+        the NCA deadline), the COO needs to measure factory throughput: how long
+        each submission took to move from initial data receipt to NCA delivery.
+        These metrics drive SLA definition, capacity planning, and identification
+        of pipeline bottlenecks.
+      metrics_to_capture:
+        total_cycle_time:
+          definition: "Elapsed time from first ingestion event to NCA submission confirmation"
+          unit: "Hours (decimal)"
+          recorded_per: "(client, AIF, reporting_period, NCA_registration)"
+        stage_dwell_times:
+          definition: "Time spent in each pipeline stage: INGESTING, TRANSFORMATION, VALIDATION, REVIEW_PENDING, PACKAGING, SUBMITTING"
+          unit: "Hours (decimal)"
+          note: "REVIEW_PENDING dwell time is the primary indicator of human review bottleneck"
+        deadline_margin:
+          definition: "Hours between NCA submission confirmation and the NCA deadline"
+          sign: "Positive = on time; negative = overdue"
+        manual_intervention_dwell:
+          definition: "Sum of time attributed to manual intervention types per REQ-OPS-002"
+          note: "Derived: total_cycle_time minus automated stage processing time"
+      requirements:
+        - "All stage timestamps derived from the existing audit trail (REQ-AUD-001) — no separate timing infrastructure required"
+        - "Per-submission SLA metrics stored as first-class records in the submission_metrics table per (client, AIF, reporting_period, NCA_registration) — queryable directly from MOD-MANAGEMENT without file export"
+        - "SLA performance view in MOD-MANAGEMENT: average and P90 cycle time per client per period"
+        - "Pipeline bottleneck report: which stage accounts for the most dwell time across all submissions in a period"
+        - "Deadline margin distribution chart: histogram of hours-before-deadline for all submissions in the last 12 months"
+      acceptance_criteria:
+        - "Total cycle time for a submission is consistent with the difference between first ingestion timestamp and submission confirmation timestamp in the audit trail"
+        - "REVIEW_PENDING dwell time is correctly identified as the dominant stage for any submission where the reviewer took more than 24 hours"
+        - "Deadline margin is correctly negative for any submission where the NCA confirmation timestamp post-dates the configured deadline"
+
+    - id: REQ-OPS-004
+      title: "Operational exception log"
+      module: MOD-MANAGEMENT
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P2, P4, P7, P10]
+      regulatory: [DORA]
+      description: >
+        A structured, searchable operational exception log maintained by
+        EAGLE_ADMIN for tracking non-automated resolutions, pipeline failures,
+        and escalated issues. This is distinct from the immutable audit trail
+        (REQ-AUD-001) which records all events; the exception log is an
+        operational register of issues requiring attention or tracking.
+        Exceptions may be opened automatically by the system (e.g. robot
+        failure, reference data update failure) or manually by EAGLE_ADMIN.
+      exception_categories:
+        PIPELINE_FAILURE:      "Pipeline stage failed for technical reason — e.g. transformation timeout, robot failure"
+        DATA_QUALITY_ISSUE:    "Client data arrived malformed, incomplete, or with unexpected structure"
+        SLA_AT_RISK:           "Submission is at risk of missing deadline — triggered by REQ-OPS-001 deadline pressure view"
+        REFERENCE_DATA_STALE:  "Reference data batch update failed or exceeded staleness threshold"
+        MANUAL_ESCALATION:     "EAGLE_ADMIN or client raised an issue requiring operational attention"
+        DORA_INCIDENT_LINKED:  "Exception linked to an open DORA incident (REQ-OPS-006)"
+      exception_record_fields:
+        id:              "Auto-generated exception ID"
+        opened_at:       "Timestamp — auto (system-generated) or manual entry"
+        category:        "One of the exception categories above"
+        severity:        "LOW / MEDIUM / HIGH / CRITICAL"
+        client:          "Linked tenant / AIFM sub-entity"
+        period:          "Reporting period affected (if applicable)"
+        pipeline_stage:  "Pipeline stage at point of exception (if applicable)"
+        description:     "Free-text description of the issue"
+        status:          "OPEN / IN_PROGRESS / RESOLVED / CLOSED"
+        assigned_to:     "EAGLE_ADMIN user responsible"
+        resolution_time: "Elapsed hours from opened_at to RESOLVED status"
+        root_cause:      "Free-text root cause (required before status can be set to CLOSED)"
+        linked_audit_events: "References to audit trail event IDs relevant to this exception"
+        linked_dora_incident: "Reference to DORA incident ID if applicable (REQ-OPS-006)"
+      requirements:
+        - "System auto-opens exceptions for: robot failure (REQ-NCA-002), reference data update failure (REQ-REF-001 alert), NCA submission rejection (REQ-SUB-003), and OVERDUE status reached"
+        - "EAGLE_ADMIN can manually open, update, assign, and close exceptions"
+        - "Exception log searchable and filterable by all fields"
+        - "Open exception count per client surfaced in REQ-OPS-001 client health row"
+        - "Root cause is required before an exception can be set to CLOSED"
+        - "Exception log stored in the exceptions table — all fields indexed and queryable from MOD-MANAGEMENT; CSV and JSON export generated on demand as views of the DB record, not separate stores"
+        - "Monthly exception summary computed from DB records and stored as a monthly_exception_summary record; displayed in MOD-MANAGEMENT without requiring manual assembly"
+        - "Exception records retained for 5 years"
+      acceptance_criteria:
+        - "A robot failure event (REQ-NCA-002) automatically creates an exception record within 5 minutes of the failure event"
+        - "Attempting to close an exception without entering a root cause is blocked with an explanatory message"
+        - "EAGLE_ADMIN can filter all open HIGH and CRITICAL exceptions across all clients in one view"
+
+    - id: REQ-OPS-005
+      title: "Cross-client reporting capacity calendar"
+      module: MOD-MANAGEMENT
+      layer: [L9_ORCHESTRATION]
+      priority: SHOULD
+      phase: 1
+      principles: [P1, P2, P4, P10]
+      regulatory: []
+      description: >
+        An EAGLE_ADMIN-only calendar view that aggregates all NCA submission
+        deadlines across all active clients and NCA registrations into a single
+        factory capacity view. This view enables the COO to identify peak
+        submission periods, anticipate capacity requirements, and plan
+        operational resources in advance. It is the cross-tenant counterpart
+        to the per-client reporting calendar in REQ-DSH-001.
+      required_elements:
+        calendar_view:
+          - "Monthly and weekly views showing all NCA submission deadlines across all clients"
+          - "Each deadline shown as a bar or marker labeled with: client name, NCA code, number of AIFs in scope, submission channel"
+          - "Peak-load indicator: total number of submissions due within any 7-day window highlighted when above configurable threshold"
+        load_distribution:
+          - "Bar chart of submission count by calendar week for the next 6 months"
+          - "Configurable peak threshold; weeks above threshold highlighted in amber/red"
+        scenario_planning:
+          - "Ability to add projected future client deadlines (for clients in onboarding) to the calendar without activating them"
+          - "Projection mode: show estimated load assuming 2x and 5x current client count based on current deadline distribution"
+      requirements:
+        - "Calendar populated automatically from all active NCA registration deadline schedules"
+        - "Updates automatically when a new client is onboarded or a reporting frequency changes"
+        - "Calendar data stored in the capacity_calendar table — DB record is the source of truth; PDF export generated on demand as a view of the DB record"
+      acceptance_criteria:
+        - "Calendar correctly shows all deadlines for 50 active clients with varying NCA registrations and reporting frequencies"
+        - "Peak-load alert fires when a 7-day window contains more submissions than the configured threshold"
+        - "Projected 2x client load view is available and clearly labeled as a projection"
+
+    - id: REQ-OPS-006
+      title: "DORA incident client impact register"
+      module: MOD-MANAGEMENT
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P4, P7, P10]
+      regulatory: [DORA]
+      description: >
+        A structured register of client impacts for each DORA MAJOR or
+        SIGNIFICANT incident, owned by the COO (operational impact lane per
+        project_eagle_coo_v1_1.md section 4.5). This register is the input
+        to the DORA Art.18 regulatory notification process owned by the Head
+        of Compliance and Risk, and provides the basis for client SLA
+        remediation tracking.
+        This requirement complements the technical incident register
+        (REQ-ISO-005) which is owned by the CTO. Each DORA incident has two
+        linked records: a technical incident record (REQ-ISO-005) and an
+        operational client impact record (this requirement).
+      impact_register_fields:
+        incident_id:            "Reference to the DORA technical incident record (REQ-ISO-005)"
+        incident_classification: "MAJOR / SIGNIFICANT per DORA Art.3 and REQ-DORA-001"
+        detected_at:            "Timestamp of first detection"
+        affected_clients:
+          structure:            "List of affected client records, one per client"
+          per_client_fields:
+            client_name:        "Tenant / AIFM sub-entity name"
+            impact_type:        "SUBMISSION_DELAYED / DATA_UNAVAILABLE / PORTAL_INACCESSIBLE / AUDIT_TRAIL_UNAVAILABLE / OTHER"
+            submission_at_risk: "Boolean — is there a submission deadline within 5 business days of incident start?"
+            deadline:           "Date of submission deadline at risk (if applicable)"
+            sla_breach:         "Boolean — did or will the incident cause an SLA breach?"
+            client_notified_at: "Timestamp of client notification"
+            notification_channel: "EMAIL / IN_APP / PHONE (free text)"
+            remediation_commitment: "Free text — what Eagle has committed to the client"
+            remediation_status: "PENDING / IN_PROGRESS / COMPLETED"
+        regulatory_notification_required: "Boolean — derived from classification; triggers alert to Head of Compliance"
+        regulatory_notification_deadline: "Deadline for DORA Art.18 initial notification (4 hours for MAJOR)"
+        post_incident_review_due: "5 business days after incident resolution for MAJOR incidents"
+        lessons_learned:        "Free text — linked to operational improvement programme"
+      requirements:
+        - "Impact register record created automatically when a DORA incident is classified as MAJOR or SIGNIFICANT in REQ-ISO-005"
+        - "EAGLE_ADMIN populates affected client list and impact details; system pre-populates clients with active submissions near the incident window"
+        - "If regulatory_notification_required is TRUE, an urgent alert is sent to the Head of Compliance and Risk role with the notification deadline"
+        - "SLA breach flag on any client record triggers automatic notification to that client's Head of Customer Success contact"
+        - "Impact register visible in REQ-OPS-001 dashboard during an active incident"
+        - "All impact register records retained for 5 years per DORA retention requirements"
+        - "Impact register exportable as PDF and JSON for inclusion in post-incident report (REQ-ISO-005)"
+      acceptance_criteria:
+        - "Creating a MAJOR incident in REQ-ISO-005 automatically creates a linked impact register record within 5 minutes"
+        - "Alert to Head of Compliance and Risk fires with the correct 4-hour notification deadline for a MAJOR incident"
+        - "Impact register export produces a self-contained document suitable for inclusion in a DORA Art.18 notification package"
+
+    - id: REQ-OPS-007
+      title: "Automated client health score"
+      priority: MUST
+      phase: 1
+      principles: [P2, P4, P10, P14]
+      module: MOD-MANAGEMENT
+      note: >
+        DB-native composite score replacing manual COO assessment; auto-actions on RED/AMBER tiers.
+        Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml changelog v1.3.0.
+        Full formal block not yet written in source; to be expanded in MOD-MANAGEMENT-SPEC v1.0.
+    - id: REQ-OPS-008
+      title: "Exception pattern analysis"
+      priority: SHOULD
+      phase: 1.5
+      principles: [P2, P4, P10, P14]
+      module: MOD-MANAGEMENT
+      note: >
+        Automatic recurring pattern detection; automation gap intelligence stored in automation_gaps table for CTO/CPO roadmap intake.
+        Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml changelog v1.3.0.
+        Full formal block not yet written in source; to be expanded in MOD-MANAGEMENT-SPEC v1.0.
+    - id: REQ-OPS-009
+      title: "Vendor SLA tracking"
+      priority: MUST
+      phase: 1
+      principles: [P2, P4, P10, P14]
+      module: MOD-MANAGEMENT
+      note: >
+        vendor_register and vendor_deliveries tables; continuous monitoring; breach alerts with DB-linked exceptions.
+        Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml changelog v1.3.0.
+        Full formal block not yet written in source; to be expanded in MOD-MANAGEMENT-SPEC v1.0.
+    - id: REQ-OPS-010
+      title: "Cost-per-submission model"
+      priority: MUST
+      phase: 1
+      principles: [P2, P4, P10, P14]
+      module: MOD-MANAGEMENT
+      note: >
+        Auto-computed from existing DB tables; cost_per_submission_model table; stateless simulation tool.
+        Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml changelog v1.3.0.
+        Full formal block not yet written in source; to be expanded in MOD-MANAGEMENT-SPEC v1.0.
+    - id: REQ-OPS-011
+      title: "Monthly operational report"
+      priority: MUST
+      phase: 1
+      principles: [P2, P4, P10, P14]
+      module: MOD-MANAGEMENT
+      note: >
+        monthly_operational_reports table; all sections populated from existing DB tables; PDF is a view.
+        Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml changelog v1.3.0.
+        Full formal block not yet written in source; to be expanded in MOD-MANAGEMENT-SPEC v1.0.
+    - id: REQ-OPS-012
+      title: "Capacity breach alerts"
+      priority: MUST
+      phase: 1
+      principles: [P2, P4, P10, P14]
+      module: MOD-MANAGEMENT
+      note: >
+        capacity_thresholds and capacity_projections tables; weekly projection; exception auto-opened.
+        Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml changelog v1.3.0.
+        Full formal block not yet written in source; to be expanded in MOD-MANAGEMENT-SPEC v1.0.
+    - id: REQ-OPS-013
+      title: "Post-incident review workflow"
+      priority: MUST
+      phase: 1
+      principles: [P2, P4, P10, P14]
+      module: MOD-MANAGEMENT
+      note: >
+        incident_reviews table; auto-populated from audit trail and impact register; feeds automation_gaps.
+        Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml changelog v1.3.0.
+        Full formal block not yet written in source; to be expanded in MOD-MANAGEMENT-SPEC v1.0.
+    - id: REQ-OPS-014
+      title: "AI pipeline performance monitoring"
+      priority: MUST
+      phase: 1
+      principles: [P2, P4, P10, P14]
+      module: MOD-MANAGEMENT
+      note: >
+        ai_field_performance and ai_override_patterns tables; sourced from audit trail; AI Act evidence.
+        Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml changelog v1.3.0.
+        Full formal block not yet written in source; to be expanded in MOD-MANAGEMENT-SPEC v1.0.
+
+  # -------------------------------------------------------------------------
+  # CCO / CRO commercial dashboard
+  # -------------------------------------------------------------------------
+  cco_cro_commercial_dashboard:
+
+    - id: REQ-INT-001
+      title: "CCO/CRO commercial KPI dashboard (MOD-MANAGEMENT CCO-view)"
+      module: MOD-MANAGEMENT
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      gdpr_blocker: false
+      principles: [P1, P2, P4, P10, P12]
+      regulatory: []
+      description: >
+        The CCO-view within MOD-MANAGEMENT provides a real-time commercial
+        intelligence dashboard covering the full funnel from prospect
+        database to signed ARR. It consolidates data from MOD-GTM,
+        MOD-TRIAL, Pipedrive (via webhook/API), and MOD-BILLING. All
+        stakeholder-specific views (CCO, CRO, CFO) are subsets of the
+        same underlying dataset — no duplicate data stores.
+      funnel_metrics:
+        prospect_database:
+          - "Total AIFM prospects in database by NCA jurisdiction"
+          - "Coverage rate: % of ESMA register represented in database"
+          - "Enrichment completion rate: % of prospects with MEDIUM+ confidence on PredominantAIFType"
+        outbound_pipeline:
+          - "Outbound volume: emails and LinkedIn messages sent (from external tool webhooks)"
+          - "MQL rate: % of outreach resulting in trial registration, demo request or form fill"
+          - "Inbound lead volume: website forms + content downloads + AI chat leads per month"
+        legitimacy_queue:
+          - "Pending legitimacy reviews: count, average age in hours"
+          - "Approval rate by legitimacy score tier (HIGH auto / MEDIUM approved / LOW rejected)"
+        trial_funnel:
+          - "Active trials: count by health tier (HOT / WARM / COLD / INACTIVE)"
+          - "Trial activation rate: % of provisioned trials that uploaded data"
+          - "Trial-to-demo rate: % of HOT/WARM trials that requested a demo or contacted Eagle"
+          - "Trial-to-paid conversion rate: % of trials converting within trial period"
+          - "Average days to conversion (trial start to contract signed)"
+      revenue_metrics:
+        - "New ARR: signed contract value per month and rolling 12 months"
+        - "Pipeline ARR: probability-weighted ARR per Pipedrive stage"
+        - "Sales cycle length: average days from first MQL to signed contract"
+        - "CAC: total sales and marketing spend divided by new clients in period"
+        - "LTV:CAC ratio: computed from average contract value, average retention and CAC"
+        - "NRR: net revenue retention including expansion and churn"
+        - "ICP hit rate: % of closed deals matching the defined ICP criteria"
+        - "Scope exception rate: % of deals requiring non-standard product commitments"
+      cfo_subview:
+        - "ARR bridge: opening ARR + new ARR + expansion ARR - churn ARR = closing ARR"
+        - "MRR with month-over-month trend"
+        - "Revenue forecast: pipeline-weighted ARR projection for next 3 months"
+      requirements:
+        - "Dashboard data refreshed at minimum every 4 hours; manual refresh available"
+        - "Revenue concentration alert: when any single client's ARR exceeds 30% of total ARR, an automatic alert is sent to CFO and CEO; concentration percentage displayed in CFO subview; alert threshold configurable per REQ-MOD-001"
+        - >
+          Pipedrive integration via webhook: deal stage changes in Pipedrive
+          update Eagle CCO-view within 15 minutes. Webhook endpoint is
+          configuration-driven per REQ-MOD-001.
+        - >
+          Funnel metrics (prospect through trial) computed from Eagle-internal
+          data. Revenue metrics sourced from Pipedrive + MOD-BILLING.
+        - "All metric definitions documented and version-controlled alongside the dashboard code"
+        - "Dashboard accessible to EAGLE_ADMIN, CCO, CRO, CFO — scoped by role where noted"
+        - "Export to PDF for weekly pipeline review with CEO"
+        - "Pipedrive webhook staleness: if no webhook event received for > 2 hours, dashboard displays a staleness indicator with last-known-good timestamp on all Pipedrive-sourced metrics; EAGLE_ADMIN alerted; manual refresh trigger available"
+      acceptance_criteria:
+        - "Dashboard loads in < 3 seconds with full dataset"
+        - "Pipedrive deal stage update reflected in pipeline ARR within 15 minutes"
+        - "Coverage rate metric correctly reflects % of ESMA register in MOD-GTM database"
+        - "All funnel and revenue metrics stored as first-class records in the commercial_metrics table; PDF export generated on demand as a view of those records, not a separate document store"
+
+    - id: REQ-INT-002
+      title: "Trial analytics and enrichment quality metrics"
+      module: MOD-MANAGEMENT
+      layer: [L9_ORCHESTRATION]
+      priority: SHOULD
+      phase: 1
+      gdpr_blocker: false
+      principles: [P2, P4, P11, P12]
+      regulatory: [AI_ACT]
+      description: >
+        Dedicated analytics view within MOD-MANAGEMENT tracking the
+        accuracy and effectiveness of the pre-population and orientation
+        system. Feeds the continuous improvement loop for REQ-GTM-001
+        enrichment and REQ-TRIAL-005 quality scoring. Also provides
+        the AI Act evidence for AI component performance monitoring
+        per REQ-AUD-004.
+      enrichment_quality_metrics:
+        - "Pre-population suggestion accuracy: % of AI_PROPOSED_INDICATIVE fields confirmed vs corrected by users, by confidence tier"
+        - "Most frequently corrected fields (top 5 by correction count)"
+        - "COO ops correction rate: % of LOW-score trials that were corrected vs approved-as-is vs suppressed"
+        - "Blank workspace fallback rate: % of trials provisioned in blank mode (score too low or ops timeout)"
+        - "Source domain accuracy: per enrichment source URL domain, % of suggestions confirmed — enables EAGLE_ADMIN to suppress low-accuracy domains"
+      trial_effectiveness_metrics:
+        - "Time-to-first-validation: median hours from trial provisioning to first L3 run"
+        - "Pre-populated vs blank workspace comparison: time-to-first-validation for each cohort"
+        - "Strategy suggestion accuracy: % of AI_PROPOSED_INDICATIVE PredominantAIFType suggestions confirmed at first review"
+        - "Trial health score distribution at T+7, T+14, T+30 days"
+      ai_act_evidence:
+        description: >
+          These metrics constitute the ongoing AI component performance
+          monitoring required by the EU AI Act for the enrichment AI
+          component. Metrics stored per model version to detect accuracy
+          drift across model updates.
+        retention: "5 years per REQ-AUD-004"
+      requirements:
+        - "Metrics available from first 10 completed trial provisioning events"
+        - "EAGLE_ADMIN can suppress a specific enrichment source domain via configuration (REQ-MOD-001)"
+        - "Accuracy metrics segmented by confidence tier (HIGH / MEDIUM / LOW)"
+        - "Model version tag on all accuracy records to detect accuracy drift across updates"
+      acceptance_criteria:
+        - "After 50 trial events, suggestion accuracy calculable and visible for each confidence tier"
+        - "Source domain suppression takes effect within 1 hour without code deployment"
+        - "Blank workspace fallback rate visible and filterable by reason (LOW score vs ops timeout)"
+
+    - id: REQ-INT-003
+      title: "Compliance-as-code: automated RoPA draft generation"
+      module: MOD-MANAGEMENT
+      layer: [L9_ORCHESTRATION]
+      priority: COULD
+      phase: 2
+      gdpr_blocker: false
+      principles: [P2, P8, P10]
+      regulatory: [GDPR]
+      description: >
+        MOD-MANAGEMENT generates a structured RoPA draft automatically from
+        GDPR-relevant requirements in the application requirements YAML on
+        each new version release. The pipeline extracts processing purpose,
+        lawful basis, personal data categories, recipients, retention periods
+        and technical measures from requirements tagged regulatory: [GDPR].
+        Output is a versioned draft requiring Head of Compliance and Risk
+        sign-off — only the diff versus the prior signed version is presented
+        for review, not the full document. LIA steps 1 and 2 are generated
+        automatically; step 3 (balancing test) is presented as a structured
+        template requiring human completion and sign-off before the relevant
+        module may go live. This requirement replaces the Phase 1 manual
+        RoPA sign-off process with an automated gate in the deployment
+        pipeline.
+      ropa_generation_trigger:
+        - "New application requirements version published"
+        - "Any requirement with regulatory: [GDPR] added, changed or removed"
+        - "Any requirement with gdpr_blocker: true added or modified"
+      review_workflow:
+        draft_produced_by: "Automated pipeline from requirements YAML"
+        review_scope: "Diff versus prior signed version only"
+        sign_off_by: "Head of Compliance and Risk"
+        sign_off_recorded: "MOD-MANAGEMENT audit trail with role, identity, timestamp, version"
+        go_live_gate: >
+          Requirements with gdpr_blocker: true cannot be deployed to
+          production until the corresponding RoPA entry status is
+          SIGNED_OFF in this workflow
+      lia_automation:
+        step_1_purpose_test: "Generated from requirement description and module purpose"
+        step_2_necessity_test: "Generated from requirement justification and alternatives considered"
+        step_3_balancing_test: >
+          Structured template generated with processing context pre-filled.
+          Free-text field for human balancing judgment. Cannot be auto-approved.
+          Head of Compliance and Risk must complete and sign.
+      requirements:
+        - >
+          On each requirements version bump, system produces RoPA diff
+          within 24 hours and notifies Head of Compliance and Risk via
+          MOD-MANAGEMENT dashboard and email
+        - "Signed RoPA versions stored immutably in MOD-MANAGEMENT audit partition"
+        - >
+          gdpr_blocker: true requirement blocks deployment pipeline to
+          production until corresponding RoPA entry status is SIGNED_OFF
+        - >
+          LIA step 3 template pre-filled with processing context;
+          free-text field for balancing judgment; sign-off mandatory
+        - >
+          Signed RoPA exportable as PDF for supervisory authority requests
+          and SOC 2 / ISAE 3402 evidence
+        - >
+          Phase 1 manual process (Head of Compliance and Risk sign-off
+          in compliance risk register) is superseded by this automated
+          workflow when REQ-INT-003 goes live
+      acceptance_criteria:
+        - "New GDPR-tagged requirement in a release produces a RoPA diff entry within 24 hours"
+        - "Deployment pipeline blocks production release of gdpr_blocker requirement without SIGNED_OFF status"
+        - "Signed RoPA PDF export passes ISAE 3402 auditor review as sufficient evidence"
+        - "LIA step 3 template for a new processing activity is pre-filled with relevant context from the triggering requirement"
+
+
+  # -------------------------------------------------------------------------
+  # Customer success operations
+  # -------------------------------------------------------------------------
+  customer_success_operations:
+
+    - id: REQ-CS-001
+      title: "CS subview in MOD-MANAGEMENT"
+      module: MOD-MANAGEMENT
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P1, P10, P12, P14]
+      regulatory: []
+      description: >
+        A dedicated Customer Success subview within MOD-MANAGEMENT, accessible
+        to the Head of Customer Success and EAGLE_ADMIN. This is the operational
+        workspace for managing onboarding, health, renewal, expansion and client
+        feedback. All data surfaces from first-class DB records per P14; no
+        spreadsheet or file-based workarounds. The CS subview is a peer to the
+        COO-view (REQ-OPS-001) and CCO/CRO-view (REQ-INT-001) within the same
+        management intelligence module.
+      subview_sections:
+        health_overview:
+          description: "Per-client health scorecard table — links to REQ-CS-002"
+          primary_user: "Head of Customer Success, EAGLE_ADMIN"
+        renewal_pipeline:
+          description: "Contract renewal tracker — links to REQ-CS-003"
+          primary_user: "Head of Customer Success"
+        expansion_pipeline:
+          description: "Expansion opportunity log — links to REQ-CS-005"
+          primary_user: "Head of Customer Success, CRO"
+        constraint_log:
+          description: "Voice of the Client constraint log — links to REQ-CS-006"
+          primary_user: "Head of Customer Success"
+        contact_register:
+          description: "Client contact register — links to REQ-CS-004"
+          primary_user: "Head of Customer Success, COO (incident lane)"
+        incident_followup:
+          description: "Post-incident client follow-up tracker — links to REQ-CS-007"
+          primary_user: "Head of Customer Success, COO"
+      access_control:
+        - "CS subview accessible to HEAD_OF_CS role and EAGLE_ADMIN"
+        - "CRO has read access to expansion pipeline section only"
+        - "CS subview not accessible to tenant roles"
+        - "COO has read access to contact register section (incident communication use)"
+      requirements:
+        - "CS subview loads within 3 seconds for up to 200 active clients"
+        - "All data in the CS subview sourced from DB records; no manual data entry into the view itself"
+        - "Each section links to the underlying DB record for drill-down and edit"
+        - "CS subview state (filters, selected client) persisted in DB per user per P14"
+      acceptance_criteria:
+        - "HEAD_OF_CS user can access the CS subview without navigating through COO-view"
+        - "All six sections render with live data on first load; no section shows a loading error"
+        - "Tenant role attempting to access CS subview receives access denied response"
+
+    - id: REQ-CS-002
+      title: "Client health scorecard"
+      module: MOD-MANAGEMENT
+      layer: [L9_ORCHESTRATION, L8_AUDIT]
+      priority: MUST
+      phase: 1
+      principles: [P1, P2, P4, P10, P11, P14]
+      regulatory: [DORA]
+      description: >
+        A composite, rule-driven health score per active client, stored as a
+        first-class DB record and surfaced in the CS subview (REQ-CS-001) and
+        the COO operations dashboard (REQ-OPS-001). This requirement completes
+        the health score definition introduced in REQ-OPS-007 (v1.3.0), which
+        defined auto-actions on RED/AMBER tiers but did not specify the score
+        composition, weight model or CS workflow integration.
+        In a regulated reporting product, client health is not a satisfaction
+        proxy — it is a composite of compliance outcomes, operational performance,
+        engagement signals and commercial proximity. The score is the primary
+        early-warning instrument for the Head of Customer Success.
+      score_components:
+        submission_success_rate:
+          definition: "Percentage of submissions in the last 12 months delivered to NCA without error or late delivery"
+          weight: 35
+          source: "submission_metrics table (REQ-OPS-003)"
+          red_threshold:   "< 85%"
+          amber_threshold: "85–94%"
+          green_threshold: "≥ 95%"
+        sla_performance:
+          definition: "Average deadline margin (hours before NCA deadline) across all submissions in last 12 months"
+          weight: 25
+          source: "submission_metrics.deadline_margin (REQ-OPS-003)"
+          red_threshold:   "< 12 hours average margin, or any submission with negative margin"
+          amber_threshold: "12–47 hours average margin"
+          green_threshold: "≥ 48 hours average margin"
+        support_ticket_frequency:
+          definition: "Count of client-reported exceptions in the operational exception log (REQ-OPS-004) in the last 90 days"
+          weight: 20
+          source: "exceptions table (REQ-OPS-004)"
+          red_threshold:   "≥ 5 open or recently closed client-reported exceptions"
+          amber_threshold: "2–4 exceptions"
+          green_threshold: "0–1 exceptions"
+        engagement_level:
+          definition: "Active user sessions in MOD-CLIENT portal in the last 30 days relative to expected activity for the reporting period"
+          weight: 10
+          source: "Derived from audit trail (REQ-AUD-001) user_session events"
+          red_threshold:   "No portal activity in a period where activity is expected"
+          amber_threshold: "Below-average session count relative to prior periods"
+          green_threshold: "Normal or above-average engagement"
+        renewal_proximity:
+          definition: "Days to contract renewal date"
+          weight: 10
+          source: "client_contracts table (REQ-CS-003)"
+          red_threshold:   "< 60 days to renewal with no renewal conversation logged"
+          amber_threshold: "60–90 days to renewal with no renewal conversation logged"
+          green_threshold: "> 90 days, or renewal conversation already initiated"
+      composite_score:
+        calculation: >
+          Weighted average of component scores on a 0–100 scale.
+          Component RAG tier converted to numeric: GREEN = 100, AMBER = 50, RED = 0.
+          composite_score = sum(component_score × weight) / 100
+        rag_tiers:
+          GREEN:  "composite_score ≥ 75"
+          AMBER:  "composite_score 50–74, or any single component RED regardless of composite"
+          RED:    "composite_score < 50, or submission_success_rate component RED"
+      storage_and_automation:
+        - "Health score computed and stored per client as a client_health_scores record after every reporting period close"
+        - "On-demand recompute available to HEAD_OF_CS from the CS subview at any time"
+        - "Score record carries: client_id, score_date, composite_score, rag_tier, per-component breakdown, triggered_by (PERIODIC / MANUAL)"
+        - "Health score history retained indefinitely — never overwritten; each recompute creates a new record per P14"
+        - "Score feeds REQ-OPS-001 per_client_health_row (SLA performance score column)"
+      auto_actions:
+        amber:
+          - "CS subview flags client with AMBER indicator; HEAD_OF_CS notified by in-app alert"
+          - "Suggested action prompt: 'Schedule proactive client call'"
+        red:
+          - "CS subview flags client with RED indicator; in-app alert to HEAD_OF_CS and EAGLE_ADMIN"
+          - "Automatic creation of a high-priority exception in REQ-OPS-004 exception log linked to the health record"
+          - "If renewal_proximity component is RED: also alert CRO"
+      requirements:
+        - "Health scorecard computed automatically without manual EAGLE_ADMIN input"
+        - "AMBER and RED auto-actions fire within 1 hour of score computation"
+        - "HEAD_OF_CS can override the rag_tier with a written justification; override logged in audit trail"
+        - "Per-component breakdown visible in CS subview drill-down without separate report generation"
+      acceptance_criteria:
+        - "Client with submission_success_rate below 85% receives RED health score regardless of other components"
+        - "Manual override of rag_tier stored as a distinct audit trail event linked to the health score record"
+        - "Score history for a client shows all prior scores in reverse-chronological order in the CS subview drill-down"
+
+    - id: REQ-CS-003
+      title: "Renewal tracker"
+      module: MOD-MANAGEMENT
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P1, P10, P12, P14]
+      regulatory: []
+      description: >
+        A structured contract renewal calendar giving the Head of Customer
+        Success complete visibility of all upcoming renewal dates, with advance
+        alerting and per-client next-action tracking. In a subscription business
+        with long sales cycles and high CAC, a renewal that lapses due to a missed
+        conversation is an avoidable and disproportionate commercial loss. The
+        renewal tracker is the operational safeguard against that failure.
+      client_contracts_table:
+        fields:
+          client_id:               "Reference to tenant record"
+          contract_start_date:     "Date of contract commencement"
+          contract_end_date:       "Date of contract expiry (renewal trigger date)"
+          contract_arr:            "Annual Recurring Revenue for this contract term"
+          auto_renew:              "Boolean — does contract auto-renew by default?"
+          renewal_status:          "NOT_STARTED / IN_CONVERSATION / AGREED / AT_RISK / CHURNED"
+          renewal_initiated_date:  "Date when renewal conversation was first logged"
+          renewal_owner:           "HEAD_OF_CS (primary) or CRO (if commercial terms in negotiation)"
+          renewal_notes:           "Free text — last conversation summary, next action, blockers"
+          next_action_date:        "Date by which next renewal action is due"
+          churn_risk_flag:         "Boolean — manually set by HEAD_OF_CS; triggers CRO alert"
+      alerting:
+        ninety_day_alert:
+          trigger: "contract_end_date minus 90 days"
+          action: "In-app alert to HEAD_OF_CS; renewal_status auto-set to NOT_STARTED if still null"
+          purpose: "Initiate renewal conversation with sufficient runway"
+        sixty_day_alert:
+          trigger: "contract_end_date minus 60 days; renewal_status still NOT_STARTED"
+          action: "Escalation alert to HEAD_OF_CS and EAGLE_ADMIN"
+        thirty_day_alert:
+          trigger: "contract_end_date minus 30 days; renewal_status NOT IN (AGREED, CHURNED)"
+          action: "Urgent alert to HEAD_OF_CS and CRO"
+        churn_risk_alert:
+          trigger: "churn_risk_flag set to TRUE by HEAD_OF_CS"
+          action: "Immediate alert to CRO and CEO"
+      requirements:
+        - "Renewal tracker populated by HEAD_OF_CS at contract signature; EAGLE_ADMIN creates the initial record"
+        - "Renewal calendar view in CS subview: all active contracts sorted by contract_end_date ascending, colour-coded by renewal_status and proximity"
+        - "ARR at risk metric: sum of contract_arr for all clients with renewal_status = NOT_STARTED or AT_RISK and contract_end_date within 90 days"
+        - "ARR at risk figure visible in MOD-MANAGEMENT CRO/CCO-view alongside new ARR pipeline (REQ-INT-001)"
+        - "Contract records retained for 5 years post-expiry per standard commercial retention"
+      acceptance_criteria:
+        - "90-day alert fires automatically; no manual trigger required"
+        - "Renewal_status change from NOT_STARTED to IN_CONVERSATION logged in audit trail with timestamp and user"
+        - "ARR at risk figure in CRO/CCO-view matches sum of qualifying contract_arr records without manual computation"
+
+    - id: REQ-CS-004
+      title: "Client contact register"
+      module: MOD-MANAGEMENT
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P1, P7, P10, P14]
+      regulatory: [DORA]
+      description: >
+        A structured register of named contacts per client for use in
+        proactive CS communications, incident notifications and renewal
+        conversations. REQ-OPS-006 references "the client's Head of Customer
+        Success contact" for SLA breach notifications but does not define
+        where that contact is stored or maintained. This requirement formalises
+        that data structure and extends it to cover all CS communication
+        scenarios.
+      contact_register_table:
+        fields:
+          client_id:            "Reference to tenant record"
+          contact_type:         "PRIMARY_CS / SECONDARY_CS / INCIDENT_ESCALATION / EXECUTIVE_SPONSOR / BILLING"
+          full_name:            "Contact full name"
+          job_title:            "Contact role at the AIFM"
+          email:                "Primary email address"
+          phone:                "Mobile number for incident escalation (mandatory for INCIDENT_ESCALATION type)"
+          preferred_channel:    "EMAIL / PHONE / IN_APP"
+          language_preference:  "ISO 639-1 language code"
+          do_not_contact_flag:  "Boolean — set if contact has requested to be removed from non-critical comms"
+          last_contacted_date:  "Date of last outreach by HEAD_OF_CS; updated manually"
+          notes:                "Free text — relationship context, role changes, sensitivities"
+      minimum_contacts_per_client:
+        - "At least one PRIMARY_CS contact required before paid tenant activation (REQ-TEN-003 onboarding checklist)"
+        - "At least one INCIDENT_ESCALATION contact with phone number required before first live submission"
+      integration:
+        - "INCIDENT_ESCALATION contacts automatically available in REQ-OPS-006 DORA incident impact register"
+        - "PRIMARY_CS contact email used as default recipient for renewal alerts (REQ-CS-003) and health score deterioration alerts (REQ-CS-002)"
+        - "Contact register accessible to COO in read-only mode for incident communication purposes"
+      requirements:
+        - "HEAD_OF_CS owns and maintains the contact register; EAGLE_ADMIN can read and create records"
+        - "Contact record changes logged in audit trail with prior value, new value, timestamp and user"
+        - "Missing INCIDENT_ESCALATION contact triggers warning in CS subview and blocks first live submission (REQ-CS-004 prerequisite gate in REQ-TEN-003)"
+        - "Contact register exportable as PDF and CSV on demand from CS subview per P14"
+      acceptance_criteria:
+        - "Tenant without an INCIDENT_ESCALATION contact cannot reach ACTIVE_TENANT status"
+        - "DORA incident record (REQ-OPS-006) pre-populates affected client notification fields from contact register without manual re-entry"
+        - "Contact change event appears in audit trail with full before/after record"
+
+    - id: REQ-CS-005
+      title: "Expansion opportunity log"
+      module: MOD-MANAGEMENT
+      layer: [L9_ORCHESTRATION]
+      priority: SHOULD
+      phase: 1
+      principles: [P1, P10, P12, P14]
+      regulatory: []
+      description: >
+        A structured per-client log of identified expansion opportunities within
+        the existing client base, surfaced in the CS subview and shared with the
+        CRO for commercial follow-up. The log and data structure are active from
+        Phase 1. The CRO_HANDOFF workflow (HANDED_TO_CRO status and handoff
+        tasks to REQ-CS-003 renewal pipeline) is dormant until the CRO role is
+        filled; prior to that point, expansion items are tracked and owned by
+        Head of Customer Success only. Expansion types in the Eagle model include
+        additional AIFs added to scope, additional NCA submissions, new user
+        tiers, and additional reporting frequencies. This log converts
+        relationship signals observed by the Head of CS into a structured
+        commercial pipeline visible to the CRO alongside new ARR.
+      expansion_opportunities_table:
+        fields:
+          client_id:              "Reference to tenant record"
+          opportunity_type:       "ADDITIONAL_AIF / ADDITIONAL_NCA / ADDITIONAL_USER_TIER / OTHER"
+          description:            "Free text — what the opportunity is and how it was identified"
+          identified_date:        "Date opportunity was logged by HEAD_OF_CS"
+          identified_by:          "HEAD_OF_CS (standard) or EAGLE_ADMIN"
+          estimated_arr_uplift:   "Estimated incremental ARR if opportunity converts (decimal EUR)"
+          probability_tier:       "HIGH / MEDIUM / LOW"
+          status:                 "IDENTIFIED / QUALIFIED / HANDED_TO_CRO / WON / LOST / PARKED"
+          cro_handoff_date:       "Date opportunity was formally handed to CRO for commercial terms"
+          won_arr:                "Actual ARR uplift if WON (populated on conversion)"
+          lost_reason:            "Free text — reason if status = LOST"
+          notes:                  "Free text — context, next steps, client signals"
+      pipeline_integration:
+        - "Expansion ARR pipeline (sum of estimated_arr_uplift × probability weight) visible in MOD-MANAGEMENT CRO/CCO-view alongside new ARR pipeline (REQ-INT-001)"
+        - "Status change to HANDED_TO_CRO triggers in-app notification to CRO with opportunity summary"
+        - "WON expansion ARR feeds ARR bridge in REQ-INT-001 (opening ARR + new ARR + expansion ARR - churn ARR = closing ARR)"
+      requirements:
+        - "HEAD_OF_CS owns the expansion log; CRO has read and status-update access for opportunities in HANDED_TO_CRO status"
+        - "Expansion opportunity log not visible to tenant roles"
+        - "Monthly expansion pipeline summary (count, estimated ARR, status breakdown) stored as a DB record per P14; accessible in CRO/CCO-view"
+        - "Expansion log exportable as PDF and CSV on demand"
+      acceptance_criteria:
+        - "Status change from IDENTIFIED to HANDED_TO_CRO fires CRO notification within 5 minutes"
+        - "Expansion ARR pipeline figure in CRO/CCO-view is consistent with sum of qualifying opportunity records without manual computation"
+        - "WON expansion ARR contributes to ARR bridge within one business day of status update"
+
+    - id: REQ-CS-006
+      title: "Client constraint log (Voice of the Client)"
+      module: MOD-MANAGEMENT
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P1, P10, P11, P14]
+      regulatory: []
+      description: >
+        A structured log of workflow friction, onboarding obstacles and recurring
+        support issues observed across the client base, maintained by the Head
+        of Customer Success and presented monthly to the CTO/CPO as evidence-based
+        product constraints. This is not a feature wishlist — it is a structured
+        register of client experience failures with quantified impact on retention.
+        The CTO/CPO decides whether and when to act on constraints; the Head of CS
+        provides the evidence and the retention context.
+      constraint_log_table:
+        fields:
+          constraint_id:          "Auto-generated unique identifier"
+          constraint_type:        "WORKFLOW_FRICTION / ONBOARDING_OBSTACLE / RECURRING_SUPPORT / DATA_FORMAT / OTHER"
+          title:                  "Short descriptive title (max 100 chars)"
+          description:            "Detailed description of the friction or failure observed"
+          first_observed_date:    "Date the issue was first logged"
+          client_count_affected:  "Number of active clients where this constraint has been observed"
+          support_ticket_count:   "Number of exception log entries (REQ-OPS-004) attributable to this constraint"
+          estimated_retention_impact: "LOW / MEDIUM / HIGH — HEAD_OF_CS assessment of churn risk if unresolved"
+          linked_client_ids:      "List of client_ids where this constraint has been observed"
+          linked_exception_ids:   "References to REQ-OPS-004 exception records supporting this constraint"
+          status:                 "OPEN / PRESENTED_TO_CTO / IN_PRODUCT_ROADMAP / RESOLVED / CLOSED_NOT_PRODUCT"
+          resolution_notes:       "Free text — CTO/CPO response or resolution description"
+          presented_date:         "Date first presented to CTO/CPO in monthly session"
+          cto_response_date:      "Date CTO/CPO provided a decision on this constraint"
+      monthly_session:
+        - "HEAD_OF_CS prepares a monthly constraint summary: all OPEN constraints sorted by (client_count_affected DESC, support_ticket_count DESC)"
+        - "Summary stored as a monthly_constraint_summary DB record; presentation-ready view generated on demand per P14"
+        - "CTO/CPO response (decision + rationale) recorded in constraint record within 5 business days of monthly session"
+        - "Constraints with status = IN_PRODUCT_ROADMAP linked to a product roadmap item reference"
+      requirements:
+        - "HEAD_OF_CS owns the constraint log; CTO and CPO have read and response-write access"
+        - "Constraint log not visible to tenant roles"
+        - "Constraint status change logged in audit trail with timestamp and user"
+        - "Monthly summary auto-generated from DB on the first business day of each month per P14"
+      acceptance_criteria:
+        - "Monthly constraint summary generated automatically without HEAD_OF_CS manual assembly"
+        - "Constraint with client_count_affected ≥ 3 automatically flagged as HIGH priority in CS subview"
+        - "CTO/CPO response recorded in the constraint record without requiring HEAD_OF_CS to duplicate the information"
+
+    - id: REQ-CS-007
+      title: "Post-incident client follow-up tracking"
+      module: MOD-MANAGEMENT
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P1, P7, P10, P14]
+      regulatory: [DORA]
+      description: >
+        Tracking of written post-incident follow-up communications to clients
+        affected by MAJOR DORA incidents, linked to the DORA incident client
+        impact register (REQ-OPS-006). The Head of CS role document (section 4.5)
+        requires a written follow-up summary to affected clients within 5 business
+        days of MAJOR incident resolution. This requirement formalises that
+        obligation as a system-enforced workflow with deadline tracking and
+        escalation if the deadline is missed.
+        REQ-OPS-006 covers the incident impact register and immediate
+        notification; this requirement covers the post-resolution follow-up lane.
+      follow_up_tracking_table:
+        fields:
+          incident_id:              "Reference to DORA incident record (REQ-ISO-005)"
+          client_id:                "Reference to affected client"
+          incident_classification:  "MAJOR / SIGNIFICANT (inherited from REQ-OPS-006)"
+          follow_up_required:       "Boolean — TRUE for all MAJOR incidents; FALSE for SIGNIFICANT unless HEAD_OF_CS flags otherwise"
+          follow_up_deadline:       "incident_resolved_at + 5 business days (auto-computed)"
+          follow_up_status:         "PENDING / IN_PREPARATION / SENT / ACKNOWLEDGED_BY_CLIENT / WAIVED"
+          follow_up_sent_at:        "Timestamp of written follow-up sent to client"
+          follow_up_channel:        "EMAIL / IN_APP / PORTAL_MESSAGE"
+          follow_up_content_ref:    "Reference to stored communication (audit trail link)"
+          client_acknowledged_at:   "Timestamp of client acknowledgement (optional)"
+          waiver_justification:     "Free text — required if status = WAIVED; must be approved by COO"
+      automation:
+        - "Follow-up record created automatically when a MAJOR incident is resolved in REQ-ISO-005, one record per affected client in REQ-OPS-006"
+        - "follow_up_deadline computed automatically from incident_resolved_at timestamp"
+        - "Daily check: if follow_up_status = PENDING and follow_up_deadline is within 24 hours, send reminder to HEAD_OF_CS"
+        - "If follow_up_deadline passes with status still PENDING: escalation alert to HEAD_OF_CS and COO; exception auto-opened in REQ-OPS-004"
+      requirements:
+        - "HEAD_OF_CS owns the follow-up log; COO has read and waiver-approval access"
+        - "Follow-up status changes logged in audit trail"
+        - "Overdue follow-up (deadline passed, status PENDING) displayed prominently in CS subview incident follow-up section"
+        - "All follow-up records retained for 5 years per DORA Art.30 retention requirements"
+        - "Monthly follow-up completion rate (SENT or above / total required) stored as a DB metric per P14"
+      acceptance_criteria:
+        - "Follow-up record created automatically within 30 minutes of MAJOR incident resolution for each affected client"
+        - "Escalation alert fires if deadline passes with no follow-up sent; alert visible in both CS subview and COO-view"
+        - "WAIVED status requires COO approval; waiver without approval is rejected by the system"
+
+    - id: REQ-CS-008
+      title: "NPS and CSAT programme"
+      module: MOD-MANAGEMENT
+      layer: [L9_ORCHESTRATION]
+      priority: SHOULD
+      phase: 2
+      principles: [P1, P10, P11, P12, P14]
+      regulatory: []
+      description: >
+        A structured Net Promoter Score and Customer Satisfaction measurement
+        programme, delivered quarterly via in-app or email survey. Results
+        stored as first-class DB records per P14, segmented by client size and
+        tenure, with trend tracking over time. NPS and CSAT are lagging
+        indicators that complement the leading-indicator health scorecard
+        (REQ-CS-002). They are Phase 2 because Phase 1 client counts make
+        statistical significance impractical; the tooling investment is
+        deferred until the client base justifies it.
+      survey_model:
+        nps:
+          question: "On a scale of 0–10, how likely are you to recommend Eagle to a colleague?"
+          scoring: "Promoters (9–10) minus Detractors (0–6) as a percentage of respondents"
+          frequency: "Quarterly; sent within 5 business days after reporting period close"
+          minimum_responses_for_validity: 5
+        csat:
+          question: "How satisfied are you with Eagle's support and service this quarter? (1–5)"
+          frequency: "Quarterly; same send cycle as NPS"
+      storage:
+        nps_csat_records_table:
+          fields:
+            client_id:       "Reference to tenant"
+            survey_date:     "Date survey was sent"
+            period:          "Reporting period this survey relates to"
+            nps_score:       "Respondent's 0–10 NPS answer (null if not responded)"
+            csat_score:      "Respondent's 1–5 CSAT answer (null if not responded)"
+            free_text:       "Optional qualitative comment from respondent"
+            responded_at:    "Timestamp of response"
+            respondent_type: "PRIMARY_CS / COMPLIANCE_REVIEWER / EXECUTIVE_SPONSOR (from REQ-CS-004 contact type)"
+        aggregate_records:
+          - "Quarterly NPS and CSAT aggregate stored as a DB record per period: response count, NPS score, CSAT average, segmented by client_size_tier and client_tenure_months"
+          - "Aggregate auto-computed from individual records; no manual assembly required per P14"
+      requirements:
+        - "Survey dispatch and response collection tooling choice left to HEAD_OF_CS; this requirement specifies storage and reporting only"
+        - "Individual and aggregate NPS/CSAT records visible in CS subview trend view"
+        - "NPS trend and CSAT trend charts available in CS subview: trailing 8 quarters, factory-wide and per client"
+        - "Segment breakdowns: clients < 12 months tenure vs ≥ 12 months; clients < 5 AIFs vs ≥ 5 AIFs"
+        - "NPS/CSAT data not accessible to tenant roles"
+      acceptance_criteria:
+        - "Quarterly aggregate record generated automatically from individual response records within 1 business day of survey close"
+        - "NPS trend chart in CS subview reflects actual response data without manual data preparation"
+        - "Individual response record includes respondent_type enabling segment analysis"
+
+
+  # -------------------------------------------------------------------------
+  # Compliance & risk (manual controls — see eagle_manual_controls.yaml)
+  # -------------------------------------------------------------------------
+  compliance_risk_manual_controls_see_eagle_manual:
+
+  - id: REQ-CR-001
+    title: "Risk register — DB-first structured compliance risk register"
+    module: MOD-MANAGEMENT
+    layer: [L9_ORCHESTRATION]
+    priority: MUST
+    phase: 1
+    principles: [P2, P8, P10, P14]
+    regulatory: [DORA, GDPR, ISO27001]
+    not_automatable: "Risk assessment, likelihood/impact scoring, mitigation design, risk acceptance (NA-001)"
+    risk_categories: [OPERATIONAL, TECHNOLOGICAL, REGULATORY]
+    requirements:
+      - "Risk records stored in risk_register table; all fields indexed and queryable from compliance subview"
+      - "Risk records retained for minimum 10 years"
+      - "Any change creates an immutable version entry in audit trail (REQ-AUD-001)"
+      - "Only HEAD_OF_COMPLIANCE_RISK and EAGLE_ADMIN can create, update, or close risk records"
+      - "DORA MAJOR incident closure auto-triggers risk review prompt within 24 hours"
+      - "Overdue reviews displayed prominently in compliance subview"
+      - "Risk register exportable as PDF and JSON for ISAE 3402 evidence"
+    acceptance_criteria:
+      - "MAJOR incident closure triggers risk review prompt within 24 hours"
+      - "Risk register PDF accepted by ISAE 3402 auditor as second-line risk oversight evidence"
+
+  - id: REQ-CR-002
+    title: "RoPA Phase 1 — structured manual Register of Processing Activities"
+    module: MOD-MANAGEMENT
+    layer: [L9_ORCHESTRATION]
+    priority: MUST
+    phase: 1
+    gdpr_blocker: false
+    principles: [P2, P8, P10, P14]
+    regulatory: [GDPR]
+    not_automatable: "Lawful basis determination (NA-002); LIA Step 3 (see REQ-CR-004, NA-003)"
+    description: >
+      Phase 1 forerunner to REQ-INT-003. Per-processing-activity DB record with lawful basis,
+      sign-off workflow, and gdpr_blocker gate for REQ-GTM-001, REQ-GTM-002, REQ-TRIAL-007.
+      Schema forward-compatible with REQ-INT-003 Phase 2 auto-generation.
+    phase_1_gdpr_blocker_gate:
+      applicable_requirements: [REQ-GTM-001, REQ-GTM-002, REQ-TRIAL-007]
+      gate: "SIGNED_OFF RoPA entry required in this table before module go-live"
+    requirements:
+      - "RoPA records stored in ropa_entries table"
+      - "Status transitions: DRAFT → PENDING_REVIEW → SIGNED_OFF; only Head of Compliance & Risk can sign off"
+      - "Any change to SIGNED_OFF entry increments version; prior version retained immutably"
+      - "RoPA exportable as PDF for supervisory authority requests and ISAE 3402 evidence"
+      - "DB schema forward-compatible with REQ-INT-003 Phase 2 auto-population"
+    acceptance_criteria:
+      - "gdpr_blocker: true requirement cannot go production-ready without SIGNED_OFF RoPA entry"
+      - "RoPA PDF accepted by ISAE 3402 auditor as GDPR Art.30 compliance evidence"
+
+  - id: REQ-CR-003
+    title: "DORA regulatory notification dossier — auto-assembled; Compliance annotates and signs"
+    module: MOD-MANAGEMENT
+    layer: [L9_ORCHESTRATION]
+    priority: MUST
+    phase: 1
+    principles: [P2, P7, P8, P10, P14]
+    regulatory: [DORA, NIS2]
+    not_automatable: "Regulatory characterisation, NIS2 threshold decision, authority submission (NA-004)"
+    description: >
+      Auto-assembled within 15 minutes of MAJOR/SIGNIFICANT incident classification from
+      REQ-ISO-005 + REQ-OPS-006. Deadline counters for DORA Art.18 (4h MAJOR) and NIS2 Art.23
+      (24h early warning). Head of Compliance & Risk adds compliance narrative and authorises.
+      Submitted dossier stored as immutable audit artefact.
+    requirements:
+      - "Dossier auto-assembled within 15 minutes of incident classification"
+      - "AT_RISK alert fires with >= 45 minutes remaining on MAJOR Art.18 deadline"
+      - "compliance_narrative mandatory before SUBMITTED status"
+      - "nis2_threshold_decision mandatory for NIS2 stream before SUBMITTED"
+      - "Dossier records retained 5 years per DORA retention requirements"
+    acceptance_criteria:
+      - "MAJOR incident creates dossier with pre-populated sections within 15 minutes"
+      - "4-hour Art.18 deadline counter visible within 5 minutes of MAJOR classification"
+      - "Submitted dossier PDF accepted by ISAE 3402 auditor as DORA notification evidence"
+
+  - id: REQ-CR-004
+    title: "LIA balancing test register — explicitly not-automatable"
+    module: MOD-MANAGEMENT
+    layer: [L9_ORCHESTRATION]
+    priority: MUST
+    phase: 1
+    gdpr_blocker: false
+    principles: [P8, P10, P14]
+    regulatory: [GDPR]
+    not_automatable: "GDPR Art.6(1)(f) LIA Step 3 balancing test is NEVER automatable (NA-003)"
+    requirements:
+      - "System blocks sign-off if step_3_balancing_test field is empty or below minimum word count"
+      - "Any gdpr_blocker: true requirement with legitimate interest basis requires COMPLETE LIA record"
+      - "All three LIA step fields mandatory; sign-off blocked if any empty"
+      - "LIA records retained minimum 10 years"
+    acceptance_criteria:
+      - "Sign-off with empty step_3_balancing_test blocked with explanatory error"
+      - "Legitimate interest gdpr_blocker requirement cannot go production-ready without COMPLETE LIA"
+
+  - id: REQ-CR-005
+    title: "AI component register — compliance-annotated; CTO-sourced technical inventory"
+    module: MOD-MANAGEMENT
+    layer: [L9_ORCHESTRATION]
+    priority: MUST
+    phase: 1
+    principles: [P5, P8, P10, P14]
+    regulatory: [AI_ACT, GDPR]
+    not_automatable: "EU AI Act classification, boundary review judgment (NA-005, NA-006)"
+    description: >
+      CTO provides technical inventory; Head of Compliance & Risk adds compliance overlay.
+      New AI model version in REQ-AUD-004 auto-creates pending compliance annotation record.
+      New model version blocks production without SIGNED_OFF annotation (REQ-ISO-004 significant change).
+    requirements:
+      - "New AI component version creates UNDER_REVIEW record; Head of Compliance & Risk alerted within 48 hours"
+      - "No new AI model version to production without SIGNED_OFF compliance annotation"
+      - "Overdue annotation reviews highlighted in compliance subview"
+      - "Records retained minimum 5 years from end of component service"
+    acceptance_criteria:
+      - "New model version in REQ-AUD-004 generates compliance annotation alert within 24 hours"
+      - "Release with unsigned new AI component blocked under REQ-ISO-004 significant change"
+
+  - id: REQ-CR-006
+    title: "ISAE 3402 / SOC 2 certification evidence view in MOD-MANAGEMENT"
+    # AMENDED in v1.1: panels increased from 9 to 13 per addendum v1.12.0 (req_cr_006_amendment).
+    # Added panels: control_environment, vendor_risk, control_deficiency_log, availability_status.
+    module: MOD-MANAGEMENT
+    layer: [L9_ORCHESTRATION]
+    priority: MUST
+    phase: 1
+    principles: [P2, P8, P10, P14]
+    regulatory: [ISO27001, DORA, GDPR, AI_ACT]
+    not_automatable: "Control objective mapping and auditor narrative (NA-008)"
+    control_objective_panels:
+      # Original 9 panels (v1.0)
+      - access_control
+      - change_management
+      - incident_management
+      - backup_and_recovery
+      - security_testing
+      - ai_governance
+      - gdpr_controls
+      - risk_management
+      - operational_controls
+      # Added in v1.1 (addendum v1.12.0 — req_cr_006_amendment)
+      - control_environment        # CC1 — ethics, org structure, accountability
+      - vendor_risk                # CC9.2 — third-party due diligence and risk register
+      - control_deficiency_log     # ISAE-EV-004 — exception and deficiency tracking
+      - availability_status        # A1.2 — client-facing availability communication
+    requirements:
+      - "Certification evidence view loads within 5 seconds for all thirteen panels"
+      - "Point-in-time evidence snapshot exportable per panel or combined"
+      - "Head of Compliance & Risk annotations stored as DB records per P14"
+      - "Accessible only to HEAD_OF_COMPLIANCE_RISK and EAGLE_ADMIN"
+      - "Evidence snapshots retained minimum 10 years"
+    acceptance_criteria:
+      - "Evidence snapshot for change_management panel covers all release manifests without manual preparation"
+      - "ISAE 3402 Type I auditor confirms all thirteen panels provide sufficient evidence aggregation"
+      - "control_deficiency_log panel surfaces all open deficiencies with age and materiality status"
+
+  - id: REQ-CR-007
+    not_automatable: true
+    definition: eagle_manual_controls.yaml
+
+  # -------------------------------------------------------------------------
+  # AIFMD horizon scanning
+  # -------------------------------------------------------------------------
+  aifmd_horizon_scanning:
+
+  - id: REQ-AIFMD-007
+    title: "AIFMD 2.0 horizon scanning and client readiness communication"
+    module: MOD-MANAGEMENT
+    layer: [L9_ORCHESTRATION]
+    priority: SHOULD
+    phase: 1.5
+    gdpr_blocker: false
+    principles: [P8, P10, P13]
+    regulatory: [AIFMD, DORA]
+    description: >
+      Formalises the regulatory horizon scanning programme per project_eagle_compliance_risk_v1_3.md
+      section 4.1. OOS-001 correctly scopes Annex IV engine implementation as out of scope until
+      ESMA ITS publication (~April 2027). This requirement tracks ESMA publication status and
+      mandates client communication when status changes. The per-client AIFMD 2.0 impact flag
+      in REQ-CR-007 is linked to this requirement.
+    aifmd20_timeline:
+      legislative_transposition: "16 April 2026 — affects national law; no Annex IV content change"
+      esma_its_expected:         "~April 2027 — triggers removal of OOS-001"
+      reporting_applies_from:    "~2028 (first full period under updated technical standards)"
+    client_communication_triggers:
+      - "At Phase 1.5 go-live: initial client communication explaining timeline and Eagle approach"
+      - "When ESMA publishes ITS: mandatory communication within 10 business days"
+      - "When ESMA opens consultation: advisory communication"
+      - "Annual update if ITS not yet published"
+    requirements:
+      - "AIFMD 2.0 horizon scanning record maintained in MOD-MANAGEMENT compliance subview"
+      - "Client communication reviewed by Head of Compliance & Risk before dispatch"
+      - "Per-client AIFMD 2.0 impact flag in REQ-CR-007 updated when ITS published"
+      - "When esma_its_status = PUBLISHED: Head of Compliance & Risk initiates AIFMD 2.0 implementation scoping within 10 business days; scope decision documented in MOD-MANAGEMENT; OOS-001 is removed from the next requirements version and REQ-ENG-006 schema migration framework is activated"
+    acceptance_criteria:
+      - "AIFMD 2.0 scanning record current before Phase 1.5 go-live"
+      - "Initial client communication dispatched at Phase 1.5 go-live"
+
+
+  # -------------------------------------------------------------------------
+  # ISAE 3402 / SOC 2 (REQ-ISAE-001..002, 004, 013, 014)
+  # -------------------------------------------------------------------------
+  isae_3402_soc_2:
+
+  - id: REQ-ISAE-001
+    title: "ISAE 3402 / SOC 2 service description and Complementary User Entity Controls"
+    module: MOD-MANAGEMENT
+    layer: [L9_ORCHESTRATION]
+    priority: MUST
+    phase: 1
+    principles: [P1, P8, P10, P13, P14]
+    regulatory: [ISO27001, DORA, GDPR, AI_ACT]
+    description: >
+      ISAE 3402 Type I/II certification requires: (1) formal service description including
+      service commitments, system requirements, infrastructure boundaries, and sub-processors;
+      (2) CUECs — Complementary User Entity Controls that client AIFMs must implement for
+      Eagle's controls to function as intended. Without published CUECs the certification
+      scope is incomplete. CUECs published in-application to TENANT_ADMIN and included in
+      DORA Art.30 contractual pack (REQ-CPL-002).
+    cuecs:
+      CUEC-001: "Access credential management — AIFM responsible for restricting TENANT_ADMIN and COMPLIANCE_REVIEWER access to authorised personnel; prompt revocation on departure; no credential sharing"
+      CUEC-002: "Pre-submission review and approval — AIFM responsible for ensuring COMPLIANCE_REVIEWER role is held by qualified, authorised individuals performing substantive review"
+      CUEC-003: "NCA submission confirmation — for MANUAL and PENDING_CONFIRMATION channels, AIFM enters NCA reference number within 5 business days of submission"
+      CUEC-004: "Source data accuracy — AIFM responsible for accuracy of position-level and fund-level source data; Eagle validates technical compliance, not commercial accuracy"
+      CUEC-005: "Timely data submission — AIFM responsible for providing source data sufficiently in advance of NCA deadline; Eagle SLA applies from data receipt"
+      CUEC-006: "Incident notification to Eagle — AIFM notifies Eagle promptly of any incident affecting accuracy or completeness of data provided"
+      CUEC-007: "NCA credential maintenance (ROBOT_PORTAL only) — AIFM maintains valid NCA portal credentials in Eagle credential vault; notifies Eagle promptly of credential changes"
+    requirements:
+      - "Service Description v1.0 signed off by Head of Compliance & Risk before ISAE 3402 audit engagement"
+      - "CUECs v1.0 produced before first paid tenant activation"
+      - "TENANT_ADMIN acknowledgement of CUECs added to paid onboarding checklist (REQ-TEN-003)"
+      - "CUECs acknowledgement logged in audit trail (REQ-AUD-001) with identity, timestamp, CUECs version"
+      - "CUECs accessible from TENANT_ADMIN dashboard at all times"
+      - "CUECs and Service Description included in REQ-CPL-002 DORA Art.30 pack"
+      - "Both documents retained minimum 10 years"
+    acceptance_criteria:
+      - "TENANT_ADMIN onboarding checklist includes CUECs acknowledgement; activation blocked without it"
+      - "CUECs PDF and Service Description PDF accepted by ISAE 3402 auditor as required certification artefacts"
+      - "Material CUECs change generates Tier 1 release communication to all active TENANT_ADMINs (REQ-REL-007)"
+
+
+# =============================================================================
+# CROSS-CUTTING REQUIREMENTS  (20 applicable)
+# Definitions in eagle_requirements_overview.yaml — references only below.
+# =============================================================================
+
+
+  - id: REQ-ISAE-002
+    title: "Management assertion — signed CEO/CTO declaration (ISAE-RS-002)"
+    module: MOD-CCEV
+    layer: [L9_ORCHESTRATION]
+    layer_tag: PLATFORM
+    priority: MUST
+    phase: 1
+    gdpr_blocker: false
+    principles: [P8, P10, P14]
+    regulatory: [ISO27001]
+    isae_criteria: "ISAE-RS-002"
+    closes_gap: "Gap 1 — Management assertion as signed document"
+    not_automatable: "Senior management sign-off on assertion content (NA-014)"
+    description: >
+      ISAE 3402 requires a management assertion signed by appropriate senior
+      management (CEO and/or CTO level) asserting that the service description
+      fairly represents the system and that controls are suitably designed
+      (Type I). For Type II the assertion extends to operating effectiveness.
+      Without this document no auditor can issue an ISAE opinion. This is a
+      hard pre-condition for the audit engagement (REQ-ISAE-014).
+    type_i_assertion_content:
+      - "Service description fairly presents Eagle's system as operated during the period"
+      - "Controls related to stated control objectives were suitably designed throughout the period"
+      - "Named signatories: CEO and CTO (dual sign-off)"
+      - "Assertion date matching the Type I point-in-time date"
+    type_ii_addition:
+      - "Controls operated effectively throughout the report period"
+      - "No unresolved material control failures during the period"
+    requirements:
+      - "Management assertion document stored in MOD-CCEV (category: management_assertion)"
+      - "Dual sign-off mandatory: CEO and CTO; assertion blocked without both signatures"
+      - "Assertion version-locked to the service description version it attests to"
+      - "Re-assertion required before each audit cycle (annual for Type II)"
+      - "Assertion PDF stored as immutable artefact (REQ-AUD-001)"
+      - "Linked to control_register entry ISAE-RS-002"
+    acceptance_criteria:
+      - "Assertion without both CEO and CTO signatures blocked by system"
+      - "Assertion version mismatch with current service description surfaced as action item in REQ-CCEV-004"
+      - "ISAE 3402 auditor accepts assertion as the required management representation"
+
+  - id: REQ-ISAE-004
+    title: "Fraud risk assessment (ISAE-CC3.3)"
+    module: MOD-CCEV
+    layer: [L9_ORCHESTRATION]
+    layer_tag: PLATFORM
+    priority: MUST
+    phase: 1
+    gdpr_blocker: false
+    principles: [P8, P10, P14]
+    regulatory: [ISO27001]
+    isae_criteria: "ISAE-CC3.3"
+    closes_gap: "Gap 4 — Fraud risk assessment"
+    not_automatable: "Fraud scenario identification and risk scoring (NA-015)"
+    description: >
+      CC3.3 requires a documented fraud risk assessment as part of the overall
+      risk assessment process. REQ-CR-001 (risk register) covers operational and
+      regulatory risks but does not include a structured fraud risk assessment.
+      This requirement adds fraud as an explicit risk category with identified
+      scenarios, controls mapped to each scenario, and annual review.
+    fraud_scenarios_minimum:
+      unauthorised_data_access:
+        description: "Eagle staff accessing client fund data outside authorised support context"
+        existing_controls: [REQ-USR-001, REQ-ISO-007, REQ-ISO-013, REQ-AUD-001]
+        residual_risk_assessment: "HEAD_OF_COMPLIANCE_RISK judgment"
+      submission_manipulation:
+        description: "Unauthorised alteration of validated submission data before or after NCA delivery"
+        existing_controls: [REQ-AUD-001, REQ-AUD-002, REQ-REL-003]
+        residual_risk_assessment: "HEAD_OF_COMPLIANCE_RISK judgment"
+      credential_misuse:
+        description: "Misuse of NCA portal credentials or API keys for unauthorised access"
+        existing_controls: [REQ-USR-002, REQ-USR-003, REQ-ISO-013, REQ-ISO-014]
+        residual_risk_assessment: "HEAD_OF_COMPLIANCE_RISK judgment"
+      insider_threat:
+        description: "Privileged insider exfiltrating client data or disrupting audit trail integrity"
+        existing_controls: [REQ-ISO-007, REQ-AUD-001, REQ-ISO-013, REQ-ISO-009]
+        residual_risk_assessment: "HEAD_OF_COMPLIANCE_RISK judgment"
+      financial_misstatement:
+        description: "Manipulation of AuM or leverage figures in canonical records affecting regulatory reporting"
+        existing_controls: [REQ-AUD-002, REQ-REV-001, REQ-VAL-001]
+        residual_risk_assessment: "HEAD_OF_COMPLIANCE_RISK judgment"
+    requirements:
+      - "Fraud risk assessment document stored in MOD-CCEV (category: fraud_risk_assessment)"
+      - "All five minimum scenarios assessed; additional scenarios at HEAD_OF_COMPLIANCE_RISK discretion"
+      - "Each scenario: description, existing controls mapped, residual risk rating, additional mitigations if required"
+      - "Annual review; review mandatory after any fraud-relevant security incident"
+      - "Assessment linked to risk register (REQ-CR-001) — HIGH residual risk scenarios create risk records"
+      - "Linked to control_register entry ISAE-CC3.3"
+    acceptance_criteria:
+      - "Fraud risk assessment with all five scenarios and residual ratings accepted by HEAD_OF_COMPLIANCE_RISK"
+      - "HIGH residual risk scenario creates corresponding risk register entry in REQ-CR-001"
+      - "ISAE 3402 auditor accepts assessment as CC3.3 fraud risk evidence"
+
+  - id: REQ-ISAE-013
+    title: "Control deficiency log — exception tracking with materiality assessment (ISAE-EV-004)"
+    module: MOD-MANAGEMENT
+    layer: [L9_ORCHESTRATION]
+    layer_tag: PLATFORM
+    priority: MUST
+    phase: 1
+    gdpr_blocker: false
+    principles: [P8, P10, P14]
+    regulatory: [ISO27001]
+    isae_criteria: "ISAE-EV-004"
+    closes_gap: "Gap 12 — Control deficiency log"
+    not_automatable: "Materiality assessment — judgment whether a control failure affects the audit opinion (NA-016)"
+    description: >
+      ISAE-EV-004 requires documentation of control failures during the audit
+      period, with materiality assessment and remediation tracking. REQ-OPS-004
+      is an operational exception log for submission pipeline issues. REQ-CR-001
+      is a risk register. Neither is a control deficiency log in ISAE sense —
+      a register of cases where a defined control did not operate as designed,
+      assessed for materiality impact on the audit opinion. This requirement
+      creates that log as a DB-first record in MOD-MANAGEMENT, surfaced in
+      REQ-CR-006 via the new control_deficiency_log panel.
+    deficiency_categories:
+      design_deficiency: "A control was not suitably designed to achieve the stated objective"
+      operating_deficiency: "A suitably designed control did not operate effectively during the period"
+      significant_deficiency: "A deficiency or combination of deficiencies that could adversely affect the audit opinion"
+    deficiency_record_fields:
+      - "deficiency_id (UUID)"
+      - "control_id (FK → control_register)"
+      - "deficiency_category (design | operating | significant)"
+      - "discovery_date"
+      - "description: what control failed and how"
+      - "discovery_source: internal_review | auditor_finding | incident | access_review | monitoring"
+      - "affected_period: from / to dates"
+      - "materiality_assessment: HEAD_OF_COMPLIANCE_RISK judgment — MATERIAL | NOT_MATERIAL with rationale"
+      - "remediation_action: description of fix"
+      - "remediation_owner: role"
+      - "remediation_deadline"
+      - "remediation_status: OPEN | IN_PROGRESS | CLOSED"
+      - "closed_date"
+      - "auditor_disclosure_required: boolean — true if MATERIAL"
+    requirements:
+      - "Control deficiency log table added to MOD-MANAGEMENT compliance subview"
+      - "Any finding from IAM review (REQ-ISO-013), pen test (REQ-ISO-003), or incident (REQ-ISO-005) that constitutes a control failure creates a deficiency record"
+      - "materiality_assessment field mandatory before status can progress beyond OPEN"
+      - "MATERIAL deficiency triggers immediate HEAD_OF_COMPLIANCE_RISK and CTO escalation alert"
+      - "Deficiency records visible in REQ-CR-006 control_deficiency_log panel"
+      - "Remediation deadline overdue by more than 5 business days triggers escalation alert"
+      - "All deficiency records retained minimum 10 years"
+      - "Deficiency log exported in REQ-CCEV-006 annual evidence package"
+    acceptance_criteria:
+      - "IAM review orphan account finding automatically creates deficiency record"
+      - "MATERIAL deficiency generates escalation alert within 1 hour"
+      - "Attempt to close deficiency without remediation_action populated is blocked"
+      - "ISAE 3402 auditor accepts deficiency log as EV-004 exception management evidence"
+
+  - id: REQ-ISAE-014
+    title: "Auditor engagement and Type I readiness programme (ISAE-MG-001/MG-002)"
+    module: MOD-CCEV
+    layer: [L9_ORCHESTRATION]
+    layer_tag: PLATFORM
+    priority: MUST
+    phase: 1
+    gdpr_blocker: false
+    principles: [P8, P10, P14]
+    regulatory: [ISO27001]
+    isae_criteria: "ISAE-MG-001, ISAE-MG-002"
+    closes_gap: "Gap 14 — Auditor engagement and prior findings process"
+    not_automatable: "Auditor scope agreement and readiness determination (NA-017)"
+    description: >
+      ISAE-MG-001 and MG-002 require a structured auditor relationship:
+      independent auditor engaged with defined scope, audit period agreed,
+      and all prior-period findings addressed before a new period commences.
+      For Eagle's first certification (Type I), this means a formal readiness
+      programme: all Type I blockers resolved before engagement, scope letter
+      agreed, and a pre-audit control walkthrough completed. This requirement
+      formalises that programme as a tracked deliverable in MOD-CCEV.
+    type_i_readiness_checklist:
+      report_structure:
+        - "REQ-ISAE-001: Service Description v1.0 signed off (RS-001)"
+        - "REQ-ISAE-002: Management assertion drafted and ready for signature (RS-002)"
+        - "REQ-ISAE-003: Carve-out decision record and CSOCs documented (RS-004)"
+        - "REQ-ISAE-001: CUECs published and acknowledged by at least one active tenant (RS-003)"
+      control_environment:
+        - "REQ-ISAE-005: Code of conduct, org chart, job descriptions complete (CC1)"
+        - "REQ-ISAE-004: Fraud risk assessment complete (CC3.3)"
+        - "REQ-ISAE-010: Security KPI metrics at least 3 months of records available (CC1.5)"
+      access_controls:
+        - "REQ-ISO-013: At least one quarterly IAM review completed with evidence (CC6.1)"
+        - "REQ-ISAE-006: Leaver process operational; at least one test event evidenced (CC6.5)"
+      operational_controls:
+        - "REQ-ISAE-007: SIEM configuration record in place; one alert test evidenced (CC7)"
+        - "REQ-ISO-004: Change log with at least 3 months of records (CC8.1)"
+        - "REQ-CR-001: Risk register active with at least one completed review (CC3.2)"
+      availability_and_confidentiality:
+        - "REQ-ISAE-008: Data classification scheme complete (C1.1)"
+        - "REQ-ISAE-011: Status channel live and accessible (A1.2)"
+        - "REQ-ISO-001: BCP tested; test results stored (A1.3)"
+      evidence_infrastructure:
+        - "REQ-ISAE-012: Control matrix generated and reviewed (EV-002)"
+        - "REQ-ISAE-013: Control deficiency log active (EV-004)"
+        - "REQ-ISAE-009: Vendor due diligence register with current AWS and Anthropic reviews (CC9.2)"
+    requirements:
+      - "Auditor engagement record stored in MOD-CCEV (category: auditor_engagement_record)"
+      - "Type I readiness checklist tracked as structured DB record; all items must reach COMPLETE before engagement"
+      - "HEAD_OF_COMPLIANCE_RISK owns readiness programme; CTO co-owns technical items"
+      - "Readiness status visible in REQ-CCEV-004 ISAE panel as a named dashboard item"
+      - "Engagement letter (scope, audit period, applicable TSC) stored as immutable artefact on signing"
+      - "Prior findings register: for Type II, all Type I findings tracked to CLOSED before period-start"
+      - "Engagement records retained minimum 10 years"
+    acceptance_criteria:
+      - "Readiness dashboard shows all Type I checklist items COMPLETE before engagement letter signed"
+      - "Attempt to mark engagement STARTED with incomplete readiness checklist generates blocker alert"
+      - "ISAE 3402 auditor confirms readiness programme provides sufficient pre-engagement preparation"
+      - "Engagement letter stored as immutable artefact within 5 business days of signing"
+
+
+cross_cutting_requirements_applied:
+
+  # -------------------------------------------------------------------------
+  # Security (REQ-SEC-*)         → eagle_requirements_overview.yaml §5.1
+  # -------------------------------------------------------------------------
+  - REQ-SEC-001  # Encryption in transit and at rest
+  - REQ-SEC-002  # Vulnerability management and security testing programme
+  - REQ-SEC-003  # Data retention and deletion
+
+  # -------------------------------------------------------------------------
+  # Resilience (REQ-RES-*)        → eagle_requirements_overview.yaml §5.2
+  # -------------------------------------------------------------------------
+  - REQ-RES-001  # Pipeline failure modes and fallback mechanisms
+  - REQ-RES-002  # Service availability targets
+
+  # -------------------------------------------------------------------------
+  # Scale (REQ-SCL-*)             → eagle_requirements_overview.yaml §5.3
+  # -------------------------------------------------------------------------
+  - REQ-SCL-001  # Priority queue architecture for pipeline execution
+
+  # -------------------------------------------------------------------------
+  # Performance (REQ-PER-*)       → eagle_requirements_overview.yaml §5.4
+  # -------------------------------------------------------------------------
+  - REQ-PER-001  # Performance targets
+
+  # -------------------------------------------------------------------------
+  # DORA operational (REQ-CPL-*)  → eagle_requirements_overview.yaml §5.6
+  # -------------------------------------------------------------------------
+  - REQ-CPL-001  # ICT incident classification and authority reporting workflow
+  - REQ-CPL-002  # DORA Art.30 contractual information pack
+  - REQ-CPL-003  # DORA register of information export for clients
+
+  # -------------------------------------------------------------------------
+  # Engineering ops (REQ-ENG-*)   → eagle_requirements_overview.yaml §5.8
+  # -------------------------------------------------------------------------
+  - REQ-ENG-004  # Infrastructure cost tracking and reporting
+  - REQ-ENG-008  # Engineering metrics dashboard
+
+  # -------------------------------------------------------------------------
+  # ISO 27001 (REQ-ISO-*)         → eagle_requirements_overview.yaml §6
+  # -------------------------------------------------------------------------
+  - REQ-ISO-001  # Automated backup with verified recovery
+  - REQ-ISO-002  # Infrastructure redundancy and automatic failover
+  - REQ-ISO-009  # Operational monitoring and anomaly alerting
+
+  # -------------------------------------------------------------------------
+  # GDPR (REQ-GDPR-*)             → eagle_requirements_overview.yaml §7
+  # -------------------------------------------------------------------------
+  - REQ-GDPR-001  # Data subject rights request workflow
+  - REQ-GDPR-002  # Data breach communication workflow
+
+  # -------------------------------------------------------------------------
+  # DORA reqs (REQ-DORA-*)        → eagle_requirements_overview.yaml §9
+  # -------------------------------------------------------------------------
+  - REQ-DORA-001  # ICT incident authority notification workflow
+  - REQ-DORA-002  # ICT incident lessons-learned feedback loop
+  - REQ-DORA-004  # Structured auditor access workflow
+

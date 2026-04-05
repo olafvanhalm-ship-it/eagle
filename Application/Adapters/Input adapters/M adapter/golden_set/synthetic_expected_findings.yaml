@@ -1,0 +1,886 @@
+schema_version: 5
+predicted_by: System Tester
+predicted_at: '2026-04-04'
+reviewed_by: CTO
+review_date: '2026-04-04'
+review_decisions:
+  DEV-001: FIX CODE — strip ESMA length prefix in validate_value()
+  DEV-006: FIX CODE — add turnover identity mappings in aifmd_reference_data.py
+  DEV-007: FIX TEMPLATE — segregate strategy families per AIF
+  DEV-008: FIX TEMPLATE — use Content Type 2 for full reporting AIFs
+compliance_sign_off: null
+suites:
+  synthetic_light_nl_init:
+    description: Light template, 8 AIFs, NL/AFM, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+        rationale: '9 warnings per AIF × 8 AIFs = 72. Warnings: AIF-34 through AIF-40 (share class identifiers not present),
+          AIF-50 (FXEURRate not present), AIF-51 (FXEURReferenceRateType not present).
+
+          '
+      dqf_missing:
+        count: 0
+      file_naming:
+        fail_count: 0
+      packaging:
+        type: zip
+  synthetic_light_de_init:
+    description: Light template, 8 AIFs, DE/BaFin, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      packaging:
+        type: gzip (.xml.gz)
+  synthetic_light_be_init:
+    description: Light template, 8 AIFs, BE/FSMA, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      packaging:
+        type: zip (per-XML)
+  synthetic_full_nl_init:
+    description: Full template, 6 AIFs, NL/AFM, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+        rationale: 'CT=4 full templates: 41 warnings from remaining conditional elements. Reduced from 55 after builder additions
+          (TradingClearingMechanism, AllCounterpartyCollateral, InvestorIlliquidAssetArrangement, FinancingLiquidity).
+
+          '
+      dqf_missing:
+        count: 0
+  synthetic_full_de_init:
+    description: Full template, 6 AIFs, DE/BaFin, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+      packaging:
+        type: gzip
+  synthetic_full_be_init:
+    description: Full template, 6 AIFs, BE/FSMA, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+      packaging:
+        type: zip per XML
+  synthetic_amnd_nl:
+    description: Full template, AMND filing, NL/AFM
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      filing_type_check:
+        expected_filing_type_in_xml: AMND
+  synthetic_cancel_nl:
+    description: Light template, CANCEL filing, NL/AFM
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 0
+        rationale: CANCEL filing produces minimal XML with no conditional sections
+  synthetic_light_gb_init:
+    description: FCA Light template, 8 AIFs, GB/FCA, INIT — v2 XSD
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+        rationale: 'Same warning pattern as ESMA light: 9 warnings per AIF × 8 AIFs. FCA v2 XSD removes some ESMA elements
+          but DQF rules still flag optional fields that are absent.
+
+          '
+      dqf_missing:
+        count: 0
+  synthetic_full_gb_init:
+    description: FCA Full template, 6 AIFs (CT=4/5), GB/FCA, INIT — v2 XSD
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+        rationale: 'FCA full templates: 41 warnings matching ESMA full pattern. FCA v2 removes AIFIdentifierECB, OldAIFIdentifierNCA,
+          and AIFEEAFlag but DQF warning count stays aligned.
+
+          '
+      dqf_missing:
+        count: 0
+  synthetic_negative_crossfield:
+    description: Deliberately invalid cross-field combinations
+    predictions:
+      xml_files_generated: 4
+      xsd:
+        valid: 3
+        invalid: 1
+        rationale: 'NEG-008 AIF LEI (999900UNKNOWN0000AA11) is 21 chars — exceeds XSD maxLength=20 and fails pattern. This
+          is intentional.
+
+          '
+      dqf_fail:
+        count: 0
+        rationale: 'After fixes, no DQF format failures. Invalid LEI checkdigit passes format check (correct pattern). Cross-field
+          violations are semantic.
+
+          '
+      dqf_warning:
+        count: 0
+  synthetic_light_at_init:
+    description: Light template, 8 AIFs, AT, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_at_init:
+    description: Full template, 6 AIFs, AT, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_bg_init:
+    description: Light template, 8 AIFs, BG, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_bg_init:
+    description: Full template, 6 AIFs, BG, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_cy_init:
+    description: Light template, 8 AIFs, CY, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_cy_init:
+    description: Full template, 6 AIFs, CY, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_cz_init:
+    description: Light template, 8 AIFs, CZ, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_cz_init:
+    description: Full template, 6 AIFs, CZ, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_dk_init:
+    description: Light template, 8 AIFs, DK, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_dk_init:
+    description: Full template, 6 AIFs, DK, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_ee_init:
+    description: Light template, 8 AIFs, EE, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_ee_init:
+    description: Full template, 6 AIFs, EE, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_es_init:
+    description: Light template, 8 AIFs, ES, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_es_init:
+    description: Full template, 6 AIFs, ES, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_fi_init:
+    description: Light template, 8 AIFs, FI, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_fi_init:
+    description: Full template, 6 AIFs, FI, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_fr_init:
+    description: Light template, 8 AIFs, FR, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_fr_init:
+    description: Full template, 6 AIFs, FR, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_gr_init:
+    description: Light template, 8 AIFs, GR, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_gr_init:
+    description: Full template, 6 AIFs, GR, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_hr_init:
+    description: Light template, 8 AIFs, HR, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_hr_init:
+    description: Full template, 6 AIFs, HR, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_hu_init:
+    description: Light template, 8 AIFs, HU, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_hu_init:
+    description: Full template, 6 AIFs, HU, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_ie_init:
+    description: Light template, 8 AIFs, IE, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_ie_init:
+    description: Full template, 6 AIFs, IE, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_is_init:
+    description: Light template, 8 AIFs, IS, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_is_init:
+    description: Full template, 6 AIFs, IS, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_it_init:
+    description: Light template, 8 AIFs, IT, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_it_init:
+    description: Full template, 6 AIFs, IT, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_li_init:
+    description: Light template, 8 AIFs, LI, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_li_init:
+    description: Full template, 6 AIFs, LI, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_lt_init:
+    description: Light template, 8 AIFs, LT, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_lt_init:
+    description: Full template, 6 AIFs, LT, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_lu_init:
+    description: Light template, 8 AIFs, LU, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_lu_init:
+    description: Full template, 6 AIFs, LU, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_lv_init:
+    description: Light template, 8 AIFs, LV, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_lv_init:
+    description: Full template, 6 AIFs, LV, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_mt_init:
+    description: Light template, 8 AIFs, MT, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_mt_init:
+    description: Full template, 6 AIFs, MT, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_no_init:
+    description: Light template, 8 AIFs, NO, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_no_init:
+    description: Full template, 6 AIFs, NO, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_pl_init:
+    description: Light template, 8 AIFs, PL, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_pl_init:
+    description: Full template, 6 AIFs, PL, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_pt_init:
+    description: Light template, 8 AIFs, PT, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_pt_init:
+    description: Full template, 6 AIFs, PT, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_ro_init:
+    description: Light template, 8 AIFs, RO, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_ro_init:
+    description: Full template, 6 AIFs, RO, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_se_init:
+    description: Light template, 8 AIFs, SE, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_se_init:
+    description: Full template, 6 AIFs, SE, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_si_init:
+    description: Light template, 8 AIFs, SI, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_si_init:
+    description: Full template, 6 AIFs, SI, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0
+  synthetic_light_sk_init:
+    description: Light template, 8 AIFs, SK, INIT
+    predictions:
+      xml_files_generated: 9
+      xsd:
+        valid: 9
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 72
+      dqf_missing:
+        count: 0
+  synthetic_full_sk_init:
+    description: Full template, 6 AIFs, SK, INIT
+    predictions:
+      xml_files_generated: 7
+      xsd:
+        valid: 7
+        invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_warning:
+        count: 41
+      dqf_missing:
+        count: 0

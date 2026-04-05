@@ -1,0 +1,1040 @@
+schema_version: 2
+reviewed_by: null
+reviewed_at: '2026-04-04'
+next_review: null
+rationale:
+  dummy_nca_code: 'The M example templates use fictitious national codes (e.g. XXX123, 12345678, BAB123) that do not comply
+    with NCA-specific format rules. This is expected for test data and does not indicate a defect in the adapter or validator.
+
+    '
+  eur_base_currency: 'AIF-50 (FXEURRate) and AIF-51 (FXEURReferenceRateType) are conditional elements that only apply when
+    the AIF base currency is not EUR. The example templates use EUR as base currency, so these elements are correctly absent.
+
+    '
+  split_empty_nca_code: 'The split template example deliberately uses empty national code fields to test the adapter''s handling
+    of missing NCA data. The file naming validator flags the empty code in the filename.
+
+    '
+  split_sparse_full: 'The split template is a FULL (CT=3 authorised) template used to test Excel+CSV position splitting. It
+    contains only basic header data and positions, so many Art 24(1) and Art 24(2) mandatory and conditional fields are absent.
+    These findings are expected for this sparse test template; real authorised fund submissions would populate all sections.
+
+    '
+  multi_nca_lu_format: 'The LU/CSSF AIFM national code A00007891 in the multi-NCA example template does not match the CSSF-required
+    old AIFM format. This is expected for the example data; real submissions would use a CSSF-compliant code.
+
+    '
+suites:
+  m_light_nl:
+    description: M Light Template, 2 AIFs with positions, RE strategy (NL/AFM)
+    expected:
+      xsd_valid: 3
+      xsd_invalid: 0
+      dqf_fail:
+        count: 3
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 4
+      file_naming_fail:
+        count: 3
+  m_full_nl:
+    description: M Full Template, 2 AIFs with positions, RE strategy (NL/AFM)
+    expected:
+      xsd_valid: 3
+      xsd_invalid: 0
+      dqf_fail:
+        count: 3
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 8
+      file_naming_fail:
+        count: 3
+  m_masterfeeder_nl:
+    description: Explicit Master-Feeder template, feeder with master AIF identification (NL/AFM)
+    expected:
+      xsd_valid: 3
+      xsd_invalid: 0
+      dqf_fail:
+        count: 3
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 8
+      file_naming_fail:
+        count: 3
+  m_positions_nl:
+    description: Light template with full position detail, single AIF (NL/AFM)
+    expected:
+      xsd_valid: 2
+      xsd_invalid: 0
+      dqf_fail:
+        count: 2
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 2
+      file_naming_fail:
+        count: 2
+  m_split_nl:
+    description: Split template (Excel+CSV positions), empty national codes (NL/AFM)
+    expected:
+      xsd_valid: 3
+      xsd_invalid: 0
+      dqf_fail:
+        count: 4
+      dqf_missing:
+        count: 20
+      dqf_warning:
+        count: 54
+      file_naming_fail:
+        count: 2
+  m_cancellation_nl:
+    description: Cancellation filing, ESMA CancellationRecordInfo structure (NL/AFM)
+    expected:
+      xsd_valid: 2
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 0
+      file_naming_fail:
+        count: 2
+  m_amnd_full_nl:
+    description: Full Template AMND filing, 2 AIFs with positions, RE strategy (NL/AFM)
+    expected:
+      xsd_valid: 3
+      xsd_invalid: 0
+      dqf_fail:
+        count: 3
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 8
+      file_naming_fail:
+        count: 3
+  m_amnd_light_nl:
+    description: Light Template AMND filing, 1 AIF (#-excluded fund), RE strategy (NL/AFM)
+    expected:
+      xsd_valid: 2
+      xsd_invalid: 0
+      dqf_fail:
+        count: 2
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 2
+      file_naming_fail:
+        count: 2
+  m_multi_nca:
+    description: 'Multi-jurisdiction template: NL+BE+DE+GB+LU outputs from single template'
+    multi_nca: true
+    per_nca:
+      NL:
+        expected:
+          xsd_valid: 3
+          xsd_invalid: 0
+          dqf_fail:
+            count: 3
+          dqf_missing:
+            count: 0
+          dqf_warning:
+            count: 0
+          file_naming_fail:
+            count: 3
+      BE:
+        expected:
+          xsd_valid: 1
+          xsd_invalid: 0
+          dqf_fail:
+            count: 0
+          dqf_missing:
+            count: 0
+          dqf_warning:
+            count: 0
+          file_naming_fail:
+            count: 0
+      DE:
+        expected:
+          xsd_valid: 1
+          xsd_invalid: 0
+          dqf_fail:
+            count: 0
+          dqf_missing:
+            count: 0
+          dqf_warning:
+            count: 0
+          file_naming_fail:
+            count: 0
+      GB:
+        expected:
+          xsd_valid: 2
+          xsd_invalid: 0
+          dqf_fail:
+            count: 0
+          dqf_missing:
+            count: 0
+          dqf_warning:
+            count: 0
+          file_naming_fail:
+            count: 0
+      LU:
+        expected:
+          xsd_valid: 2
+          xsd_invalid: 0
+          dqf_fail:
+            count: 0
+          dqf_missing:
+            count: 0
+          dqf_warning:
+            count: 0
+          file_naming_fail:
+            count: 0
+  synthetic_light_nl_init:
+    description: Synthetic Light Template, 8 AIFs, NL/AFM, INIT — exhaustive domain values
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_light_de_init:
+    description: Synthetic Light Template, 8 AIFs, DE/BaFin, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_light_be_init:
+    description: Synthetic Light Template, 8 AIFs, BE/FSMA, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_nl_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), NL/AFM, INIT — all Art 24 sections
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_full_de_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), DE/BaFin, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_full_be_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), BE/FSMA, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_amnd_nl:
+    description: Synthetic Full Template, AMND filing, NL/AFM — obligation change codes
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_cancel_nl:
+    description: Synthetic Light Template, CANCEL filing, NL/AFM
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 0
+      file_naming_fail:
+        count: 0
+  synthetic_light_gb_init:
+    description: Synthetic FCA Light Template, 8 AIFs, GB/FCA, INIT — v2 XSD, consolidated AIF
+    expected:
+      xsd_valid: 2
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 9
+      file_naming_fail:
+        count: 0
+  synthetic_full_gb_init:
+    description: Synthetic FCA Full Template, 6 AIFs (CT=4/5), GB/FCA, INIT — v2 XSD, consolidated AIF
+    expected:
+      xsd_valid: 2
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 0
+      file_naming_fail:
+        count: 0
+  synthetic_negative_crossfield:
+    description: Synthetic negative tests — deliberately invalid cross-field combinations
+    expected:
+      xsd_valid: 3
+      xsd_invalid: 1
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 0
+      file_naming_fail:
+        count: 0
+  synthetic_light_at_init:
+    description: Synthetic Light Template, 8 AIFs, AT/FMA, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_at_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), AT/FMA, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_bg_init:
+    description: Synthetic Light Template, 8 AIFs, BG/FSC, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_bg_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), BG/FSC, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_cy_init:
+    description: Synthetic Light Template, 8 AIFs, CY/CySEC, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_cy_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), CY/CySEC, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_cz_init:
+    description: Synthetic Light Template, 8 AIFs, CZ/CNB, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_cz_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), CZ/CNB, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_dk_init:
+    description: Synthetic Light Template, 8 AIFs, DK/Finanstilsynet, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_dk_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), DK/Finanstilsynet, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_ee_init:
+    description: Synthetic Light Template, 8 AIFs, EE/FSA, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_ee_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), EE/FSA, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_es_init:
+    description: Synthetic Light Template, 8 AIFs, ES/CNMV, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_es_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), ES/CNMV, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_fi_init:
+    description: Synthetic Light Template, 8 AIFs, FI/FIN-FSA, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_fi_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), FI/FIN-FSA, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_fr_init:
+    description: Synthetic Light Template, 8 AIFs, FR/AMF, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_fr_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), FR/AMF, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_gr_init:
+    description: Synthetic Light Template, 8 AIFs, GR/HCMC, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_gr_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), GR/HCMC, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_hr_init:
+    description: Synthetic Light Template, 8 AIFs, HR/HANFA, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_hr_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), HR/HANFA, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_hu_init:
+    description: Synthetic Light Template, 8 AIFs, HU/MNB, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_hu_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), HU/MNB, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_ie_init:
+    description: Synthetic Light Template, 8 AIFs, IE/CBI, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 9
+  synthetic_full_ie_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), IE/CBI, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 7
+  synthetic_light_is_init:
+    description: Synthetic Light Template, 8 AIFs, IS/CBI, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_is_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), IS/CBI, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_it_init:
+    description: Synthetic Light Template, 8 AIFs, IT/CONSOB, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_it_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), IT/CONSOB, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_li_init:
+    description: Synthetic Light Template, 8 AIFs, LI/FMA, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_li_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), LI/FMA, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_lt_init:
+    description: Synthetic Light Template, 8 AIFs, LT/BoL, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_lt_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), LT/BoL, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_lu_init:
+    description: Synthetic Light Template, 8 AIFs, LU/CSSF, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_lu_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), LU/CSSF, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_lv_init:
+    description: Synthetic Light Template, 8 AIFs, LV/BoL, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_lv_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), LV/BoL, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_mt_init:
+    description: Synthetic Light Template, 8 AIFs, MT/MFSA, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_mt_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), MT/MFSA, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_no_init:
+    description: Synthetic Light Template, 8 AIFs, NO/Finanstilsynet, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_no_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), NO/Finanstilsynet, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_pl_init:
+    description: Synthetic Light Template, 8 AIFs, PL/KNF, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_pl_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), PL/KNF, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_pt_init:
+    description: Synthetic Light Template, 8 AIFs, PT/CMVM, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_pt_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), PT/CMVM, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_ro_init:
+    description: Synthetic Light Template, 8 AIFs, RO/ASF, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_ro_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), RO/ASF, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_se_init:
+    description: Synthetic Light Template, 8 AIFs, SE/FI, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_se_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), SE/FI, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_si_init:
+    description: Synthetic Light Template, 8 AIFs, SI/ATVP, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_si_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), SI/ATVP, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0
+  synthetic_light_sk_init:
+    description: Synthetic Light Template, 8 AIFs, SK/NBS, INIT
+    expected:
+      xsd_valid: 9
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 72
+      file_naming_fail:
+        count: 0
+  synthetic_full_sk_init:
+    description: Synthetic Full Template, 6 AIFs (CT=4/5), SK/NBS, INIT
+    expected:
+      xsd_valid: 7
+      xsd_invalid: 0
+      dqf_fail:
+        count: 0
+      dqf_missing:
+        count: 0
+      dqf_warning:
+        count: 41
+      file_naming_fail:
+        count: 0

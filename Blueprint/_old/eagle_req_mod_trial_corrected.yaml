@@ -1,0 +1,464 @@
+# =============================================================================
+# Project Eagle — Trial Account Lifecycle (MOD-TRIAL)
+# Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml
+# Cross-cutting requirements defined in: eagle_requirements_overview.yaml
+# Manual controls: eagle_manual_controls_v1_1.yaml
+# =============================================================================
+
+metadata:
+  module: MOD-TRIAL
+  name: "Trial Account Lifecycle"
+  primary_users: [EAGLE_ADMIN, COO, CCO_DELEGATE, TRIAL_USER]
+  pipeline_layers: [L1_INGESTION, L2_TRANSFORMATION, L9_ORCHESTRATION, L11_IAM]
+  module_req_count: 7
+  cross_req_count: 16
+  total_applicable: 23
+
+# =============================================================================
+# MODULE REQUIREMENTS  (7 requirements)
+# =============================================================================
+
+requirements:
+
+  # -------------------------------------------------------------------------
+  # Trial account lifecycle
+  # -------------------------------------------------------------------------
+  trial_account_lifecycle:
+
+    - id: REQ-TRIAL-001
+      title: "Trial account provisioning and lifecycle"
+      module: MOD-TRIAL
+      layer: [L9_ORCHESTRATION, L11_IAM]
+      priority: MUST
+      phase: 1
+      gdpr_blocker: false
+      principles: [P1, P2, P9, P12]
+      regulatory: [GDPR]
+      description: >
+        Self-service trial provisioning triggered by website registration.
+        Legitimacy validation (REQ-GTM-002) is a prerequisite gate.
+        Trial tenants are TRIAL_TENANT type, distinct from ACTIVE_TENANT
+        (paid). Time limit is configurable per tenant (default: 60 days).
+        Expiry is enforced as a hard cutoff. Conversion to paid is a
+        separate CS Manager action.
+      provisioning_flow:
+        step_1: "Registrant submits name, company, email, optional use-case description"
+        step_2: "Legitimacy scoring runs (REQ-GTM-002) — HIGH auto-proceeds; MEDIUM/LOW queued"
+        step_3: "On approval: TRIAL_TENANT created in MOD-ADMIN with TRIAL_TENANT type flag"
+        step_4: "Pre-population pipeline triggered (REQ-TRIAL-003, REQ-TRIAL-004, REQ-TRIAL-005)"
+        step_5: "Registrant receives email with trial account link; clock starts"
+      tenant_type_flags:
+        TRIAL_TENANT:
+          description: "Self-service trial — feature-gated, time-limited"
+          transition: "Can only transition to ACTIVE_TENANT via CS Manager action + paid checklist"
+        ACTIVE_TENANT:
+          description: "Paid client — full access, CS Manager-provisioned"
+      time_limit:
+        default_days: 60
+        configurable_by: "EAGLE_ADMIN per prospect — override available at provisioning"
+        warning_emails: [7, 3, 1]
+        hard_expiry: >
+          At T+limit: all trial user access suspended; data enters 30-day
+          retention window (REQ-TRIAL-007). Prospect notified at each warning
+          milestone and at expiry.
+      requirements:
+        - "TRIAL_TENANT provisioned within 10 minutes of HIGH legitimacy score"
+        - "Time limit configurable between 14 and 90 days; default 60"
+        - "EAGLE_ADMIN can extend a specific trial by up to 30 days with logged reason"
+        - "Expiry warning emails sent at T-7, T-3, T-1 days"
+        - "Hard expiry suspends access; data not immediately deleted (REQ-TRIAL-007)"
+        - "Trial provisioning event logged in audit trail with legitimacy score, source, approver"
+      acceptance_criteria:
+        - "TRIAL_TENANT created within 10 minutes of HIGH legitimacy approval"
+        - "T-7 warning email triggers automatically; T+limit access suspended automatically"
+        - "EAGLE_ADMIN extension logged with actor identity and reason"
+
+    - id: REQ-TRIAL-002
+      title: "Trial feature gating"
+      module: MOD-TRIAL
+      layer: [L11_IAM, L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      gdpr_blocker: false
+      principles: [P1, P3, P9, P12]
+      regulatory: [AIFMD]
+      description: >
+        TRIAL_TENANT has access to all Eagle functionality except the
+        explicitly gated features below. The gating enforces the commercial
+        boundary: trial users can validate a full Annex IV submission
+        and experience the product end-to-end, but cannot produce a
+        deliverable that replaces the paid service.
+      gated_features:
+        download_annex_iv_report:
+          description: "Download or export of the generated Annex IV XML submission package"
+          ui_treatment: "Feature visible but locked; upgrade prompt shown on attempt"
+          rationale: "Core deliverable of the paid service"
+        nca_submission:
+          description: "Transmission of an Annex IV submission to any NCA"
+          ui_treatment: "Submit button disabled with clear label 'Available in paid plan'"
+          rationale: "Regulatory action with legal consequences — not appropriate for trial"
+        api_key_creation:
+          description: "Generation of production API keys for system integration"
+          ui_treatment: "API key section shows sandbox key only; production key requires upgrade"
+          rationale: "Production integration implies paid commitment"
+      available_in_trial:
+        - "Full data upload (all five ingestion channels)"
+        - "AI-assisted data parsing and field mapping (REQ-ING-004)"
+        - "Complete L3 validation with all CAF/CAM/DQ error codes"
+        - "DQEF quality checks (L4)"
+        - "Human review gate (L5) — full workflow including bulk approval"
+        - "Amendment workflow (REQ-AMD-001)"
+        - "Audit trail viewing (read-only)"
+        - "NCA obligation matrix (view only)"
+        - "Pre-populated workspace and strategy orientation (REQ-TRIAL-003/004)"
+      requirements:
+        - "Gating enforced server-side — not only in UI; API calls for gated actions return HTTP 402"
+        - "Upgrade prompt shown on every gated action attempt — consistent wording, link to contact Eagle"
+        - "TRIAL_TENANT role cannot be self-upgraded; only CS Manager can transition"
+        - "Feature gate configuration is version-controlled per REQ-MOD-001"
+      acceptance_criteria:
+        - "TRIAL_TENANT POST to submission API returns 402 with upgrade message"
+        - "XML download button visible but locked; click shows upgrade prompt not error"
+        - "Gate configuration change deployable without code release"
+
+    - id: REQ-TRIAL-003
+      title: "Trial pre-population from public register data"
+      module: MOD-TRIAL
+      layer: [L1_INGESTION, L1B_ADAPTER]
+      priority: MUST
+      phase: 1
+      gdpr_blocker: false
+      principles: [P1, P2, P5, P8, P12]
+      regulatory: [AIFMD, AI_ACT, GDPR]
+      description: >
+        Upon trial provisioning, Eagle pre-populates the trial workspace
+        with data from the Eagle AIFM prospect database (REQ-GTM-003).
+        Goal: immediate recognition and reduced time-to-first-validation
+        for deadline-driven smaller AIFMs. Pre-populated fields carry
+        status PRE_POPULATED_PUBLIC and require explicit user confirmation
+        before entering the validation pipeline. No pre-populated field
+        may flow to L3 validation without confirmation.
+      source_fields:
+        - "AIFM legal name, LEI, national codes"
+        - "Home NCA and all registered NCA jurisdictions"
+        - "AIF names and identifiers where available in register"
+        - "AIFM authorisation date and status"
+      explicitly_excluded:
+        - "AuM, NAV, portfolio positions — not publicly available"
+        - "Leverage ratios, liquidity profiles — not publicly available"
+        - "Any field derived from non-public data"
+      field_status_model:
+        PRE_POPULATED_PUBLIC:
+          source: "Deterministic register match (exact LEI or name)"
+          confidence: HIGH
+          ui_indicator: "Solid filled pill — 'From public register'"
+        AI_PROPOSED_INDICATIVE:
+          source: "AI-inferred from web enrichment (REQ-GTM-001)"
+          confidence: "MEDIUM or LOW"
+          ui_indicator: "Dashed outline pill — 'Suggested based on public profile'"
+        MANUAL_OPS_CORRECTION:
+          source: "Manually corrected by COO ops reviewer (REQ-TRIAL-005)"
+          ui_indicator: "Pencil icon — 'Reviewed by Eagle team'"
+        USER_CONFIRMED:
+          source: "User has confirmed the value"
+          ui_indicator: "Standard filled field"
+      requirements:
+        - >
+          Pre-population triggers within 60 seconds of trial tenant creation
+          based on AIFM LEI or name match in MOD-GTM database
+        - >
+          All pre-populated fields carry their status indicator in UI;
+          bulk confirmation permitted for HIGH confidence fields
+        - "No pre-populated field advances past data entry without user confirmation"
+        - "Unmatched fields shown as blank with manual entry prompt — no silent omission"
+        - "If AIFM not found in database, trial starts in fully blank mode with clear notification"
+        - >
+          Audit trail records per field: source, confidence score, register
+          snapshot timestamp, confirmation action and actor
+      acceptance_criteria:
+        - "Known AIFM trial shows pre-populated profile within 60 seconds of provisioning"
+        - "No pre-populated field appears in L3 output without USER_CONFIRMED record in audit trail"
+        - "Unknown AIFM trial proceeds to blank workspace with clear notification"
+
+    - id: REQ-TRIAL-004
+      title: "Trial orientation via inferred fund strategy"
+      module: MOD-TRIAL
+      layer: [L1_INGESTION, L2_TRANSFORMATION]
+      priority: MUST
+      phase: 1
+      gdpr_blocker: false
+      principles: [P1, P5, P8, P12]
+      regulatory: [AI_ACT, AIFMD]
+      description: >
+        Using enrichment attributes from REQ-GTM-001, Eagle personalises
+        the trial workspace to reflect the prospect's fund type. The goal
+        is orientation and recognition — not accuracy. Mandatory Annex IV
+        sections for the inferred fund type are highlighted; not-applicable
+        sections are visually de-emphasised. All strategy suggestions are
+        explicitly labelled AI_PROPOSED_INDICATIVE and require confirmation.
+        This mechanism applies to both trial users and, when REQ-TRIAL-003
+        pre-population is active, to paid onboarding.
+      orientation_elements:
+        strategy_suggestion:
+          trigger: "PredominantAIFType inferred at MEDIUM or HIGH confidence"
+          presentation: >
+            Onboarding wizard shows: 'Based on your public profile, we think
+            you are a [type] fund. Is this correct?' — one-click confirm or change.
+          status: AI_PROPOSED_INDICATIVE
+        section_highlighting:
+          description: >
+            On AIF type confirmation (or suggestion): mandatory sections
+            highlighted; conditional sections shown with trigger condition;
+            not-applicable sections suppressed (visible but greyed).
+          updates: "Dynamic — updates immediately when user changes AIF type"
+          example_PEQF: >
+            PrivateEquityFundInvestmentStrategies highlighted as mandatory;
+            PositionSizeType shown as mandatory (CAF-079); HedgeFund section
+            suppressed. CAF-036 and CAF-079 risk surfaced proactively.
+        field_pre_suggestion:
+          trigger: "Strategy codes inferred at HIGH confidence"
+          example: "StrategyType = VENT_CAPL for known VC fund"
+          status: AI_PROPOSED_INDICATIVE
+          requirement: "Never pre-selected without visible suggestion label"
+      requirements:
+        - >
+          Orientation applies at provisioning and updates dynamically when
+          user changes PredominantAIFType — no page reload required
+        - >
+          If no enrichment data available or confidence too low, trial starts
+          with standard blank workspace — no degraded experience
+        - "All AI_PROPOSED_INDICATIVE fields visually distinct from USER_CONFIRMED fields"
+        - "User confirmation of AIF type recorded in audit trail"
+        - "Orientation does not pre-fill reportable field values — guides, not fills"
+        - >
+          AI Act: inferred AIF type and strategy codes recorded in AI component
+          register per REQ-AUD-004 with model version, source, confidence and
+          user confirmation action
+      acceptance_criteria:
+        - >
+          PE fund trial user sees PEQF workspace with PE-specific sections
+          highlighted within 60 seconds of provisioning, with 'Is this correct?'
+          confirmation prompt
+        - "Confirming PEQF marks PositionSizeType as mandatory and suppresses HedgeFund sections"
+        - "Changing AIF type updates section highlighting without page reload"
+        - "All orientation suggestions labelled AI_PROPOSED_INDICATIVE in UI and audit trail"
+
+    - id: REQ-TRIAL-005
+      title: "Pre-population quality scoring and COO operations review"
+      module: MOD-TRIAL
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      gdpr_blocker: false
+      principles: [P1, P2, P5, P8, P11, P12]
+      regulatory: [AI_ACT, AIFMD]
+      description: >
+        Before pre-populated data reaches the trial workspace, every
+        enrichment attribute is scored for quality using a weighted model.
+        Attributes with low scores are reviewed by the COO operations team
+        before display. The trial is never blocked — it falls back to blank
+        workspace mode if review is not completed within 4 hours.
+        The scoring and review feedback loop continuously improves enrichment
+        accuracy per REQ-INT-002.
+      attribute_weights:
+        critical_weight_3:
+          fields: [PredominantAIFType, NCA_registrations, AIFM_LEI]
+          rationale: >
+            PredominantAIFType determines mandatory vs forbidden sections
+            (CAF-036, CAF-079). NCA registrations determine the full
+            reporting obligation matrix. AIFM LEI is the entity key.
+        important_weight_2:
+          fields: [AIF_names, AIFM_national_code, authorisation_date,
+                   InvestmentStrategy_codes]
+        contextual_weight_1:
+          fields: [fund_focus, fund_size_tier, asset_class_indicators]
+      score_calculation: >
+        Weighted average: SUM(attribute_confidence × weight) /
+        SUM(weight) for attributes with data present.
+        Absent attributes excluded from calculation.
+        Confidence: HIGH=1.0, MEDIUM=0.6, LOW=0.2.
+      score_outcomes:
+        HIGH:
+          threshold: "Weighted score >= 0.70"
+          action: >
+            HIGH and MEDIUM confidence attributes pre-populated.
+            LOW confidence attributes suppressed (shown blank).
+            Trial provisioned automatically.
+        MEDIUM:
+          threshold: "Weighted score 0.40 – 0.69"
+          action: >
+            Only HIGH confidence attributes pre-populated. MEDIUM and LOW
+            suppressed. Trial provisioned automatically. COO ops notified
+            informally for quality improvement.
+        LOW:
+          threshold: "Weighted score < 0.40"
+          action: >
+            Pre-population HELD. Trial provisioned in blank workspace
+            immediately (user not blocked). COO ops review queued.
+            If approved or corrected within 4 hours, pre-populated
+            workspace pushed as update. After 4 hours, trial continues
+            in blank mode.
+      coo_ops_review:
+        trigger: "LOW overall score OR any critical-weight-3 attribute scoring LOW"
+        interface: "MOD-MANAGEMENT COO-view — pre-population review queue"
+        actions:
+          APPROVE_AS_IS: "Deploy all scored attributes to trial workspace"
+          CORRECT_AND_APPROVE: >
+            Reviewer corrects one or more attribute values manually.
+            Correction logged as MANUAL_OPS_CORRECTION with reviewer identity.
+          SUPPRESS_ATTRIBUTE: "Remove specific attribute; shown blank in workspace"
+          NO_PRE_POPULATION: "Reject all enrichment; trial stays in blank mode"
+        sla: "Same-day target; 4-hour non-blocking cutoff"
+        audit: "Every action logged: reviewer, timestamp, before/after values"
+      requirements:
+        - "Quality score calculated within 60 seconds of enrichment pipeline completion"
+        - "HIGH/MEDIUM score outcomes provision trial workspace within 2 minutes of registration"
+        - "LOW score provisions blank workspace within 2 minutes; queue item within 60 seconds"
+        - "PredominantAIFType at LOW always triggers COO ops review regardless of overall score"
+        - "Scoring thresholds and weights are configuration-driven per REQ-MOD-001"
+        - "COO ops corrections distinguishable from automated enrichment in all audit outputs"
+      acceptance_criteria:
+        - "Well-known PE firm trial shows PEQF workspace within 2 minutes"
+        - "Low-confidence AIFM provisions blank workspace within 2 minutes; COO queue item appears"
+        - "COO correction to PredominantAIFType reflected in workspace and logged with reviewer identity"
+        - "No pre-populated field in validation output without USER_CONFIRMED audit record"
+
+    - id: REQ-TRIAL-006
+      title: "Trial health monitoring and upgrade trigger"
+      module: MOD-TRIAL
+      layer: [L9_ORCHESTRATION]
+      priority: SHOULD
+      phase: 1
+      gdpr_blocker: false
+      principles: [P1, P2, P11, P12]
+      regulatory: []
+      description: >
+        Eagle monitors trial engagement signals and generates a health score
+        per trial tenant. High-engagement trials trigger an in-app upgrade
+        prompt and a notification to Pipedrive. This enables the CCO/CRO
+        to prioritise outreach on trials showing genuine intent.
+      engagement_signals:
+        - "Login count and last login date"
+        - "Data uploaded (any ingestion channel)"
+        - "Validation run (L3 triggered at least once)"
+        - "Review gate accessed"
+        - "Days since provisioning vs time limit remaining"
+      health_score_tiers:
+        HOT: "Validation run + review gate accessed + data uploaded — within first 14 days"
+        WARM: "Data uploaded + validation run — no review gate yet"
+        COLD: "Login only or no activity in 14 days"
+        INACTIVE: "No login in 21 days"
+      upgrade_trigger:
+        conditions: "HOT or WARM for 7+ consecutive days"
+        in_app: "Upgrade prompt displayed on next login"
+        pipedrive: >
+          Webhook to Pipedrive creates or updates deal: trial account name,
+          health tier, days remaining, engagement summary
+      requirements:
+        - "Health score recalculated daily per trial tenant"
+        - "HOT/WARM trigger fires Pipedrive webhook within 24 hours of tier change"
+        - "In-app prompt shown on next login after trigger — dismissable but re-shown after 3 days"
+        - "Trial health metrics visible in MOD-MANAGEMENT CCO-view dashboard (REQ-INT-001)"
+        - "Pipedrive webhook is configuration-driven (endpoint, auth token) per REQ-MOD-001"
+      acceptance_criteria:
+        - "HOT trial fires Pipedrive webhook within 24 hours of reaching HOT status"
+        - "INACTIVE trial visible in CCO-view with days-inactive count and upgrade link"
+
+    - id: REQ-TRIAL-007
+      title: "Trial data retention and GDPR compliance"
+      module: MOD-TRIAL
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      gdpr_blocker: true
+      principles: [P9, P10, P12]
+      regulatory: [GDPR, AIFMD]
+      description: >
+        Trial tenant data has a distinct retention lifecycle. Upon expiry,
+        data enters a 30-day grace window. If the trial converts to a paid
+        account within the window, all data is migrated to the ACTIVE_TENANT
+        record. If no conversion occurs, all trial data is permanently deleted
+        at end of the grace window. No trial data is retained after the
+        grace window regardless of data type.
+      retention_lifecycle:
+        active_trial:
+          duration: "60 days (default, configurable)"
+          data_status: "Active — full read/write access for trial user"
+        grace_window:
+          trigger: "Hard expiry reached (T+limit)"
+          duration: "30 days"
+          data_status: >
+            Read-only for EAGLE_ADMIN; no trial user access.
+            Conversion possible during this window.
+          prospect_communication: >
+            Expiry notification at T+0, reminder at T+15 of grace window.
+        post_grace:
+          trigger: "Grace window expires without conversion"
+          action: "All trial tenant data permanently and automatically deleted"
+          data_included: >
+            All uploaded documents, canonical records, validation reports,
+            audit trail entries, pre-population data, enrichment data
+            linked to this trial tenant. LEI and AIFM legal name retained
+            in MOD-GTM prospect database as a contact record (separate
+            legal basis: legitimate interest for future outreach, subject
+            to opt-out).
+        conversion:
+          trigger: "CS Manager upgrades TRIAL_TENANT to ACTIVE_TENANT"
+          data_action: "All trial data migrated to ACTIVE_TENANT record intact"
+          legal_basis_change: >
+            Data basis transitions from legitimate interest (trial) to
+            contract performance (paid service). DPA must be executed
+            before conversion completes (REQ-GDPR-004).
+      requirements:
+        - "Grace window auto-deletion is automated — no manual trigger required"
+        - "Deletion event logged in audit trail: tenant ID, data scope, timestamp"
+        - "Pre-deletion notification sent to trial user at T+0 and T+15 of grace window"
+        - "Conversion action requires CS Manager role; DPA confirmation required"
+        - >
+          GDPR RoPA entry for trial data processing under legitimate interest
+          must be in place before MOD-TRIAL go-live (same entry as REQ-GTM-002)
+      acceptance_criteria:
+        - "Trial data auto-deleted at end of 30-day grace window — confirmed by EAGLE_ADMIN"
+        - "Conversion retains all trial data with no data loss"
+        - "Deletion event has complete audit record"
+
+
+# =============================================================================
+# CROSS-CUTTING REQUIREMENTS  (16 applicable)
+# Definitions in eagle_requirements_overview.yaml — references only below.
+# =============================================================================
+
+cross_cutting_requirements_applied:
+
+  # -------------------------------------------------------------------------
+  # Security (REQ-SEC-*)         → eagle_requirements_overview.yaml §5.1
+  # -------------------------------------------------------------------------
+  - REQ-SEC-001  # Encryption in transit and at rest
+  - REQ-SEC-002  # Vulnerability management and security testing programme
+  - REQ-SEC-003  # Data retention and deletion
+
+  # -------------------------------------------------------------------------
+  # Scale (REQ-SCL-*)             → eagle_requirements_overview.yaml §5.3
+  # -------------------------------------------------------------------------
+  - REQ-SCL-001  # Priority queue architecture for pipeline execution
+  - REQ-SCL-002  # Per-client throughput SLA
+
+  # -------------------------------------------------------------------------
+  # GDPR (REQ-GDPR-*)             → eagle_requirements_overview.yaml §7
+  # -------------------------------------------------------------------------
+  - REQ-GDPR-001  # Data subject rights request workflow
+  - REQ-GDPR-002  # Data breach communication workflow
+  - REQ-GDPR-003  # Systematic data minimisation controls
+  - REQ-GDPR-004  # GDPR DPA existence check at tenant activation
+  - REQ-GDPR-005  # Anthropic sub-processor transfer control
+
+  # -------------------------------------------------------------------------
+  # EU AI Act (REQ-AIACT-*)       → eagle_requirements_overview.yaml §8
+  # -------------------------------------------------------------------------
+  - REQ-AIACT-001  # AI input data quality controls
+  - REQ-AIACT-002  # AI classification safeguard — formal in-application control
+  - REQ-AIACT-003  # AI serious incident reporting to Anthropic
+  - REQ-AIACT-004  # Prompt injection prevention for unstructured ingestion
+  - REQ-AIACT-005  # Post-market monitoring plan — formal documented artefact per Art.26(5)
+  - REQ-AIACT-006  # AI transparency notice to users — in-app and contractual per Art.13
+

@@ -1,0 +1,706 @@
+# =============================================================================
+# Project Eagle — Manual Controls Register
+# Version:  1.1
+# Date:     2026-03-24
+# Owner:    Head of Compliance & Risk
+# Status:   Updated — addendum v1.12.0 merged
+#
+# Purpose:
+#   Consolidated single-source register of all Project Eagle requirements that
+#   carry a not_automatable: field. These steps require human judgment by a
+#   qualified compliance professional and cannot be generated, approximated,
+#   inferred, or auto-approved by the system under any circumstances.
+#   Automating these steps would violate the second-line independence model
+#   (project_eagle_compliance_risk.md s.5).
+#
+# related_documents:
+#   - eagle_company_requirements_v1_0_baseline_final.yaml  (baseline; manual controls removed)
+#   - eagle_company_requirements_addendum_v1_12_0.yaml     (source of v1.1 additions)
+#   - project_eagle_compliance_risk.md
+#
+# change_history:
+#   v1.0  2026-03-23  Initial split from eagle_company_requirements_v1_0_baseline_final.yaml
+#   v1.1  2026-03-24  Merged addendum v1.12.0:
+#                       - REQ-CR-006 amended: panels 9 → 13 (control_environment,
+#                         vendor_risk, control_deficiency_log, availability_status)
+#                       - Added ISAE 3402 manual controls: REQ-ISAE-002, REQ-ISAE-004,
+#                         REQ-ISAE-013, REQ-ISAE-014
+#                       - Extended not_automatable_register: NA-014..017 (application-level)
+#                         and NA-018..022 (entity-level / Company Compliance)
+#                       - Added entity-level manual obligations section
+# =============================================================================
+
+metadata:
+  title:   "Project Eagle — Manual Controls Register"
+  version: "1.2"
+  date:    "2026-03-24"
+  owner:   "Head of Compliance & Risk"
+  status:  "Updated — addendum v1.12.0 merged"
+  source_documents:
+    - "eagle_company_requirements_v1_0_baseline_final.yaml"
+    - "eagle_company_requirements_addendum_v1_12_0.yaml"
+  purpose: >
+    Single-source register of all Project Eagle requirements that contain a
+    not_automatable: field. See not_automatable_register in the source document
+    for the full NA-001..022 definitions.
+
+# =============================================================================
+# NOT-AUTOMATABLE REGISTER
+# Full NA-001..022 reference list (NA-001..013 from baseline; NA-014..022 added here)
+# =============================================================================
+
+not_automatable_register:
+  # --- Baseline (v1.0, NA-001..008) ---
+  - {step_id: "NA-001", step: "Risk assessment, likelihood/impact scoring, mitigation design, risk acceptance",                 requirement: REQ-CR-001}
+  - {step_id: "NA-002", step: "Lawful basis determination",                                                                    requirement: REQ-CR-002}
+  - {step_id: "NA-003", step: "GDPR Art.6(1)(f) LIA Step 3 balancing test — NEVER automatable",                               requirement: REQ-CR-004}
+  - {step_id: "NA-004", step: "Regulatory characterisation, NIS2 threshold decision, authority submission",                    requirement: REQ-CR-003}
+  - {step_id: "NA-005", step: "EU AI Act classification judgment",                                                             requirement: REQ-CR-005}
+  - {step_id: "NA-006", step: "AI system boundary review judgment",                                                           requirement: REQ-CR-005}
+  - {step_id: "NA-007", step: "Complexity tiering, consequence assessment, AIFMD 2.0 impact assessment",                      requirement: REQ-CR-007}
+  - {step_id: "NA-008", step: "Control objective mapping and auditor narrative",                                               requirement: REQ-CR-006}
+  # --- Addendum v1.9.0..v1.10.0 (NA-009..013) — carried through for completeness ---
+  # (NA-009..013 are defined in addenda v1.9.0 and v1.10.0; not reproduced here as those
+  #  addenda pre-date v1.12.0 and have no manual controls in this register's scope.)
+  # --- Addendum v1.11.0 (NA-014..017) — application-level ---
+  - {step_id: "NA-014", step: "Management assertion — senior management sign-off that service description is accurate and controls suitably designed", requirement: REQ-ISAE-002}
+  - {step_id: "NA-015", step: "Fraud risk assessment — identification and scoring of fraud scenarios relevant to Eagle's service delivery",           requirement: REQ-ISAE-004}
+  - {step_id: "NA-016", step: "Control deficiency materiality assessment — judgment whether a control failure is material to the audit opinion",     requirement: REQ-ISAE-013}
+  - {step_id: "NA-017", step: "Auditor scope agreement and readiness determination — judgment whether Eagle is ready for Type I audit engagement",  requirement: REQ-ISAE-014}
+  # --- Addendum v1.12.0 (NA-018..022) — entity-level / Company Compliance (not application requirements) ---
+  - {step_id: "NA-018", step: "ISMS scope and Statement of Applicability — determining ISMS boundary and justified inclusion/exclusion of all 93 Annex A controls", requirement: "entity-level / Company Compliance"}
+  - {step_id: "NA-019", step: "ISO 27001 internal audit — independent audit of ISMS at planned intervals; auditor selection for objectivity and impartiality",       requirement: "entity-level / Company Compliance"}
+  - {step_id: "NA-020", step: "ISO 27001 management review — top management review of ISMS performance, context changes and continual improvement decisions",        requirement: "entity-level / Company Compliance"}
+  - {step_id: "NA-021", step: "Threat intelligence programme — collection, analysis and actioning of information security threat intelligence (A.5.7)",               requirement: "entity-level / Company Compliance"}
+  - {step_id: "NA-022", step: "Security awareness and training programme — annual information security education for all personnel and relevant interested parties (A.6.3)", requirement: "entity-level / Company Compliance"}
+
+# =============================================================================
+# MANUAL CONTROLS INDEX
+# =============================================================================
+
+manual_controls_index:
+  # --- Baseline controls (v1.0) ---
+  - {id: REQ-CR-001,   title: "Risk register",                                           na_ref: [NA-001]}
+  - {id: REQ-CR-002,   title: "RoPA Phase 1 — structured manual RoPA",                  na_ref: [NA-002, NA-003]}
+  - {id: REQ-CR-003,   title: "DORA regulatory notification dossier",                    na_ref: [NA-004]}
+  - {id: REQ-CR-004,   title: "LIA balancing test register",                             na_ref: [NA-003]}
+  - {id: REQ-CR-005,   title: "AI component register",                                   na_ref: [NA-005, NA-006]}
+  - {id: REQ-CR-006,   title: "ISAE 3402 / SOC 2 certification evidence view",           na_ref: [NA-008],    amended_in: "v1.1 — panels 9→13"}
+  - {id: REQ-CR-007,   title: "Client regulatory risk profile",                          na_ref: [NA-007]}
+  - {id: REQ-GDPR-006, title: "GDPR Art.33 supervisory authority breach notification",   na_ref: [NA-004]}
+  - {id: REQ-GDPR-007, title: "DPIA trigger mechanism — high-risk processing detection", na_ref: []}
+  # --- Added in v1.1 (addendum v1.12.0) ---
+  - {id: REQ-ISAE-002, title: "Management assertion — signed CEO/CTO declaration",             na_ref: [NA-014], added_in: "v1.1"}
+  - {id: REQ-ISAE-004, title: "Fraud risk assessment",                                         na_ref: [NA-015], added_in: "v1.1"}
+  - {id: REQ-ISAE-013, title: "Control deficiency log — exception tracking with materiality",  na_ref: [NA-016], added_in: "v1.1"}
+  - {id: REQ-ISAE-014, title: "Auditor engagement and Type I readiness programme",             na_ref: [NA-017], added_in: "v1.1"}
+
+# =============================================================================
+# 1.  COMPLIANCE & RISK OPERATIONS — MANUAL CONTROLS
+#     Owner: Head of Compliance & Risk (process); CTO (build)
+#     Source: section 4.13 of eagle_company_requirements_v1_0_baseline_final.yaml
+#     Gap analysis: project_eagle_compliance_risk.md
+#     Independence note: Co-authored by Head of Compliance & Risk.
+#       External review required before first paid client go-live.
+# =============================================================================
+
+compliance_risk_operations:
+
+  - id: REQ-CR-001
+    title: "Risk register — DB-first structured compliance risk register"
+    module: MOD-MANAGEMENT
+    layer: [L9_ORCHESTRATION]
+    priority: MUST
+    phase: 1
+    principles: [P2, P8, P10, P14]
+    regulatory: [DORA, GDPR, ISO27001]
+    not_automatable: "Risk assessment, likelihood/impact scoring, mitigation design, risk acceptance (NA-001)"
+    risk_categories: [OPERATIONAL, TECHNOLOGICAL, REGULATORY]
+    requirements:
+      - "Risk records stored in risk_register table; all fields indexed and queryable from compliance subview"
+      - "Risk records retained for minimum 10 years"
+      - "Any change creates an immutable version entry in audit trail (REQ-AUD-001)"
+      - "Only HEAD_OF_COMPLIANCE_RISK and EAGLE_ADMIN can create, update, or close risk records"
+      - "DORA MAJOR incident closure auto-triggers risk review prompt within 24 hours"
+      - "Overdue reviews displayed prominently in compliance subview"
+      - "Risk register exportable as PDF and JSON for ISAE 3402 evidence"
+    acceptance_criteria:
+      - "MAJOR incident closure triggers risk review prompt within 24 hours"
+      - "Risk register PDF accepted by ISAE 3402 auditor as second-line risk oversight evidence"
+
+  - id: REQ-CR-002
+    title: "RoPA Phase 1 — structured manual Register of Processing Activities"
+    module: MOD-MANAGEMENT
+    layer: [L9_ORCHESTRATION]
+    priority: MUST
+    phase: 1
+    gdpr_blocker: false
+    principles: [P2, P8, P10, P14]
+    regulatory: [GDPR]
+    not_automatable: "Lawful basis determination (NA-002); LIA Step 3 (see REQ-CR-004, NA-003)"
+    description: >
+      Phase 1 forerunner to REQ-INT-003. Per-processing-activity DB record with lawful basis,
+      sign-off workflow, and gdpr_blocker gate for REQ-GTM-001, REQ-GTM-002, REQ-TRIAL-007.
+      Schema forward-compatible with REQ-INT-003 Phase 2 auto-generation.
+    phase_1_gdpr_blocker_gate:
+      applicable_requirements: [REQ-GTM-001, REQ-GTM-002, REQ-TRIAL-007]
+      gate: "SIGNED_OFF RoPA entry required in this table before module go-live"
+    requirements:
+      - "RoPA records stored in ropa_entries table"
+      - "Status transitions: DRAFT → PENDING_REVIEW → SIGNED_OFF; only Head of Compliance & Risk can sign off"
+      - "Any change to SIGNED_OFF entry increments version; prior version retained immutably"
+      - "RoPA exportable as PDF for supervisory authority requests and ISAE 3402 evidence"
+      - "DB schema forward-compatible with REQ-INT-003 Phase 2 auto-population"
+    acceptance_criteria:
+      - "gdpr_blocker: true requirement cannot go production-ready without SIGNED_OFF RoPA entry"
+      - "RoPA PDF accepted by ISAE 3402 auditor as GDPR Art.30 compliance evidence"
+
+  - id: REQ-CR-003
+    title: "DORA regulatory notification dossier — auto-assembled; Compliance annotates and signs"
+    module: MOD-MANAGEMENT
+    layer: [L9_ORCHESTRATION]
+    priority: MUST
+    phase: 1
+    principles: [P2, P7, P8, P10, P14]
+    regulatory: [DORA, NIS2]
+    not_automatable: "Regulatory characterisation, NIS2 threshold decision, authority submission (NA-004)"
+    description: >
+      Auto-assembled within 15 minutes of MAJOR/SIGNIFICANT incident classification from
+      REQ-ISO-005 + REQ-OPS-006. Deadline counters for DORA Art.18 (4h MAJOR) and NIS2 Art.23
+      (24h early warning). Head of Compliance & Risk adds compliance narrative and authorises.
+      Submitted dossier stored as immutable audit artefact.
+    requirements:
+      - "Dossier auto-assembled within 15 minutes of incident classification"
+      - "AT_RISK alert fires with >= 45 minutes remaining on MAJOR Art.18 deadline"
+      - "compliance_narrative mandatory before SUBMITTED status"
+      - "nis2_threshold_decision mandatory for NIS2 stream before SUBMITTED"
+      - "Dossier records retained 5 years per DORA retention requirements"
+    acceptance_criteria:
+      - "MAJOR incident creates dossier with pre-populated sections within 15 minutes"
+      - "4-hour Art.18 deadline counter visible within 5 minutes of MAJOR classification"
+      - "Submitted dossier PDF accepted by ISAE 3402 auditor as DORA notification evidence"
+
+  - id: REQ-CR-004
+    title: "LIA balancing test register — explicitly not-automatable"
+    module: MOD-MANAGEMENT
+    layer: [L9_ORCHESTRATION]
+    priority: MUST
+    phase: 1
+    gdpr_blocker: false
+    principles: [P8, P10, P14]
+    regulatory: [GDPR]
+    not_automatable: "GDPR Art.6(1)(f) LIA Step 3 balancing test is NEVER automatable (NA-003)"
+    requirements:
+      - "System blocks sign-off if step_3_balancing_test field is empty or below minimum word count"
+      - "Any gdpr_blocker: true requirement with legitimate interest basis requires COMPLETE LIA record"
+      - "All three LIA step fields mandatory; sign-off blocked if any empty"
+      - "LIA records retained minimum 10 years"
+    acceptance_criteria:
+      - "Sign-off with empty step_3_balancing_test blocked with explanatory error"
+      - "Legitimate interest gdpr_blocker requirement cannot go production-ready without COMPLETE LIA"
+
+  - id: REQ-CR-005
+    title: "AI component register — compliance-annotated; CTO-sourced technical inventory"
+    module: MOD-MANAGEMENT
+    layer: [L9_ORCHESTRATION]
+    priority: MUST
+    phase: 1
+    principles: [P5, P8, P10, P14]
+    regulatory: [AI_ACT, GDPR]
+    not_automatable: "EU AI Act classification, boundary review judgment (NA-005, NA-006)"
+    description: >
+      CTO provides technical inventory; Head of Compliance & Risk adds compliance overlay.
+      New AI model version in REQ-AUD-004 auto-creates pending compliance annotation record.
+      New model version blocks production without SIGNED_OFF annotation (REQ-ISO-004 significant change).
+    requirements:
+      - "New AI component version creates UNDER_REVIEW record; Head of Compliance & Risk alerted within 48 hours"
+      - "No new AI model version to production without SIGNED_OFF compliance annotation"
+      - "Overdue annotation reviews highlighted in compliance subview"
+      - "Records retained minimum 5 years from end of component service"
+    acceptance_criteria:
+      - "New model version in REQ-AUD-004 generates compliance annotation alert within 24 hours"
+      - "Release with unsigned new AI component blocked under REQ-ISO-004 significant change"
+
+  - id: REQ-CR-006
+    title: "ISAE 3402 / SOC 2 certification evidence view in MOD-MANAGEMENT"
+    # AMENDED in v1.1: panels increased from 9 to 13 per addendum v1.12.0 (req_cr_006_amendment).
+    # Added panels: control_environment, vendor_risk, control_deficiency_log, availability_status.
+    module: MOD-MANAGEMENT
+    layer: [L9_ORCHESTRATION]
+    priority: MUST
+    phase: 1
+    principles: [P2, P8, P10, P14]
+    regulatory: [ISO27001, DORA, GDPR, AI_ACT]
+    not_automatable: "Control objective mapping and auditor narrative (NA-008)"
+    control_objective_panels:
+      # Original 9 panels (v1.0)
+      - access_control
+      - change_management
+      - incident_management
+      - backup_and_recovery
+      - security_testing
+      - ai_governance
+      - gdpr_controls
+      - risk_management
+      - operational_controls
+      # Added in v1.1 (addendum v1.12.0 — req_cr_006_amendment)
+      - control_environment        # CC1 — ethics, org structure, accountability
+      - vendor_risk                # CC9.2 — third-party due diligence and risk register
+      - control_deficiency_log     # ISAE-EV-004 — exception and deficiency tracking
+      - availability_status        # A1.2 — client-facing availability communication
+    requirements:
+      - "Certification evidence view loads within 5 seconds for all thirteen panels"
+      - "Point-in-time evidence snapshot exportable per panel or combined"
+      - "Head of Compliance & Risk annotations stored as DB records per P14"
+      - "Accessible only to HEAD_OF_COMPLIANCE_RISK and EAGLE_ADMIN"
+      - "Evidence snapshots retained minimum 10 years"
+    acceptance_criteria:
+      - "Evidence snapshot for change_management panel covers all release manifests without manual preparation"
+      - "ISAE 3402 Type I auditor confirms all thirteen panels provide sufficient evidence aggregation"
+      - "control_deficiency_log panel surfaces all open deficiencies with age and materiality status"
+
+  - id: REQ-CR-007
+    title: "Client regulatory risk profile — auto-filled DB record with compliance annotations"
+    module: MOD-MANAGEMENT
+    layer: [L9_ORCHESTRATION]
+    priority: MUST
+    phase: 1
+    principles: [P2, P4, P8, P10, P14]
+    regulatory: [AIFMD, DORA, GDPR]
+    not_automatable: "Complexity tiering, consequence assessment, AIFMD 2.0 impact assessment (NA-007)"
+    description: >
+      System-populated layer auto-filled from REQ-MJ-001, REQ-OBL-001, REQ-MOD-001, REQ-TEN-004.
+      Compliance annotation layer manually maintained by Head of Compliance & Risk.
+      AIFMD 2.0 flag activates for MEDIUM/HIGH impact clients within 90 days of ESMA ITS
+      publication (not April 2026 legislative deadline — see OOS-001).
+    requirements:
+      - "Profile auto-created within 30 minutes of paid tenant activation"
+      - "System_populated fields auto-refreshed on submission status changes"
+      - "Submission REJECTED or OVERDUE triggers review_due prompt within 1 hour"
+      - "ELEVATED clients displayed prominently in compliance subview"
+      - "Profile retained minimum 10 years"
+    acceptance_criteria:
+      - "New paid tenant creates profile within 30 minutes with all system fields populated"
+      - "Submission REJECTED triggers review_due prompt within 1 hour"
+
+# =============================================================================
+# 2.  GDPR APPLICATION-LEVEL CONTROLS — MANUAL CONTROLS
+#     Source: section 6. of eagle_company_requirements_v1_0_baseline_final.yaml
+#     Note: REQ-GDPR-001..005 and REQ-GDPR-008 are automated controls and
+#           remain in the baseline document.
+# =============================================================================
+
+gdpr_manual_controls:
+
+  # Added v1.8.0 (audit gap analysis)
+
+  - id: REQ-GDPR-006
+    title: "GDPR Art.33 supervisory authority breach notification workflow"
+    layer: [L9_ORCHESTRATION]
+    priority: MUST
+    phase: 1
+    gdpr_blocker: false
+    principles: [P7, P8, P10]
+    regulatory: [GDPR, DORA]
+    description: >
+      GDPR Art.33 requires notification to the supervisory authority within 72 hours
+      of becoming aware of a personal data breach. Distinct from REQ-GDPR-002 (Art.34
+      — data subject notification) and REQ-CR-003 (DORA regulatory incident notification).
+      The workflow auto-starts a 72-hour deadline counter on breach classification in
+      REQ-ISO-005, assembles a structured report from existing incident records, and
+      stores the submitted notification as an immutable audit artefact.
+    not_automatable: >
+      The Art.33(1) threshold test (whether a breach is likely to result in risk to
+      natural persons) is a legal judgment by the Head of Compliance & Risk (NA-004).
+      The system tracks the deadline and assembles the report; threshold determination
+      and actual AP submission are human acts.
+    requirements:
+      - "AP notification record auto-created within 5 minutes of PERSONAL_DATA_BREACH classification in REQ-ISO-005"
+      - "72-hour deadline counter displayed in MOD-MANAGEMENT compliance subview"
+      - "AT_RISK alert (< 12 hours remaining) sent to Head of Compliance & Risk and EAGLE_ADMIN"
+      - "BREACHED alert fires immediately if 72-hour deadline passes without submission"
+      - "threshold_assessment field is mandatory before status can be set to SUBMITTED or EXEMPTED"
+      - "Submitted AP notification PDF stored as immutable audit artefact (REQ-AUD-001)"
+      - "Records retained for minimum 5 years per GDPR Art.33(5)"
+      - "Visible in REQ-CR-006 certification evidence view under gdpr_controls panel"
+    acceptance_criteria:
+      - "PERSONAL_DATA_BREACH classification creates AP notification record with 72-hour counter within 5 minutes"
+      - "AT_RISK alert fires with at least 12 hours remaining on the deadline"
+      - "Submitted AP notification PDF accepted by ISAE 3402 auditor as GDPR Art.33 evidence"
+
+  - id: REQ-GDPR-007
+    title: "DPIA trigger mechanism — high-risk processing activity detection"
+    layer: [L9_ORCHESTRATION]
+    priority: MUST
+    phase: 1
+    gdpr_blocker: false
+    principles: [P8, P10]
+    regulatory: [GDPR]
+    description: >
+      GDPR Art.35 requires a DPIA before processing likely to result in high risk to
+      natural persons. The system flags when a new processing activity crosses a
+      high-risk threshold and alerts the Head of Compliance & Risk. The DPIA record is
+      stored in MOD-MANAGEMENT. This addresses the application-level trigger mechanism;
+      the entity-level DPIA programme governance remains outside application scope.
+    not_automatable: >
+      The DPIA content — risk identification, evaluation, and mitigation determination —
+      is a compliance judgment. The system detects triggers and provides structure only.
+    high_risk_trigger_conditions:
+      - "New processing activity involving special categories (Art.9) — retained for completeness; not currently applicable to Eagle's B2B processing scope"
+      - "New processing activity involving special categories of personal data (Art.9) per RoPA entry"
+      - "Manual trigger: EAGLE_ADMIN or Head of Compliance & Risk flags activity for DPIA"
+    requirements:
+      - "DPIA trigger alert sent to Head of Compliance & Risk within 1 business day of trigger condition"
+      - "DPIA record pre-populated from RoPA entry (REQ-CR-002) where available"
+      - "Processing activity cannot go live where trigger condition met and DPIA status not COMPLETE"
+      - "DPIA records stored in dpia_records table in MOD-MANAGEMENT compliance subview"
+      - "Records retained for minimum 10 years"
+    acceptance_criteria:
+      - "New RoPA entry with Art.9 special categories flag or systematic AI monitoring flag triggers DPIA alert to Head of Compliance & Risk within 1 business day"
+      - "A requirement with a high-risk trigger and no COMPLETE DPIA is flagged before go-live"
+
+# =============================================================================
+# 3.  ISAE 3402 GAP CLOSURES — MANUAL CONTROLS                              [NEW v1.1]
+#     Source: eagle_company_requirements_addendum_v1_12_0.yaml (section isae_gap_closures)
+#     Only requirements carrying a not_automatable: field are listed here.
+#     The remaining REQ-ISAE-003 / 005..012 are automated controls and belong
+#     in the baseline document.
+# =============================================================================
+
+isae_manual_controls:
+
+  - id: REQ-ISAE-002
+    title: "Management assertion — signed CEO/CTO declaration (ISAE-RS-002)"
+    module: MOD-CCEV
+    layer: [L9_ORCHESTRATION]
+    layer_tag: PLATFORM
+    priority: MUST
+    phase: 1
+    gdpr_blocker: false
+    principles: [P8, P10, P14]
+    regulatory: [ISO27001]
+    isae_criteria: "ISAE-RS-002"
+    closes_gap: "Gap 1 — Management assertion as signed document"
+    not_automatable: "Senior management sign-off on assertion content (NA-014)"
+    description: >
+      ISAE 3402 requires a management assertion signed by appropriate senior
+      management (CEO and/or CTO level) asserting that the service description
+      fairly represents the system and that controls are suitably designed
+      (Type I). For Type II the assertion extends to operating effectiveness.
+      Without this document no auditor can issue an ISAE opinion. This is a
+      hard pre-condition for the audit engagement (REQ-ISAE-014).
+    type_i_assertion_content:
+      - "Service description fairly presents Eagle's system as operated during the period"
+      - "Controls related to stated control objectives were suitably designed throughout the period"
+      - "Named signatories: CEO and CTO (dual sign-off)"
+      - "Assertion date matching the Type I point-in-time date"
+    type_ii_addition:
+      - "Controls operated effectively throughout the report period"
+      - "No unresolved material control failures during the period"
+    requirements:
+      - "Management assertion document stored in MOD-CCEV (category: management_assertion)"
+      - "Dual sign-off mandatory: CEO and CTO; assertion blocked without both signatures"
+      - "Assertion version-locked to the service description version it attests to"
+      - "Re-assertion required before each audit cycle (annual for Type II)"
+      - "Assertion PDF stored as immutable artefact (REQ-AUD-001)"
+      - "Linked to control_register entry ISAE-RS-002"
+    acceptance_criteria:
+      - "Assertion without both CEO and CTO signatures blocked by system"
+      - "Assertion version mismatch with current service description surfaced as action item in REQ-CCEV-004"
+      - "ISAE 3402 auditor accepts assertion as the required management representation"
+
+  - id: REQ-ISAE-004
+    title: "Fraud risk assessment (ISAE-CC3.3)"
+    module: MOD-CCEV
+    layer: [L9_ORCHESTRATION]
+    layer_tag: PLATFORM
+    priority: MUST
+    phase: 1
+    gdpr_blocker: false
+    principles: [P8, P10, P14]
+    regulatory: [ISO27001]
+    isae_criteria: "ISAE-CC3.3"
+    closes_gap: "Gap 4 — Fraud risk assessment"
+    not_automatable: "Fraud scenario identification and risk scoring (NA-015)"
+    description: >
+      CC3.3 requires a documented fraud risk assessment as part of the overall
+      risk assessment process. REQ-CR-001 (risk register) covers operational and
+      regulatory risks but does not include a structured fraud risk assessment.
+      This requirement adds fraud as an explicit risk category with identified
+      scenarios, controls mapped to each scenario, and annual review.
+    fraud_scenarios_minimum:
+      unauthorised_data_access:
+        description: "Eagle staff accessing client fund data outside authorised support context"
+        existing_controls: [REQ-USR-001, REQ-ISO-007, REQ-ISO-013, REQ-AUD-001]
+        residual_risk_assessment: "HEAD_OF_COMPLIANCE_RISK judgment"
+      submission_manipulation:
+        description: "Unauthorised alteration of validated submission data before or after NCA delivery"
+        existing_controls: [REQ-AUD-001, REQ-AUD-002, REQ-REL-003]
+        residual_risk_assessment: "HEAD_OF_COMPLIANCE_RISK judgment"
+      credential_misuse:
+        description: "Misuse of NCA portal credentials or API keys for unauthorised access"
+        existing_controls: [REQ-USR-002, REQ-USR-003, REQ-ISO-013, REQ-ISO-014]
+        residual_risk_assessment: "HEAD_OF_COMPLIANCE_RISK judgment"
+      insider_threat:
+        description: "Privileged insider exfiltrating client data or disrupting audit trail integrity"
+        existing_controls: [REQ-ISO-007, REQ-AUD-001, REQ-ISO-013, REQ-ISO-009]
+        residual_risk_assessment: "HEAD_OF_COMPLIANCE_RISK judgment"
+      financial_misstatement:
+        description: "Manipulation of AuM or leverage figures in canonical records affecting regulatory reporting"
+        existing_controls: [REQ-AUD-002, REQ-REV-001, REQ-VAL-001]
+        residual_risk_assessment: "HEAD_OF_COMPLIANCE_RISK judgment"
+    requirements:
+      - "Fraud risk assessment document stored in MOD-CCEV (category: fraud_risk_assessment)"
+      - "All five minimum scenarios assessed; additional scenarios at HEAD_OF_COMPLIANCE_RISK discretion"
+      - "Each scenario: description, existing controls mapped, residual risk rating, additional mitigations if required"
+      - "Annual review; review mandatory after any fraud-relevant security incident"
+      - "Assessment linked to risk register (REQ-CR-001) — HIGH residual risk scenarios create risk records"
+      - "Linked to control_register entry ISAE-CC3.3"
+    acceptance_criteria:
+      - "Fraud risk assessment with all five scenarios and residual ratings accepted by HEAD_OF_COMPLIANCE_RISK"
+      - "HIGH residual risk scenario creates corresponding risk register entry in REQ-CR-001"
+      - "ISAE 3402 auditor accepts assessment as CC3.3 fraud risk evidence"
+
+  - id: REQ-ISAE-013
+    title: "Control deficiency log — exception tracking with materiality assessment (ISAE-EV-004)"
+    module: MOD-MANAGEMENT
+    layer: [L9_ORCHESTRATION]
+    layer_tag: PLATFORM
+    priority: MUST
+    phase: 1
+    gdpr_blocker: false
+    principles: [P8, P10, P14]
+    regulatory: [ISO27001]
+    isae_criteria: "ISAE-EV-004"
+    closes_gap: "Gap 12 — Control deficiency log"
+    not_automatable: "Materiality assessment — judgment whether a control failure affects the audit opinion (NA-016)"
+    description: >
+      ISAE-EV-004 requires documentation of control failures during the audit
+      period, with materiality assessment and remediation tracking. REQ-OPS-004
+      is an operational exception log for submission pipeline issues. REQ-CR-001
+      is a risk register. Neither is a control deficiency log in ISAE sense —
+      a register of cases where a defined control did not operate as designed,
+      assessed for materiality impact on the audit opinion. This requirement
+      creates that log as a DB-first record in MOD-MANAGEMENT, surfaced in
+      REQ-CR-006 via the new control_deficiency_log panel.
+    deficiency_categories:
+      design_deficiency: "A control was not suitably designed to achieve the stated objective"
+      operating_deficiency: "A suitably designed control did not operate effectively during the period"
+      significant_deficiency: "A deficiency or combination of deficiencies that could adversely affect the audit opinion"
+    deficiency_record_fields:
+      - "deficiency_id (UUID)"
+      - "control_id (FK → control_register)"
+      - "deficiency_category (design | operating | significant)"
+      - "discovery_date"
+      - "description: what control failed and how"
+      - "discovery_source: internal_review | auditor_finding | incident | access_review | monitoring"
+      - "affected_period: from / to dates"
+      - "materiality_assessment: HEAD_OF_COMPLIANCE_RISK judgment — MATERIAL | NOT_MATERIAL with rationale"
+      - "remediation_action: description of fix"
+      - "remediation_owner: role"
+      - "remediation_deadline"
+      - "remediation_status: OPEN | IN_PROGRESS | CLOSED"
+      - "closed_date"
+      - "auditor_disclosure_required: boolean — true if MATERIAL"
+    requirements:
+      - "Control deficiency log table added to MOD-MANAGEMENT compliance subview"
+      - "Any finding from IAM review (REQ-ISO-013), pen test (REQ-ISO-003), or incident (REQ-ISO-005) that constitutes a control failure creates a deficiency record"
+      - "materiality_assessment field mandatory before status can progress beyond OPEN"
+      - "MATERIAL deficiency triggers immediate HEAD_OF_COMPLIANCE_RISK and CTO escalation alert"
+      - "Deficiency records visible in REQ-CR-006 control_deficiency_log panel"
+      - "Remediation deadline overdue by more than 5 business days triggers escalation alert"
+      - "All deficiency records retained minimum 10 years"
+      - "Deficiency log exported in REQ-CCEV-006 annual evidence package"
+    acceptance_criteria:
+      - "IAM review orphan account finding automatically creates deficiency record"
+      - "MATERIAL deficiency generates escalation alert within 1 hour"
+      - "Attempt to close deficiency without remediation_action populated is blocked"
+      - "ISAE 3402 auditor accepts deficiency log as EV-004 exception management evidence"
+
+  - id: REQ-ISAE-014
+    title: "Auditor engagement and Type I readiness programme (ISAE-MG-001/MG-002)"
+    module: MOD-CCEV
+    layer: [L9_ORCHESTRATION]
+    layer_tag: PLATFORM
+    priority: MUST
+    phase: 1
+    gdpr_blocker: false
+    principles: [P8, P10, P14]
+    regulatory: [ISO27001]
+    isae_criteria: "ISAE-MG-001, ISAE-MG-002"
+    closes_gap: "Gap 14 — Auditor engagement and prior findings process"
+    not_automatable: "Auditor scope agreement and readiness determination (NA-017)"
+    description: >
+      ISAE-MG-001 and MG-002 require a structured auditor relationship:
+      independent auditor engaged with defined scope, audit period agreed,
+      and all prior-period findings addressed before a new period commences.
+      For Eagle's first certification (Type I), this means a formal readiness
+      programme: all Type I blockers resolved before engagement, scope letter
+      agreed, and a pre-audit control walkthrough completed. This requirement
+      formalises that programme as a tracked deliverable in MOD-CCEV.
+    type_i_readiness_checklist:
+      report_structure:
+        - "REQ-ISAE-001: Service Description v1.0 signed off (RS-001)"
+        - "REQ-ISAE-002: Management assertion drafted and ready for signature (RS-002)"
+        - "REQ-ISAE-003: Carve-out decision record and CSOCs documented (RS-004)"
+        - "REQ-ISAE-001: CUECs published and acknowledged by at least one active tenant (RS-003)"
+      control_environment:
+        - "REQ-ISAE-005: Code of conduct, org chart, job descriptions complete (CC1)"
+        - "REQ-ISAE-004: Fraud risk assessment complete (CC3.3)"
+        - "REQ-ISAE-010: Security KPI metrics at least 3 months of records available (CC1.5)"
+      access_controls:
+        - "REQ-ISO-013: At least one quarterly IAM review completed with evidence (CC6.1)"
+        - "REQ-ISAE-006: Leaver process operational; at least one test event evidenced (CC6.5)"
+      operational_controls:
+        - "REQ-ISAE-007: SIEM configuration record in place; one alert test evidenced (CC7)"
+        - "REQ-ISO-004: Change log with at least 3 months of records (CC8.1)"
+        - "REQ-CR-001: Risk register active with at least one completed review (CC3.2)"
+      availability_and_confidentiality:
+        - "REQ-ISAE-008: Data classification scheme complete (C1.1)"
+        - "REQ-ISAE-011: Status channel live and accessible (A1.2)"
+        - "REQ-ISO-001: BCP tested; test results stored (A1.3)"
+      evidence_infrastructure:
+        - "REQ-ISAE-012: Control matrix generated and reviewed (EV-002)"
+        - "REQ-ISAE-013: Control deficiency log active (EV-004)"
+        - "REQ-ISAE-009: Vendor due diligence register with current AWS and Anthropic reviews (CC9.2)"
+    requirements:
+      - "Auditor engagement record stored in MOD-CCEV (category: auditor_engagement_record)"
+      - "Type I readiness checklist tracked as structured DB record; all items must reach COMPLETE before engagement"
+      - "HEAD_OF_COMPLIANCE_RISK owns readiness programme; CTO co-owns technical items"
+      - "Readiness status visible in REQ-CCEV-004 ISAE panel as a named dashboard item"
+      - "Engagement letter (scope, audit period, applicable TSC) stored as immutable artefact on signing"
+      - "Prior findings register: for Type II, all Type I findings tracked to CLOSED before period-start"
+      - "Engagement records retained minimum 10 years"
+    acceptance_criteria:
+      - "Readiness dashboard shows all Type I checklist items COMPLETE before engagement letter signed"
+      - "Attempt to mark engagement STARTED with incomplete readiness checklist generates blocker alert"
+      - "ISAE 3402 auditor confirms readiness programme provides sufficient pre-engagement preparation"
+      - "Engagement letter stored as immutable artefact within 5 business days of signing"
+
+# =============================================================================
+# 4.  ENTITY-LEVEL MANUAL OBLIGATIONS — ISO 27001 / ISMS                   [NEW v1.1]
+#     Source: eagle_company_requirements_addendum_v1_12_0.yaml (entity_level_findings_v1_12_0)
+#
+#     These items CANNOT be implemented in the Eagle application. They are
+#     organisation-level governance, HR, legal and IT-endpoint obligations.
+#     Owner: Head of Compliance & Risk (programme); tracked in Company Compliance document.
+#     Not-automatable references: NA-018..022.
+#
+#     IMPORTANT: These entries have no REQ-ID and are NOT tracked in the
+#     application requirement count. They are included here for completeness
+#     and to ensure the Head of Compliance & Risk has a single-source view
+#     of all non-automatable obligations.
+# =============================================================================
+
+entity_level_manual_obligations:
+
+  - el_id: EL-006
+    title: "ISO 27001 clausules 4-10 — complete ISMS governance"
+    na_ref: [NA-018, NA-019, NA-020]
+    scope: "entity governance"
+    description: >
+      Context of the organisation, leadership, planning (incl. Statement of Applicability),
+      support, operation, performance evaluation, and continual improvement.
+      All ISMS-mandatory clausule 4-10 obligations are entity-level.
+    manual_obligations:
+      - "NA-018: ISMS scope determination and Statement of Applicability (93 Annex A controls)"
+      - "NA-019: ISO 27001 internal audit at planned intervals with independent auditor"
+      - "NA-020: Management review of ISMS performance and continual improvement decisions"
+
+  - el_id: EL-007
+    title: "A.5.1/5.2/5.4 — Information security policy, role assignments, management responsibility"
+    na_ref: []
+    scope: "entity governance documents"
+    description: >
+      Top-level information security policy approved and communicated by management.
+      Roles and responsibilities for information security defined and assigned.
+
+  - el_id: EL-008
+    title: "A.5.5/5.6/5.7 — Contacts with authorities, special interest groups, threat intelligence"
+    na_ref: [NA-021]
+    scope: "entity governance"
+    description: >
+      Maintained contacts with relevant authorities and information security special
+      interest groups. Threat intelligence programme: collection, analysis and
+      actioning of information security threat intelligence (NA-021).
+
+  - el_id: EL-009
+    title: "A.5.8/5.10/5.11 — Security in project management, acceptable use policy, return of assets"
+    na_ref: []
+    scope: "entity HR / governance"
+    description: >
+      Information security integrated in project management. Acceptable use policy
+      for information and associated assets. Return of assets on termination.
+
+  - el_id: EL-010
+    title: "A.5.13/5.32 — Information labelling procedures, intellectual property rights"
+    na_ref: []
+    scope: "entity operational policy and legal"
+    description: >
+      Procedures for information labelling in line with the data classification scheme
+      (REQ-ISAE-008). Procedures for protection of intellectual property rights.
+
+  - el_id: EL-011
+    title: "A.6.1/6.2/6.3/6.4/6.6/6.7 — HR security lifecycle"
+    na_ref: [NA-022]
+    scope: "entity HR"
+    description: >
+      Pre-employment screening, employment terms and conditions with security obligations,
+      security awareness training programme (NA-022), disciplinary process,
+      NDAs / confidentiality agreements, remote working policy.
+
+  - el_id: EL-012
+    title: "A.8.1/8.23 — User endpoint device policy, web filtering for corporate endpoints"
+    na_ref: []
+    scope: "entity IT management"
+    description: >
+      Policy and controls for user endpoint devices (laptops, mobile devices).
+      Web filtering for corporate endpoints to prevent access to malicious sites.
+
+  - el_id: EL-013
+    title: "A.8.30/8.34 — Outsourced development oversight, protection of information systems during audit testing"
+    na_ref: []
+    scope: "entity process"
+    description: >
+      Oversight of outsourced system development activities.
+      Protection of information systems during audit testing activities.
+
+# =============================================================================
+# COMPLETENESS SUMMARY
+# =============================================================================
+
+completeness_summary:
+  version: "1.1"
+  generated_date: "2026-03-24"
+
+  application_manual_controls:
+    total: 13
+    by_section:
+      compliance_risk_operations: 7    # REQ-CR-001..007
+      gdpr_manual_controls:       2    # REQ-GDPR-006..007
+      isae_manual_controls:       4    # REQ-ISAE-002, 004, 013, 014  [NEW v1.1]
+    na_refs_covered: [NA-001, NA-002, NA-003, NA-004, NA-005, NA-006, NA-007, NA-008,
+                      NA-014, NA-015, NA-016, NA-017]
+
+  entity_level_obligations:
+    total: 8    # EL-006..013  [NEW v1.1]
+    na_refs_covered: [NA-018, NA-019, NA-020, NA-021, NA-022]
+    note: "Not application requirements; tracked in Company Compliance document"
+
+  not_automatable_register_coverage:
+    total_na_entries: 22         # NA-001..008 (baseline) + NA-014..017 (v1.11.0) + NA-018..022 (v1.12.0)
+    # Note: NA-009..013 are defined in addenda v1.9.0 and v1.10.0; those controls
+    # (GDPR and DORA gap closures) carry no not_automatable fields and are not
+    # represented in this register.
+    all_na_entries_accounted_for: true
+
+  req_cr_006_panels:
+    v1_0_count: 9
+    v1_1_count: 13
+    panels_added_in_v1_1: [control_environment, vendor_risk, control_deficiency_log, availability_status]
+
+  open_actions:
+    - "External review of this register required before first paid client go-live (per project_eagle_compliance_risk.md s.5)"
+    - "EL-006..013 obligations must be evidenced in Company Compliance document (owner: Head of Compliance & Risk)"
+    - "REQ-ISAE-014 Type I readiness checklist must reach all-COMPLETE before ISAE audit engagement letter is signed"
+    - "Addendum v1.12.0 status: DRAFT — pending ratification; this register version tracks that status"

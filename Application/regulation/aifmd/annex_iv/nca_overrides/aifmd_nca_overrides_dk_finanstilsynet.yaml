@@ -1,0 +1,124 @@
+################################################################################
+# NCA-SPECIFIC OVERRIDES — FINANSTILSYNET (DK)
+# Version: v1 — 2026-04-03
+# Base YAML: aifmd_validation_rules.yaml
+#
+# Source: Online research of NCA documentation and ESMA guidelines
+# National code: CVR number: 8-digit Danish Central Business Register number
+# Portal: FIONA Online (via National Bank of Denmark NEXT extranet)
+# File packaging: XML
+# Deadline: Standard 30 days; mandatory XML from 30 June 2026
+################################################################################
+nca_overrides:
+  nca: FINANSTILSYNET
+  country: DK
+  base_yaml: aifmd_validation_rules.yaml
+  base_yaml_version: '1.0'
+  source_document:
+    title: AIFMD Annex IV Reporting Requirements — Finanstilsynet (Danish FSA)
+    version: '1.0'
+    date: '2026-04-03'
+    publisher: Finanstilsynet (Danish FSA)
+    url: https://www.dfsa.dk
+  transmission:
+    portal: FIONA Online
+    method: XML upload
+    registration:
+      description: >-
+        Contact persons must be registered via the official FIONA-Online registration form,
+        submitted to fiona@ftnet.dk. The form requires company confirmation with physical
+        signature. Each contact person is assigned roles: access to reporting, receive
+        reminder emails, and receive error status emails.
+      email: fiona@ftnet.dk
+      form: RegistreringsblanketFIONAengelsk (available from Finanstilsynet)
+    identifier:
+      name: FT-id
+      description: >-
+        The company identifier used in FIONA-Online is called the "FT-id" (Finanstilsynet ID).
+        This is a 5-digit numeric code assigned by the Danish FSA, distinct from the 8-digit
+        CVR (Central Business Register) number.
+  file_format:
+    packaging: XML
+    national_code_info: 'FT-id: 5-digit numeric Finanstilsynet identifier (not the 8-digit CVR number)'
+  additional_sources:
+    - title: 'Registration of contact persons reporting via FIONA-Online'
+      version: '07/12/2023'
+      date: '2023-12-07'
+      publisher: Finanstilsynet (Danish FSA)
+      notes: >-
+        FIONA-Online registration form for reporting contact persons. Confirms
+        FT-id as the company identifier, registration via fiona@ftnet.dk, and
+        contact person role management (access, reminder emails, error status).
+  changelog:
+  - version: v1
+    date: '2026-04-03'
+    changes:
+    - Initial FINANSTILSYNET NCA override file — based on web research of latest documentation
+  - version: v2
+    date: '2026-04-03'
+    changes:
+    - Updated AIFM/AIF national code format to 5-digit numeric (was 8-digit CVR)
+    - Added AIF national code rule (same 5-digit format)
+    - Added FIONA registration details from official registration form
+    - 'Added: FT-id as official identifier name, fiona@ftnet.dk contact, role management'
+  nca_rules:
+  - rule_id: NCA-DFSA-DK-ReportingMemberState
+    base_rule_id: AIFM-1
+    field_id: '1'
+    field_name: Reporting Member State
+    xsd_element: <ReportingMemberState>
+    severity: CRITICAL
+    overrides_esma: true
+    status: active
+    nca_source_doc: Finanstilsynet (Danish FSA) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: For reports submitted to Danish FSA the value must always be DK.
+    validation_rules: ReportingMemberState = "DK"
+  - rule_id: NCA-DFSA-DK-AIFMNationalCode
+    base_rule_id: AIFM-18
+    field_id: '18'
+    field_name: AIFM National Code
+    xsd_element: <AIFMNationalCode>
+    severity: CRITICAL
+    overrides_esma: true
+    status: active
+    nca_source_doc: Finanstilsynet (Danish FSA) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: >-
+      Danish FSA assigns AIFM national codes as 5-digit numeric identifiers. Example: 35993. Note that this
+      is different from the CVR (Central Business Register) number which is 8 digits. The NCA code used in
+      AIFMD Annex IV reporting is the 5-digit Finanstilsynet-assigned identifier.
+    validation_rules:
+    - Must match regex ^[0-9]{5}$
+    - Total length must be exactly 5 digits
+    example: '35993'
+  - rule_id: NCA-DFSA-DK-AIFNationalCode
+    base_rule_id: AIF-17
+    field_id: '17'
+    field_name: AIF National Code
+    xsd_element: <AIFNationalCode>
+    severity: CRITICAL
+    overrides_esma: true
+    status: active
+    nca_source_doc: Finanstilsynet (Danish FSA) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: >-
+      Danish FSA assigns AIF national codes as 5-digit numeric identifiers, same format as the AIFM national
+      code. Example: 35993.
+    validation_rules:
+    - Must match regex ^[0-9]{5}$
+    - Total length must be exactly 5 digits
+    example: '35993'
+  - rule_id: NCA-DFSA-DK-MandatoryXML2026
+    base_rule_id: ''
+    field_id: FORMAT
+    field_name: Mandatory XML Format
+    xsd_element: ''
+    severity: MEDIUM
+    overrides_esma: false
+    status: active
+    nca_source_doc: Finanstilsynet (Danish FSA) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: From 30 June 2026, FIONA Online will only accept XML file uploads. Manual data entry and Excel import
+      options will be discontinued.
+    validation_rules: XML file submission mandatory from 30 June 2026

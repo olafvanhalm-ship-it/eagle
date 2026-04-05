@@ -1,0 +1,100 @@
+updated_at: '2026-04-02T13:29:27.976677'
+suites:
+  acme_capital_nl:
+    total_files: 5
+    xsd_valid: 5
+    xsd_invalid: 0
+    dqf_fail: 0
+    dqf_missing: 0
+    file_naming_fail: 0
+  blue_ridge_be:
+    total_files: 2
+    xsd_valid: 2
+    xsd_invalid: 0
+    dqf_fail: 0
+    dqf_missing: 0
+    file_naming_fail: 0
+  blue_ridge_de:
+    total_files: 2
+    xsd_valid: 2
+    xsd_invalid: 0
+    dqf_fail: 0
+    dqf_missing: 0
+    file_naming_fail: 0
+  cedar_point_gb:
+    total_files: 2
+    xsd_valid: 2
+    xsd_invalid: 0
+    dqf_fail: 0
+    dqf_missing: 0
+    file_naming_fail: 0
+  cedar_point_nl:
+    total_files: 2
+    xsd_valid: 2
+    xsd_invalid: 0
+    dqf_fail: 0
+    dqf_missing: 0
+    file_naming_fail: 0
+  summit_partners_lu:
+    total_files: 61
+    xsd_valid: 61
+    xsd_invalid: 0
+    dqf_fail: 0
+    dqf_missing: 0
+    file_naming_fail: 61
+  m_light_nl:
+    total_files: 3
+    xsd_valid: 3
+    xsd_invalid: 0
+    dqf_fail: 0
+    dqf_missing: 0
+    file_naming_fail: 0
+  m_full_nl:
+    total_files: 3
+    xsd_valid: 3
+    xsd_invalid: 0
+    dqf_fail: 0
+    dqf_missing: 0
+    file_naming_fail: 0
+  m_masterfeeder_nl:
+    total_files: 3
+    xsd_valid: 3
+    xsd_invalid: 0
+    dqf_fail: 0
+    dqf_missing: 0
+    file_naming_fail: 0
+  m_positions_nl:
+    total_files: 2
+    xsd_valid: 2
+    xsd_invalid: 0
+    dqf_fail: 0
+    dqf_missing: 0
+    file_naming_fail: 0
+  m_split_nl:
+    total_files: 3
+    xsd_valid: 3
+    xsd_invalid: 0
+    dqf_fail: 4
+    dqf_missing: 20
+    file_naming_fail: 2
+  m_cancellation_nl:
+    total_files: 2
+    xsd_valid: 2
+    xsd_invalid: 0
+    dqf_fail: 0
+    dqf_missing: 0
+    file_naming_fail: 0
+  m_amnd_full_nl:
+    total_files: 3
+    xsd_valid: 3
+    xsd_invalid: 0
+    dqf_fail: 0
+    dqf_missing: 0
+    file_naming_fail: 0
+  m_amnd_light_nl:
+    total_files: 2
+    xsd_valid: 2
+    xsd_invalid: 0
+    dqf_fail: 0
+    dqf_missing: 0
+    file_naming_fail: 0

@@ -1,0 +1,59 @@
+################################################################################
+# NCA-SPECIFIC OVERRIDES — KNF (PL)
+# Version: v1 — 2026-04-03
+# Base YAML: aifmd_validation_rules.yaml
+#
+# Source: Online research of NCA documentation and ESMA guidelines
+# National code: KNF-assigned AIFM identifier
+# Portal: ESPI (Electronic Submission Platform)
+# File packaging: XML (DATMAN + DATAIF)
+# Deadline: Standard 30 days; annual reports due end of January
+################################################################################
+nca_overrides:
+  nca: KNF
+  country: PL
+  base_yaml: aifmd_validation_rules.yaml
+  base_yaml_version: '1.0'
+  source_document:
+    title: AIFMD Annex IV Reporting Requirements — Komisja Nadzoru Finansowego (KNF)
+    version: '1.0'
+    date: '2026-04-03'
+    publisher: Komisja Nadzoru Finansowego (KNF)
+    url: https://www.knf.gov.pl
+  transmission:
+    portal: ESPI (Electronic Submission Platform)
+    method: XML upload
+  file_format:
+    packaging: XML (DATMAN + DATAIF)
+    national_code_info: KNF-assigned AIFM identifier
+  changelog:
+  - version: v1
+    date: '2026-04-03'
+    changes:
+    - Initial KNF NCA override file — based on web research of latest documentation
+  nca_rules:
+  - rule_id: NCA-KNF-PL-ReportingMemberState
+    base_rule_id: AIFM-1
+    field_id: '1'
+    field_name: Reporting Member State
+    xsd_element: <ReportingMemberState>
+    severity: CRITICAL
+    overrides_esma: true
+    status: active
+    nca_source_doc: Komisja Nadzoru Finansowego (KNF) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: For reports submitted to KNF the value must always be PL.
+    validation_rules: ReportingMemberState = "PL"
+  - rule_id: NCA-KNF-PL-DATMANDATAIFValidation
+    base_rule_id: ''
+    field_id: VALIDATION
+    field_name: DATMAN/DATAIF Validation Rules
+    xsd_element: ''
+    severity: HIGH
+    overrides_esma: false
+    status: active
+    nca_source_doc: Komisja Nadzoru Finansowego (KNF) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: KNF has detailed validation rules documented in '2013-ITMG-65_opis_regul_walidacyjnych_plikow_DATMAN_DATAIF_71002.xlsx'.
+      Data consistency checks ensure DATMAN (AIFM) and DATAIF (AIF) files are internally consistent. UTF-8 encoding required.
+    validation_rules: KNF applies specific validation rules for data consistency between DATMAN and DATAIF files

@@ -1,0 +1,182 @@
+# =============================================================================
+# Project Eagle — Audit Delta Report
+# Principles file:   project_eagle_v0_4.md
+# Generated on:      2026-03-24T00:00:00
+# Audited documents: 25
+# =============================================================================
+
+audit_metadata:
+  gegenereerd_op:          "2026-03-24T00:00:00"
+  principles_bestand:      "project_eagle_v0_4.md"
+  geauditeerde_documenten: 25
+  geselecteerde_methode:   "latest-per-basename — 1 oudere versie uitgesloten (eagle_req_mod_audit_corrected.yaml)"
+  totaal_afwijkingen:      6
+  critical:                0
+  warning:                 4
+  info:                    2
+
+# =============================================================================
+# AFWIJKINGEN
+# =============================================================================
+
+afwijkingen:
+
+  # ---------------------------------------------------------------------------
+  # WARNING 1 — CFO: P14 (Database-first) ontbreekt in Guiding Principles
+  # ---------------------------------------------------------------------------
+  - principe_id:    "P14"
+    principe_naam:  "Database-first"
+    document:       "project_eagle_cfo_v1_1_corrected_v2.md"
+    sectie:         "## 7. Guiding Principles"
+    ernst:          "warning"
+    bevinding: >
+      De Guiding Principles sectie van de CFO vermeldt P3, P4, P10, P12 en P16,
+      maar P14 (Database-first) ontbreekt. De body-tekst beschrijft onder P4 al
+      dat de CFO alle financiële metrics afleidt uit het canonieke datamodel en
+      dat parallelle spreadsheets een 'design violation' zijn — de inhoudelijke
+      verplichting is aanwezig, maar P14 wordt niet als sturend principe benoemd.
+      CTO, COO, Head of Engineering en Head of Compliance & Risk hebben P14 wél
+      opgenomen.
+    aanbevolen_actie: >
+      Voeg P14 toe aan de Guiding Principles sectie van de CFO met een
+      CFO-specifieke toelichting, bijv.: "All financial metrics — CAC, LTV,
+      cost-per-submission, automation ratio, gross margin — are derived exclusively
+      from the canonical database. Financial dashboards and threshold reports are
+      database-native views. Parallel spreadsheets or extracts that diverge from
+      the canonical record are a design violation: the CFO escalates these to the
+      CTO and does not treat them as authoritative sources."
+
+  # ---------------------------------------------------------------------------
+  # WARNING 2 — COO: P7 (Resilience) ontbreekt in Guiding Principles
+  # ---------------------------------------------------------------------------
+  - principe_id:    "P7"
+    principe_naam:  "Resilience"
+    document:       "project_eagle_coo_v1_1_corrected_v2.md"
+    sectie:         "## 7. Guiding Principles"
+    ernst:          "warning"
+    bevinding: >
+      De Guiding Principles sectie van de COO vermeldt P2, P3, P6, P10, P11,
+      P12, P14 en P16, maar P7 (Resilience) ontbreekt. De COO is primaire eigenaar
+      van SLA-management, DORA operational impact lane, exception handling met
+      escalatiepaden en capaciteitsplanning bij piekbelasting — allemaal
+      kernverantwoordelijkheden die direct uit P7 voortvloeien. P7 is wél
+      opgenomen als Guiding Principle voor de Head of Engineering, maar niet voor
+      de COO die de operationele laag bezit.
+    aanbevolen_actie: >
+      Voeg P7 toe aan de Guiding Principles sectie van de COO met een
+      COO-specifieke toelichting, bijv.: "Every operational process has defined
+      failure modes, fallback mechanisms and escalation paths. The COO designs
+      the factory to degrade gracefully — exception handling, SLA breach
+      escalation, DORA operational impact assessment and capacity buffers are
+      not reactive measures but structural properties of the reporting factory."
+
+  # ---------------------------------------------------------------------------
+  # WARNING 3 — Manual Controls: versienummer in metadata ≠ bestandsnaam (P4)
+  # ---------------------------------------------------------------------------
+  - principe_id:    "P4"
+    principe_naam:  "Single source of truth"
+    document:       "eagle_manual_controls_v1_2.yaml"
+    sectie:         "metadata.version"
+    ernst:          "warning"
+    bevinding: >
+      De bestandsnaam is 'eagle_manual_controls_v1_2.yaml' maar het metadata-veld
+      'version' bevat "1.1". De change_history beschrijft een v1.1-update met
+      substantiële toevoegingen (REQ-ISAE-002/004/013/014, NA-014..022). Dit
+      creëert een versie-ambiguïteit in strijd met P4: consumerende documenten
+      en tooling die het versienummer uitlezen zullen inconsistente resultaten
+      produceren.
+    aanbevolen_actie: >
+      Pas 'metadata.version' aan van "1.1" naar "1.2" zodat het overeenkomt met
+      de bestandsnaam. Voeg tevens een v1.2-entry toe aan de change_history met
+      datum, wijzigingen en auteur.
+
+  # ---------------------------------------------------------------------------
+  # WARNING 4 — Systematisch: 14 documenten verwijzen naar v1_1 i.p.v. v1_2 (P4)
+  # ---------------------------------------------------------------------------
+  - principe_id:    "P4"
+    principe_naam:  "Single source of truth"
+    document: >
+      eagle_requirements_overview_corrected_v2.yaml (regels 29, 2502);
+      eagle_req_mod_admin_corrected.yaml (regel 5);
+      eagle_req_mod_api_corrected.yaml (regel 5);
+      eagle_req_mod_audit_corrected_v2.yaml (regel 5);
+      eagle_req_mod_billing_corrected.yaml (regel 5);
+      eagle_req_mod_client_corrected.yaml (regel 5);
+      eagle_req_mod_comp_corrected.yaml (regel 5);
+      eagle_req_mod_data_corrected.yaml (regel 5);
+      eagle_req_mod_gtm_corrected.yaml (regel 5);
+      eagle_req_mod_management_corrected.yaml (regels 5, 1004, 1163);
+      eagle_req_mod_review_corrected.yaml (regel 5);
+      eagle_req_mod_sub_corrected_v2.yaml (regel 5);
+      eagle_req_mod_trial_corrected.yaml (regel 5)
+    sectie:         "bestandsheader (regel 5) en inline verwijzingen"
+    ernst:          "warning"
+    bevinding: >
+      Veertien documenten verwijzen naar 'eagle_manual_controls_v1_1.yaml',
+      terwijl het huidige bestand 'eagle_manual_controls_v1_2.yaml' is. Dit is
+      een systematische verouderde referentie in strijd met P4 en P10: nieuwe
+      teamleden zullen het niet-bestaande v1_1-bestand proberen te raadplegen.
+      De uitgebreide controls uit de v1.2-update (REQ-ISAE-002/004/013/014 en
+      NA-014..022) blijven daarmee buiten beeld bij onderhoud van de modules.
+    aanbevolen_actie: >
+      Vervang in alle 14 documenten 'eagle_manual_controls_v1_1.yaml' door
+      'eagle_manual_controls_v1_2.yaml'. Dit is een pure zoek-en-vervang
+      operatie. Overweeg een CI/CD lint-regel die verwijzingen naar
+      niet-bestaande bestandsversies detecteert.
+
+  # ---------------------------------------------------------------------------
+  # INFO 1 — CEO: P14 en P15 ontbreken in Guiding Principles
+  # ---------------------------------------------------------------------------
+  - principe_id:    "P14, P15"
+    principe_naam:  "Database-first; Platform-first, product-second"
+    document:       "project_eagle_ceo_v1_0_corrected.md"
+    sectie:         "## 7. Guiding Principles"
+    ernst:          "info"
+    bevinding: >
+      De CEO Guiding Principles benoemen P1, P2, P3, P10, P12, P13 en P16, maar
+      P14 en P15 ontbreken. De CEO houdt ultimate governance accountability,
+      inclusief architectuurbeslissingen met materiële businessimplicaties (§4.6).
+      P14 en P15 zijn de twee structurele architectuurprincipes die de
+      platform-laag beschermen. De afwezigheid is een omissie, geen tegenspraak.
+    aanbevolen_actie: >
+      Overweeg P14 en P15 toe te voegen met een strategische toelichting op
+      CEO-niveau, bijv. voor P15: "The platform/product boundary is a structural
+      commitment the CEO enforces at the investment and roadmap level: no capital
+      is allocated to product features that would require platform module changes."
+
+  # ---------------------------------------------------------------------------
+  # INFO 2 — AIFMD validation rules: jaarlijkse reviewcyclus verstreken
+  # ---------------------------------------------------------------------------
+  - principe_id:    "P8"
+    principe_naam:  "Compliance-proof by design"
+    document:       "aifmd_annex_iv_validation_rules_v0_3.yaml"
+    sectie:         "metadata.created / metadata.review_cycle"
+    ernst:          "info"
+    bevinding: >
+      Het bestand heeft 'created: 2025-03-20' en 'review_cycle: Annual'. Per
+      auditdatum 2026-03-24 is de jaarlijkse reviewperiode verstreken. Dit is
+      bijzonder relevant gezien de AIFMD 2.0 member-state application deadline
+      van 16 april 2026. Het bestand is inhoudelijk huidig (v0.3 bevat de DQEF
+      May 2025 updates en AIFMD 2.0 notice) maar de formele review is niet
+      gedocumenteerd.
+    aanbevolen_actie: >
+      Voer de jaarlijkse review uit en documenteer deze in het changelog-blok.
+      Voeg een 'last_reviewed' veld toe aan de metadata. Leg vast dat de huidige
+      v0.3 ruleset geldig is voor de overgangsperiode tot de nieuwe ESMA
+      XSD-schemas (~april 2027).
+
+# =============================================================================
+# SAMENVATTING
+# =============================================================================
+
+samenvatting:
+  volledig_compliant: false
+  toelichting: >
+    25 documenten gecontroleerd tegen 16 Eagle-principes; 1 oudere versie
+    automatisch uitgesloten (eagle_req_mod_audit_corrected.yaml). Geen critical
+    issues. De vier warnings betreffen twee principegaten in rolekaarten (CFO
+    mist P14, COO mist P7) en twee versie-coherentieproblemen die P4 raken
+    (versienummer-mismatch in manual controls + systematische verouderde
+    referentie in 14 req-documenten). De twee info-bevindingen betreffen een
+    omissie in de CEO Guiding Principles en een vervallen reviewcyclus op het
+    AIFMD validatiebestand.

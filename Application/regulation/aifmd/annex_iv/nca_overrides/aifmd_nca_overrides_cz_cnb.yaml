@@ -1,0 +1,59 @@
+################################################################################
+# NCA-SPECIFIC OVERRIDES — CNB (CZ)
+# Version: v1 — 2026-04-03
+# Base YAML: aifmd_validation_rules.yaml
+#
+# Source: Online research of NCA documentation and ESMA guidelines
+# National code: CNB-assigned code; report codes OFZ(CNB) 36-01 and 37-01
+# Portal: SDAT electronic reporting system (requires qualified electronic signature)
+# File packaging: XML
+# Deadline: Standard 30 days; annual reports due 30 January
+################################################################################
+nca_overrides:
+  nca: CNB
+  country: CZ
+  base_yaml: aifmd_validation_rules.yaml
+  base_yaml_version: '1.0'
+  source_document:
+    title: AIFMD Annex IV Reporting Requirements — Czech National Bank (Česká národní banka)
+    version: '1.0'
+    date: '2026-04-03'
+    publisher: Czech National Bank (Česká národní banka)
+    url: https://www.cnb.cz
+  transmission:
+    portal: SDAT electronic reporting system (requires qualified electronic signature)
+    method: XML upload
+  file_format:
+    packaging: XML
+    national_code_info: CNB-assigned code; report codes OFZ(CNB) 36-01 and 37-01
+  changelog:
+  - version: v1
+    date: '2026-04-03'
+    changes:
+    - Initial CNB NCA override file — based on web research of latest documentation
+  nca_rules:
+  - rule_id: NCA-CNB-CZ-ReportingMemberState
+    base_rule_id: AIFM-1
+    field_id: '1'
+    field_name: Reporting Member State
+    xsd_element: <ReportingMemberState>
+    severity: CRITICAL
+    overrides_esma: true
+    status: active
+    nca_source_doc: Czech National Bank (Česká národní banka) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: For reports submitted to CNB the value must always be CZ.
+    validation_rules: ReportingMemberState = "CZ"
+  - rule_id: NCA-CNB-CZ-QualifiedSignature
+    base_rule_id: ''
+    field_id: SIGNATURE
+    field_name: Qualified Electronic Signature
+    xsd_element: ''
+    severity: HIGH
+    overrides_esma: false
+    status: active
+    nca_source_doc: Czech National Bank (Česká národní banka) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: CNB requires all SDAT submissions to be signed with a qualified electronic signature. This is a system-level
+      requirement, not an XML content rule.
+    validation_rules: Submissions must use qualified electronic signature based on valid qualified certificate

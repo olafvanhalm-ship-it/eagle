@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ESMA AIF. Created by Eagle Platform (M adapter). -->
+<AIFReportingInfo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" CreationDateAndTime="2026-04-04T20:16:26" ReportingMemberState="NL" Version="1.2" xsi:noNamespaceSchemaLocation="AIFMD_DATAIF_V1.2.xsd">
+  <CancellationAIFRecordInfo>
+    <CancelledAIFNationalCode>50020114</CancelledAIFNationalCode>
+    <CancelledAIFMNationalCode>BJQ306</CancelledAIFMNationalCode>
+    <CancelledReportingPeriodType>Y1</CancelledReportingPeriodType>
+    <CancelledReportingPeriodYear>2025</CancelledReportingPeriodYear>
+    <CancelledRecordFlag>C</CancelledRecordFlag>
+  </CancellationAIFRecordInfo>
+</AIFReportingInfo>

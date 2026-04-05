@@ -1,0 +1,13 @@
+﻿# Lines starting with a # can be freely added everywhere and are for comments.
+INPUT_FORMAT;AIFMD;V1
+POSITION;Residential real estate fund;PHY_RES_RESL;NONE;Home 1;;XXX;;;;;;;L;867130;867130;;;;;;EUR;EUROPEEEA;
+POSITION;Residential real estate fund;PHY_RES_RESL;NONE;Home 2;;XXX;;;;;;;L;667130;667130;;;;;;EUR;EUROPEEEA;
+POSITION;Residential real estate fund;PHY_RES_RESL;NONE;Home 3;;XXX;;;;;;;L;767130;767130;;;;;;EUR;EUROPEEEA;
+POSITION;Residential real estate fund;SEC_CSH_OTHC;NONE;cash position;;XXX;;;;;;;L;2301390;2301390;;;;;;EUR;EUROPEEEA;
+POSITION;Commercial real estate fund;PHY_RES_COML;NONE;Office building 1;;XXX;;;;;;;L;35000000;35000000;;;;;;EUR;EUROPEEEA;
+POSITION;Commercial real estate fund;PHY_RES_COML;NONE;Office building 2;;XXX;;;;;;;L;15000000;15000000;;;;;;EUR;EUROPEEEA;
+POSITION;Commercial real estate fund;PHY_RES_COML;NONE;Office building 3;;XXX;;;;;;;L;10000000;10000000;;;;;;EUR;EUROPEEEA;
+POSITION;Commercial real estate fund;SEC_CSH_OTHC;NONE;cash position;;XXX;;;;;;;L;10000000;10000000;;;;;;EUR;EUROPEEEA;
+POSITION;Commercial real estate fund;OTH_OTH_OTHR;NONE;Other current receivables;;XXX;;;;;;;L;1000000;1000000;;;;;;EUR;EUROPEEEA;
+POSITION;Commercial real estate fund;SEC_LON_OTHL;NONE;Loan (Office building 1);;XXX;;;;;;;S;0;-20000000;;;;;;EUR;EUROPEEEA;
+POSITION;Commercial real estate fund;OTH_OTH_OTHR;NONE;Other current payables;;XXX;;;;;;;S;0;-2000000;;;;;;EUR;EUROPEEEA;

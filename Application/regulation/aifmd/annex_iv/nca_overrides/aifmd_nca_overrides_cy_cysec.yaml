@@ -1,0 +1,72 @@
+################################################################################
+# NCA-SPECIFIC OVERRIDES — CYSEC (CY)
+# Version: v1 — 2026-04-03
+# Base YAML: aifmd_validation_rules.yaml
+#
+# Source: Online research of NCA documentation and ESMA guidelines
+# National code: CySEC-assigned AIFM registration code
+# Portal: Transaction Reporting System (TRS) — digitally signed XML via email
+# File packaging: XML (digitally signed)
+# Deadline: Standard 30 days; Fund of Funds: 45 days (30+15 extension upon request)
+################################################################################
+nca_overrides:
+  nca: CYSEC
+  country: CY
+  base_yaml: aifmd_validation_rules.yaml
+  base_yaml_version: '1.0'
+  source_document:
+    title: AIFMD Annex IV Reporting Requirements — Cyprus Securities and Exchange Commission (CySEC)
+    version: '1.0'
+    date: '2026-04-03'
+    publisher: Cyprus Securities and Exchange Commission (CySEC)
+    url: https://www.cysec.gov.cy
+  transmission:
+    portal: Transaction Reporting System (TRS) — digitally signed XML via email
+    method: XML upload
+  file_format:
+    packaging: XML (digitally signed)
+    national_code_info: CySEC-assigned AIFM registration code
+  changelog:
+  - version: v1
+    date: '2026-04-03'
+    changes:
+    - Initial CYSEC NCA override file — based on web research of latest documentation
+  nca_rules:
+  - rule_id: NCA-CySEC-CY-ReportingMemberState
+    base_rule_id: AIFM-1
+    field_id: '1'
+    field_name: Reporting Member State
+    xsd_element: <ReportingMemberState>
+    severity: CRITICAL
+    overrides_esma: true
+    status: active
+    nca_source_doc: Cyprus Securities and Exchange Commission (CySEC) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: For reports submitted to CySEC the value must always be CY.
+    validation_rules: ReportingMemberState = "CY"
+  - rule_id: NCA-CySEC-CY-DigitalSignature
+    base_rule_id: ''
+    field_id: SIGNATURE
+    field_name: Digital Signature Requirement
+    xsd_element: ''
+    severity: HIGH
+    overrides_esma: false
+    status: active
+    nca_source_doc: Cyprus Securities and Exchange Commission (CySEC) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: CySEC requires all XML files to be digitally signed. Submission is via the Transaction Reporting System
+      (TRS). Data language must be English.
+    validation_rules: XML files must be digitally signed before submission to TRS
+  - rule_id: NCA-CySEC-CY-FoFExtension
+    base_rule_id: ''
+    field_id: DEADLINE-FOF
+    field_name: Fund of Funds Deadline Extension
+    xsd_element: ''
+    severity: LOW
+    overrides_esma: false
+    status: active
+    nca_source_doc: Cyprus Securities and Exchange Commission (CySEC) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: CySEC allows Fund of Funds managers to request a 15-day extension beyond the standard 30-day deadline,
+      for a total of 45 calendar days after period end.
+    validation_rules: Fund of Funds may request 15-day extension (total 45 days)

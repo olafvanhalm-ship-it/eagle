@@ -1,0 +1,243 @@
+# =============================================================================
+# Project Eagle — Go-to-Market Automation (MOD-GTM)
+# Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml
+# Cross-cutting requirements defined in: eagle_requirements_overview.yaml
+# Manual controls: eagle_manual_controls.yaml
+# =============================================================================
+
+metadata:
+  module: MOD-GTM
+  name: "Go-to-Market Automation"
+  primary_users: [EAGLE_ADMIN, CCO, CRO, CCO_DELEGATE]
+  pipeline_layers: [L9_ORCHESTRATION]
+  module_req_count: 3
+  cross_req_count: 8
+  total_applicable: 11
+
+# =============================================================================
+# MODULE REQUIREMENTS  (3 requirements)
+# =============================================================================
+
+requirements:
+
+  # -------------------------------------------------------------------------
+  # Go-to-market and prospect database
+  # -------------------------------------------------------------------------
+  go_to_market_and_prospect_database:
+
+    - id: REQ-GTM-001
+      title: "AIFM prospect enrichment via public web sources"
+      module: MOD-GTM
+      layer: [L2_TRANSFORMATION]
+      priority: SHOULD
+      phase: 1.5
+      gdpr_blocker: true
+      principles: [P2, P5, P8, P11, P12]
+      regulatory: [AI_ACT, GDPR]
+      description: >
+        Eagle's internal AIFM prospect database is enriched asynchronously
+        with strategy context inferred from publicly available sources:
+        AIFM websites, fund factsheets, prospectuses, press releases and
+        regulatory publications. Enriched attributes serve two purposes:
+        (1) improved outbound targeting in MOD-GTM; (2) trial workspace
+        orientation in MOD-TRIAL. All inferred attributes stored with
+        confidence score and source reference. No inferred attribute
+        is ever treated as verified data.
+      enrichment_attributes:
+        - "PredominantAIFType (HFND / PEQF / RESF / FOFS / OTHR)"
+        - "Likely InvestmentStrategy codes (Annex II Table 3)"
+        - "Primary asset classes (Table 2 vocabulary)"
+        - "Fund geographic or sector focus where discernible"
+        - "Indicative fund size tier (not a reportable value)"
+      requirements:
+        - >
+          Enrichment pipeline runs asynchronously after AIFM record is
+          created in the prospect database; does not block record creation
+        - >
+          Each enriched attribute stored with: inferred value, confidence
+          score (HIGH / MEDIUM / LOW), source URL, extraction timestamp,
+          AI model version
+        - >
+          Enrichment refreshed on configurable schedule (default: quarterly)
+          or when triggered manually by EAGLE_ADMIN
+        - >
+          GDPR: only publicly accessible sources used; source URLs logged
+          per attribute; opt-out suppresses enrichment for that prospect
+        - >
+          Enrichment pipeline failure does not affect prospect record
+          creation or downstream trial provisioning
+      ai_act_note: >
+        AI inference of PredominantAIFType and strategy codes is AI_PROPOSED_INDICATIVE
+        only. These values never flow to a regulatory submission without
+        user confirmation at L5. Non-high-risk classification preserved.
+      acceptance_criteria:
+        - >
+          For a known PE fund with public website, enrichment pipeline
+          produces PredominantAIFType = PEQF with HIGH or MEDIUM confidence
+          within 60 minutes of prospect record creation
+        - "Source URL stored for every enriched attribute"
+        - "Pipeline failure does not block prospect record or trial provisioning"
+
+    - id: REQ-GTM-002
+      title: "Inbound trial request legitimacy validation"
+      module: MOD-GTM
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      gdpr_blocker: true
+      principles: [P1, P2, P8, P9, P12]
+      regulatory: [GDPR]
+      description: >
+        Every self-service inbound trial request is automatically scored
+        for legitimacy before a trial account is provisioned. The process
+        has two stages: automated scoring across four sources, followed by
+        CCO review for MEDIUM and LOW scores. HIGH scores are auto-approved.
+        The CCO review role is explicitly delegatable (CCO_DELEGATE) to
+        manage operational load at scale.
+      matching_sources:
+        esma_aifm_register:
+          description: "Match on company name and/or LEI against Eagle MOD-GTM database"
+          confidence_contribution: HIGH
+        service_provider_database:
+          description: >
+            Match against Eagle-maintained list of fund administrators, ManCos,
+            prime brokers, compliance consultancies and regulatory technology
+            vendors. List is a versioned configuration file (REQ-MOD-001).
+          confidence_contribution: MEDIUM
+        linkedin_profile:
+          description: >
+            Automated lookup on company name and registrant role. Clear match
+            (financial services sector, fund/compliance/investment role keywords)
+            scores MEDIUM. Partial match scores LOW.
+          confidence_contribution: "MEDIUM (clear) / LOW (partial)"
+        company_website:
+          description: >
+            Does the email domain resolve to a website containing fund/investment
+            vocabulary? Supporting signal only — boosts LOW to MEDIUM in combination.
+          confidence_contribution: supporting
+      scoring_outcomes:
+        HIGH:
+          criteria: "Confirmed AIFM or sub-threshold AIFM in ESMA register"
+          action: "AUTO_APPROVED — trial provisioned within 10 minutes"
+        MEDIUM:
+          criteria: "Service provider match OR LinkedIn clear match"
+          action: "QUEUED_FOR_CCO_REVIEW — prospect notified of same-day review"
+        LOW:
+          criteria: "No clear match; partial signals only"
+          action: "QUEUED_FOR_CCO_REVIEW with LOW flag"
+        NONE:
+          criteria: "No match; non-industry domain"
+          action: "QUEUED_FOR_CCO_REVIEW — CCO likely rejects"
+      cco_review_process:
+        sla: "Same business day"
+        interface: "MOD-MANAGEMENT CCO-view review queue"
+        actions: [APPROVE, REJECT, REQUEST_INFO]
+        delegatable: >
+          CCO_DELEGATE role enables delegation. EAGLE_ADMIN assigns
+          CCO_DELEGATE. Delegation activated when queue exceeds configurable
+          threshold (default: 10 requests/day). All actions logged with
+          actor identity.
+        rejection_notice: >
+          Standard message only — no reason given to prospect to avoid
+          revealing matching process or creating GDPR obligations.
+      gdpr_controls:
+        lawful_basis: >
+          Legitimate interest (GDPR Art.6(1)(f)). Must be documented in
+          Eagle RoPA by Head of Compliance and Risk before go-live.
+        data_minimisation: "Name, company, email domain, stated use case only"
+        retention: >
+          APPROVED: data moves to trial tenant record.
+          REJECTED: prospect personal data deleted within 30 days.
+          Audit record retains decision outcome, confidence score,
+          timestamp, actor identity — no prospect personal data.
+      requirements:
+        - "Automated matching completes within 5 minutes of trial registration"
+        - "HIGH score provisions trial within 10 minutes of registration"
+        - >
+          MEDIUM and LOW scores trigger automated email to prospect:
+          'Your request is being reviewed. You will hear from us within
+          one business day.'
+        - "CCO review queue accessible in MOD-MANAGEMENT CCO-view, oldest first"
+        - >
+          Every matching attempt logged: sources checked, per-source scores,
+          overall score, outcome, timestamp — in GTM audit partition separate
+          from the compliance pipeline audit trail
+        - "LinkedIn lookup uses only publicly visible profile data"
+        - "Matching logic is configuration-driven per REQ-MOD-001"
+      acceptance_criteria:
+        - >
+          Trial request from confirmed AIFM in ESMA register is auto-approved
+          and trial provisioned within 10 minutes
+        - "MEDIUM/LOW score appears in CCO review queue within 5 minutes"
+        - "CCO REJECT triggers prospect notification and suppresses future provisioning"
+        - "GDPR RoPA entry signed off by Head of Compliance and Risk before go-live"
+
+    - id: REQ-GTM-003
+      title: "Internal AIFM prospect database"
+      module: MOD-GTM
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      gdpr_blocker: false
+      principles: [P2, P4, P10, P12]
+      regulatory: [GDPR, AIFMD]
+      description: >
+        Eagle maintains an internal, versioned database of AIFM prospects
+        built from ESMA and national AIFM registers supplemented by
+        enrichment from REQ-GTM-001. This is a strategic data asset owned
+        by Eagle — not a pass-through to an external tool. The database
+        is the single source of truth for outbound targeting, inbound
+        legitimacy matching, and trial pre-population data.
+      data_sources:
+        - "ESMA AIFMD register (weekly refresh, per REQ-REF-001 schedule)"
+        - "National registers: AFM, CSSF, BaFin, FCA, CBI and others as added"
+        - "Web enrichment pipeline per REQ-GTM-001"
+        - "Manual additions and corrections by EAGLE_ADMIN"
+      core_fields:
+        - "AIFM legal name, LEI, national codes per NCA"
+        - "Authorisation status and date"
+        - "Home NCA and all registered NCAs"
+        - "AIF names and identifiers where available in register"
+        - "Enrichment attributes (REQ-GTM-001) with confidence scores"
+        - "Outbound contact status (not yet contacted / active sequence / MQL / SQL / customer)"
+        - "Opt-out flag with timestamp"
+      requirements:
+        - "Register data refreshed on schedule aligned with REQ-REF-001"
+        - >
+          Deduplication: LEI is the primary deduplication key; name-based
+          deduplication with configurable fuzzy threshold for records
+          without LEI
+        - "All changes version-controlled with timestamp and source"
+        - "GDPR: opt-out suppresses all outbound activity for that record"
+        - >
+          Data accessible via MOD-MANAGEMENT CCO-view for targeting and
+          pipeline management; not exposed to clients or trial users
+      acceptance_criteria:
+        - "Database contains all authorised AIFMs from ESMA register within 7 days of a new register publication"
+        - "Duplicate LEI rejected at import with clear EAGLE_ADMIN notification"
+        - "Opt-out flag suppresses record from all outbound export and email tool integrations"
+
+
+# =============================================================================
+# CROSS-CUTTING REQUIREMENTS  (8 applicable)
+# Definitions in eagle_requirements_overview.yaml — references only below.
+# =============================================================================
+
+cross_cutting_requirements_applied:
+
+  # -------------------------------------------------------------------------
+  # Security (REQ-SEC-*)         → eagle_requirements_overview.yaml §5.1
+  # -------------------------------------------------------------------------
+  - REQ-SEC-001  # Encryption in transit and at rest
+  - REQ-SEC-002  # Vulnerability management and security testing programme
+  - REQ-SEC-003  # Data retention and deletion
+
+  # -------------------------------------------------------------------------
+  # GDPR (REQ-GDPR-*)             → eagle_requirements_overview.yaml §7
+  # -------------------------------------------------------------------------
+  - REQ-GDPR-001  # Data subject rights request workflow
+  - REQ-GDPR-002  # Data breach communication workflow
+  - REQ-GDPR-003  # Systematic data minimisation controls
+  - REQ-GDPR-004  # GDPR DPA existence check at tenant activation
+  - REQ-GDPR-005  # Anthropic sub-processor transfer control
+

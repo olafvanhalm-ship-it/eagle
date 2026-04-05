@@ -1,0 +1,92 @@
+################################################################################
+# NCA-SPECIFIC OVERRIDES — CBI (IS)
+# Version: v1 — 2026-04-03
+# Base YAML: aifmd_validation_rules.yaml
+#
+# Source: Online research of NCA documentation and ESMA guidelines
+# National code: Kennitala: DDMMYY-XXXX (10 digits); for companies day+40
+# Portal: FME electronic reporting portal (now Central Bank)
+# File packaging: XML
+# Deadline: Standard 30 days after reporting period end
+################################################################################
+nca_overrides:
+  nca: CBI
+  country: IS
+  base_yaml: aifmd_validation_rules.yaml
+  base_yaml_version: '1.0'
+  source_document:
+    title: AIFMD Annex IV Reporting Requirements — Central Bank of Iceland (Seðlabanki Íslands)
+    version: '1.0'
+    date: '2026-04-03'
+    publisher: Central Bank of Iceland (Seðlabanki Íslands)
+    url: https://cb.is
+  transmission:
+    portal: FME electronic reporting portal (now Central Bank)
+    method: XML upload
+  file_format:
+    packaging: XML
+    national_code_info: 'Kennitala: DDMMYY-XXXX (10 digits); for companies day+40'
+  changelog:
+  - version: v1
+    date: '2026-04-03'
+    changes:
+    - Initial CBI NCA override file — based on web research of latest documentation
+  nca_rules:
+  - rule_id: NCA-CBI-IS-ReportingMemberState
+    base_rule_id: AIFM-1
+    field_id: '1'
+    field_name: Reporting Member State
+    xsd_element: <ReportingMemberState>
+    severity: CRITICAL
+    overrides_esma: true
+    status: active
+    nca_source_doc: Central Bank of Iceland (Seðlabanki Íslands) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: For reports submitted to the Central Bank of Iceland the value must always be IS.
+    validation_rules: ReportingMemberState = "IS"
+  - rule_id: NCA-CBI-IS-AIFMNationalCode
+    base_rule_id: AIFM-18
+    field_id: '18'
+    field_name: AIFM National Code
+    xsd_element: <AIFMNationalCode>
+    severity: CRITICAL
+    overrides_esma: true
+    status: active
+    nca_source_doc: Central Bank of Iceland (Seðlabanki Íslands) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: >-
+      Iceland uses 10-digit numeric identifiers for both AIFM and AIF national codes. Based on the kennitala
+      system: for legal entities the first two digits are day of registration + 40 (range 41-71), followed
+      by MMYY and 4 additional digits. Total 10 digits without hyphen.
+    validation_rules:
+    - Must match regex ^[0-9]{10}$
+    - Total length must be exactly 10 digits
+    example: '5501012345'
+  - rule_id: NCA-CBI-IS-AIFNationalCode
+    base_rule_id: AIF-17
+    field_id: '17'
+    field_name: AIF National Code
+    xsd_element: <AIFNationalCode>
+    severity: CRITICAL
+    overrides_esma: true
+    status: active
+    nca_source_doc: Central Bank of Iceland (Seðlabanki Íslands) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: >-
+      Iceland uses 10-digit numeric identifiers for AIF national codes, same format as the AIFM national code.
+    validation_rules:
+    - Must match regex ^[0-9]{10}$
+    - Total length must be exactly 10 digits
+    example: '5501019876'
+  - rule_id: NCA-CBI-IS-SubmissionDeadline
+    base_rule_id: ''
+    field_id: DEADLINE
+    field_name: Submission Deadline
+    xsd_element: ''
+    severity: MEDIUM
+    overrides_esma: false
+    status: active
+    nca_source_doc: Central Bank of Iceland (Seðlabanki Íslands) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: 'Standard ESMA deadline. Frequency determined by AUM: annual, semi-annual, or quarterly.'
+    validation_rules: 30 calendar days after reporting period end

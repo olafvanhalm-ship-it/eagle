@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- FCA AIF. Created by Eagle Platform (M adapter). -->
+<AIFReportingInfo xmlns="urn:fsa-gov-uk:MER:AIF002:2" CreationDateAndTime="2026-04-04T19:02:55" ReportingMemberState="GB" Version="2.0">
+  <AIFRecordInfo>
+    <FilingType>INIT</FilingType>
+    <AIFContentType>2</AIFContentType>
+    <ReportingPeriodStartDate>2024-07-01</ReportingPeriodStartDate>
+    <ReportingPeriodEndDate>2024-09-30</ReportingPeriodEndDate>
+    <ReportingPeriodType>Q3</ReportingPeriodType>
+    <ReportingPeriodYear>2024</ReportingPeriodYear>
+    <LastReportingFlag>false</LastReportingFlag>
+    <Assumptions>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+    </Assumptions>
+    <AIFMNationalCode>845672</AIFMNationalCode>
+    <AIFNationalCode>804083</AIFNationalCode>
+    <AIFName>Alpine VI Parallel Fund, L.P.</AIFName>
+    <AIFReportingCode>45</AIFReportingCode>
+    <AIFDomicile>US</AIFDomicile>
+    <InceptionDate>2023-09-30</InceptionDate>
+    <AIFNoReportingFlag>true</AIFNoReportingFlag>
+  </AIFRecordInfo>
+  <AIFRecordInfo>
+    <FilingType>INIT</FilingType>
+    <AIFContentType>2</AIFContentType>
+    <ReportingPeriodStartDate>2024-07-01</ReportingPeriodStartDate>
+    <ReportingPeriodEndDate>2024-09-30</ReportingPeriodEndDate>
+    <ReportingPeriodType>Q3</ReportingPeriodType>
+    <ReportingPeriodYear>2024</ReportingPeriodYear>
+    <LastReportingFlag>false</LastReportingFlag>
+    <Assumptions>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+      <Assumption>
+        <FCAFieldReference>19A</FCAFieldReference>
+        <AssumptionDetails>All numbers are from the previous quarter</AssumptionDetails>
+      </Assumption>
+    </Assumptions>
+    <AIFMNationalCode>845672</AIFMNationalCode>
+    <AIFNationalCode>805905</AIFNationalCode>
+    <AIFName>Alpine VI Parallel Feeder C.V.</AIFName>
+    <AIFReportingCode>45</AIFReportingCode>
+    <AIFDomicile>NL</AIFDomicile>
+    <InceptionDate>2023-09-30</InceptionDate>
+    <AIFNoReportingFlag>true</AIFNoReportingFlag>
+  </AIFRecordInfo>
+</AIFReportingInfo>

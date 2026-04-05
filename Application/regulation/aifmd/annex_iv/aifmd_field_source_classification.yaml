@@ -1,0 +1,1498 @@
+# =============================================================================
+# AIFMD Field Source Classification
+# =============================================================================
+# Classifies each ESMA field into one of three categories for the two-layer
+# canonical architecture:
+#
+#   entity    → Scalar fact about a real-world entity (Fund, Manager, etc.)
+#               Can be "lifted" from an ESMA/FCA XML import into the Source
+#               Canonical for reuse across report types.
+#
+#   composite → Aggregated/derived from multiple source entities (positions,
+#               transactions, etc.) Only available with full lineage when
+#               calculated by a projection from source data.
+#               When imported from ESMA/FCA XML, stored at report level only.
+#
+#   report    → Only meaningful in the context of this specific AIFMD report
+#               filing. Not reusable for other report types.
+#
+# Source entity mapping (for entity fields) indicates which Source Canonical
+# entity the field maps to when reverse-lifting from ESMA/FCA imports.
+# =============================================================================
+
+version: "1.0"
+description: "Field classification for AIFMD two-layer canonical architecture"
+
+# =============================================================================
+# AIFM FIELDS (Q1-Q38 + special)
+# =============================================================================
+aifm_fields:
+
+  # ── Header / Report metadata ──────────────────────────────────────────────
+  - field_id: "1"
+    field_name: Reporting Member state
+    category: report
+    reason: "NCA-specific filing metadata"
+
+  - field_id: "2"
+    field_name: Version
+    category: report
+    reason: "XSD version for this filing"
+
+  - field_id: "3"
+    field_name: Creation date and time
+    category: report
+    reason: "Filing timestamp"
+
+  - field_id: "4"
+    field_name: Filing type
+    category: report
+    reason: "INIT/AMND/CANCEL — filing-specific"
+
+  - field_id: "5"
+    field_name: AIFM content type
+    category: report
+    reason: "NCA-specific reporting obligation type"
+
+  - field_id: "6"
+    field_name: Reporting period start date
+    category: report
+    reason: "Filing period metadata"
+
+  - field_id: "7"
+    field_name: Reporting period end date
+    category: report
+    reason: "Filing period metadata"
+
+  - field_id: "8"
+    field_name: Reporting period type
+    category: report
+    reason: "Q1/Q2/H1/Y1 — NCA-specific frequency"
+
+  - field_id: "9"
+    field_name: Reporting period year
+    category: report
+    reason: "Filing period metadata"
+
+  - field_id: "10"
+    field_name: Change in AIFM reporting obligation frequency Code
+    category: report
+    reason: "NCA-specific obligation change"
+
+  - field_id: "11"
+    field_name: Change in AIFM reporting obligation contents Code
+    category: report
+    reason: "NCA-specific obligation change"
+
+  - field_id: "12"
+    field_name: Change in AIFM reporting obligation Quarter
+    category: report
+    reason: "NCA-specific obligation change"
+
+  - field_id: "13"
+    field_name: Last reporting flag
+    category: report
+    reason: "Filing-specific flag"
+
+  - field_id: "14"
+    field_name: Question Number (assumption)
+    category: report
+    reason: "AIFMD-specific assumption reference"
+
+  - field_id: "15"
+    field_name: Assumption description
+    category: report
+    reason: "AIFMD-specific assumption"
+
+  # ── AIFM entity fields ────────────────────────────────────────────────────
+  - field_id: "16"
+    field_name: AIFM reporting code
+    category: report
+    reason: "NCA-specific reporting category"
+
+  - field_id: "17"
+    field_name: AIFM jurisdiction
+    category: entity
+    source_entity: manager
+    source_field: jurisdiction
+    reason: "Country where AIFM is established — universal fact"
+
+  - field_id: "18"
+    field_name: AIFM National Code
+    category: report
+    reason: "NCA-assigned identifier — different per NCA"
+
+  - field_id: "19"
+    field_name: AIFM Name
+    category: entity
+    source_entity: manager
+    source_field: name
+    reason: "Legal name of the AIFM — universal fact"
+
+  - field_id: "20"
+    field_name: AIFM EEA Flag
+    category: entity
+    source_entity: manager
+    source_field: eea_flag
+    reason: "Derived from jurisdiction — universal fact"
+
+  - field_id: "21"
+    field_name: AIFM no reporting flag
+    category: report
+    reason: "Filing-specific flag"
+
+  - field_id: "22"
+    field_name: AIFM LEI Code
+    category: entity
+    source_entity: manager
+    source_field: lei
+    reason: "Global identifier — universal"
+
+  - field_id: "23"
+    field_name: AIFM BIC Code
+    category: entity
+    source_entity: manager
+    source_field: bic
+    reason: "Global identifier — universal"
+
+  - field_id: "24"
+    field_name: Old AIFM national identifier - Reporting Member State
+    category: report
+    reason: "NCA-specific migration data"
+
+  - field_id: "25"
+    field_name: Old AIFM national identifier - National code
+    category: report
+    reason: "NCA-specific migration data"
+
+  # ── AIFM composite fields (derived from positions) ────────────────────────
+  - field_id: "26"
+    field_name: Ranking (AIFM principal markets)
+    category: composite
+    derived_from: positions
+    reason: "Ranked from all positions across AIFs"
+
+  - field_id: "27"
+    field_name: Code type of the principal market
+    category: composite
+    derived_from: positions
+    reason: "Derived from position market codes"
+
+  - field_id: "28"
+    field_name: MIC code of the principal market
+    category: composite
+    derived_from: positions
+    reason: "Derived from position market codes"
+
+  - field_id: "29"
+    field_name: Aggregated value of the principal market
+    category: composite
+    derived_from: positions
+    reason: "Sum of position values by market"
+
+  - field_id: "30"
+    field_name: Ranking (AIFM principal instruments)
+    category: composite
+    derived_from: positions
+    reason: "Ranked from all positions across AIFs"
+
+  - field_id: "31"
+    field_name: Sub-asset type code of the principal instrument
+    category: composite
+    derived_from: positions
+    reason: "Derived from position sub-asset types"
+
+  - field_id: "32"
+    field_name: Aggregated value of the principal instrument
+    category: composite
+    derived_from: positions
+    reason: "Sum of position values by sub-asset type"
+
+  - field_id: "33"
+    field_name: Total AuM Amount In Euro
+    category: composite
+    derived_from: positions
+    reason: "Sum of all AIF AuMs converted to EUR"
+
+  - field_id: "34"
+    field_name: Total AuM amount in base currency
+    category: composite
+    derived_from: positions
+    reason: "Sum of all AIF AuMs"
+
+  - field_id: "35"
+    field_name: AIFM Base currency
+    category: entity
+    source_entity: manager
+    source_field: base_currency
+    reason: "Manager-level reporting currency"
+
+  - field_id: "36"
+    field_name: Base currency / EUR FX reference rate type
+    category: report
+    reason: "FX rate methodology for this filing"
+
+  - field_id: "37"
+    field_name: Base currency / EUR FX rate
+    category: report
+    reason: "Specific FX rate used in this filing"
+
+  - field_id: "38"
+    field_name: Base currency / EUR FX reference rate description
+    category: report
+    reason: "FX rate description for this filing"
+
+
+# =============================================================================
+# AIF FIELDS (Q1-Q302 + special)
+# =============================================================================
+aif_fields:
+
+  # ── Header / Report metadata ──────────────────────────────────────────────
+  - field_id: "1"
+    field_name: Reporting Member state
+    category: report
+
+  - field_id: "2"
+    field_name: Version
+    category: report
+
+  - field_id: "3"
+    field_name: Creation date and time
+    category: report
+
+  - field_id: "4"
+    field_name: Filing type
+    category: report
+
+  - field_id: "5"
+    field_name: AIF content type
+    category: report
+    reason: "NCA-specific reporting obligation type"
+
+  - field_id: "6"
+    field_name: Reporting period start date
+    category: report
+
+  - field_id: "7"
+    field_name: Reporting period end date
+    category: report
+
+  - field_id: "8"
+    field_name: Reporting period type
+    category: report
+
+  - field_id: "9"
+    field_name: Reporting period year
+    category: report
+
+  - field_id: "10"
+    field_name: Change in AIF reporting obligation frequency Code
+    category: report
+
+  - field_id: "11"
+    field_name: Change in AIF reporting obligation contents Code
+    category: report
+
+  - field_id: "12"
+    field_name: Change in AIF reporting obligation Quarter
+    category: report
+
+  - field_id: "13"
+    field_name: Last reporting flag
+    category: report
+
+  - field_id: "14"
+    field_name: Question Number (assumption)
+    category: report
+
+  - field_id: "15"
+    field_name: Assumption description
+    category: report
+
+  - field_id: "16"
+    field_name: AIFM National Code
+    category: report
+
+  # ── AIF entity identification ─────────────────────────────────────────────
+  - field_id: "17"
+    field_name: AIF national code
+    category: report
+    reason: "NCA-assigned — different per NCA"
+
+  - field_id: "18"
+    field_name: AIF Name
+    category: entity
+    source_entity: fund
+    source_field: name
+
+  - field_id: "19"
+    field_name: AIF EEA Flag
+    category: entity
+    source_entity: fund
+    source_field: eea_flag
+
+  - field_id: "20"
+    field_name: AIF reporting code
+    category: report
+    reason: "NCA-specific reporting category"
+
+  - field_id: "21"
+    field_name: Domicile of the AIF
+    category: entity
+    source_entity: fund
+    source_field: domicile
+
+  - field_id: "22"
+    field_name: Inception Date
+    category: entity
+    source_entity: fund
+    source_field: inception_date
+
+  - field_id: "23"
+    field_name: AIF no reporting flag
+    category: report
+
+  - field_id: "24"
+    field_name: AIF LEI code
+    category: entity
+    source_entity: fund
+    source_field: lei
+
+  - field_id: "25"
+    field_name: AIF ISIN code
+    category: entity
+    source_entity: fund
+    source_field: isin
+
+  - field_id: "26"
+    field_name: AIF CUSIP code
+    category: entity
+    source_entity: fund
+    source_field: cusip
+
+  - field_id: "27"
+    field_name: AIF SEDOL code
+    category: entity
+    source_entity: fund
+    source_field: sedol
+
+  - field_id: "28"
+    field_name: AIF Bloomberg Code
+    category: entity
+    source_entity: fund
+    source_field: bloomberg
+
+  - field_id: "29"
+    field_name: AIF Reuters code
+    category: entity
+    source_entity: fund
+    source_field: reuters
+
+  - field_id: "30"
+    field_name: AIF ECB code
+    category: entity
+    source_entity: fund
+    source_field: ecb_code
+
+  - field_id: "31"
+    field_name: Old AIF national identifier - Reporting Member State
+    category: report
+
+  - field_id: "32"
+    field_name: Old AIF national identifier - National code
+    category: report
+
+  # ── Share classes ─────────────────────────────────────────────────────────
+  - field_id: "33"
+    field_name: AIF share class flag
+    category: entity
+    source_entity: fund
+    source_field: has_share_classes
+
+  - field_id: "34"
+    field_name: Share class national code
+    category: entity
+    source_entity: share_class
+    source_field: national_code
+
+  - field_id: "35"
+    field_name: Share class ISIN code
+    category: entity
+    source_entity: share_class
+    source_field: isin
+
+  - field_id: "36"
+    field_name: Share class SEDOL code
+    category: entity
+    source_entity: share_class
+    source_field: sedol
+
+  - field_id: "37"
+    field_name: Share class CUSIP code
+    category: entity
+    source_entity: share_class
+    source_field: cusip
+
+  - field_id: "38"
+    field_name: Share class Bloomberg code
+    category: entity
+    source_entity: share_class
+    source_field: bloomberg
+
+  - field_id: "39"
+    field_name: Share class Reuters code
+    category: entity
+    source_entity: share_class
+    source_field: reuters
+
+  - field_id: "40"
+    field_name: Share class name
+    category: entity
+    source_entity: share_class
+    source_field: name
+
+  # ── Master feeder ─────────────────────────────────────────────────────────
+  - field_id: "41"
+    field_name: Master feeder status
+    category: entity
+    source_entity: fund
+    source_field: master_feeder_status
+
+  - field_id: "42"
+    field_name: Master AIF name
+    category: entity
+    source_entity: fund
+    source_field: master_aif_name
+
+  - field_id: "43"
+    field_name: Master AIF Reporting Member State
+    category: entity
+    source_entity: fund
+    source_field: master_aif_rms
+
+  - field_id: "44"
+    field_name: Master AIF National code
+    category: entity
+    source_entity: fund
+    source_field: master_aif_national_code
+
+  # ── Prime brokers ─────────────────────────────────────────────────────────
+  - field_id: "45"
+    field_name: Prime Broker Name
+    category: entity
+    source_entity: counterparty
+    source_field: name
+
+  - field_id: "46"
+    field_name: Prime Broker LEI code
+    category: entity
+    source_entity: counterparty
+    source_field: lei
+
+  - field_id: "47"
+    field_name: Prime Broker BIC code
+    category: entity
+    source_entity: counterparty
+    source_field: bic
+
+  # ── Base currency and AuM ─────────────────────────────────────────────────
+  - field_id: "48"
+    field_name: Total AuM amount of the AIF in base currency
+    category: composite
+    derived_from: positions
+    reason: "Sum of all position values"
+
+  - field_id: "49"
+    field_name: Base currency of the AIF
+    category: entity
+    source_entity: fund
+    source_field: base_currency
+
+  - field_id: "50"
+    field_name: Base currency / EUR FX rate
+    category: report
+
+  - field_id: "51"
+    field_name: Base currency / EUR FX reference rate type
+    category: report
+
+  - field_id: "52"
+    field_name: Base currency / EUR FX reference rate description
+    category: report
+
+  - field_id: "53"
+    field_name: Total Net Asset Value of the AIF (NAV)
+    category: composite
+    derived_from: positions
+    reason: "Sum of all position NAVs"
+
+  # ── Funding sources ───────────────────────────────────────────────────────
+  - field_id: "54"
+    field_name: First funding source country
+    category: entity
+    source_entity: fund
+    source_field: funding_source_1
+
+  - field_id: "55"
+    field_name: Second funding source country
+    category: entity
+    source_entity: fund
+    source_field: funding_source_2
+
+  - field_id: "56"
+    field_name: Third funding source country
+    category: entity
+    source_entity: fund
+    source_field: funding_source_3
+
+  # ── Strategy ──────────────────────────────────────────────────────────────
+  - field_id: "57"
+    field_name: Predominant AIF Type
+    category: entity
+    source_entity: fund
+    source_field: predominant_type
+
+  - field_id: "58"
+    field_name: Investment strategy code
+    category: entity
+    source_entity: strategy
+    source_field: code
+
+  - field_id: "59"
+    field_name: Primary strategy flag
+    category: entity
+    source_entity: strategy
+    source_field: is_primary
+
+  - field_id: "60"
+    field_name: Investment strategy NAV percentage
+    category: entity
+    source_entity: strategy
+    source_field: nav_pct
+
+  - field_id: "61"
+    field_name: Description for strategy type Other
+    category: entity
+    source_entity: strategy
+    source_field: other_description
+
+  - field_id: "62"
+    field_name: Number of transactions under HFT
+    category: entity
+    source_entity: fund
+    source_field: hft_transaction_count
+
+  - field_id: "63"
+    field_name: Market value of buys and sells under HFT
+    category: entity
+    source_entity: fund
+    source_field: hft_market_value
+
+  # ── Main instruments (Q64-77) — COMPOSITE from positions ──────────────────
+  - field_id: "64"
+    field_name: Ranking (Five main instruments)
+    category: composite
+    derived_from: positions
+
+  - field_id: "65"
+    field_name: Sub-asset type code of the five main instruments
+    category: composite
+    derived_from: positions
+
+  - field_id: "66"
+    field_name: Instrument code type
+    category: composite
+    derived_from: positions
+
+  - field_id: "67"
+    field_name: Instrument name of the five main instruments
+    category: composite
+    derived_from: positions
+
+  - field_id: "68"
+    field_name: Instrument ISIN code of the five main instruments
+    category: composite
+    derived_from: positions
+
+  - field_id: "69"
+    field_name: AII exchange code
+    category: composite
+    derived_from: positions
+
+  - field_id: "70"
+    field_name: AII exchange product code
+    category: composite
+    derived_from: positions
+
+  - field_id: "71"
+    field_name: AII derivative type
+    category: composite
+    derived_from: positions
+
+  - field_id: "72"
+    field_name: AII Put/Call identifier
+    category: composite
+    derived_from: positions
+
+  - field_id: "73"
+    field_name: AII expiry/delivery/prompt date
+    category: composite
+    derived_from: positions
+
+  - field_id: "74"
+    field_name: AII strike price
+    category: composite
+    derived_from: positions
+
+  - field_id: "75"
+    field_name: Position type of the five main instruments
+    category: composite
+    derived_from: positions
+
+  - field_id: "76"
+    field_name: Instrument position value of the five main instruments
+    category: composite
+    derived_from: positions
+
+  - field_id: "77"
+    field_name: Short position hedging percentage
+    category: composite
+    derived_from: positions
+
+  # ── Geographical focus (Q78-93) — COMPOSITE from positions ────────────────
+  - field_id: "78"
+    field_name: Africa NAV percentage
+    category: composite
+    derived_from: positions
+  - field_id: "79"
+    field_name: Asia Pacific NAV percentage
+    category: composite
+    derived_from: positions
+  - field_id: "80"
+    field_name: Europe (other than EEA) NAV percentage
+    category: composite
+    derived_from: positions
+  - field_id: "81"
+    field_name: Europe EEA NAV percentage
+    category: composite
+    derived_from: positions
+  - field_id: "82"
+    field_name: Middle East NAV percentage
+    category: composite
+    derived_from: positions
+  - field_id: "83"
+    field_name: North America NAV percentage
+    category: composite
+    derived_from: positions
+  - field_id: "84"
+    field_name: South America NAV percentage
+    category: composite
+    derived_from: positions
+  - field_id: "85"
+    field_name: Supra National NAV percentage
+    category: composite
+    derived_from: positions
+  - field_id: "86"
+    field_name: Africa AuM value percentage
+    category: composite
+    derived_from: positions
+  - field_id: "87"
+    field_name: Asia Pacific AuM value percentage
+    category: composite
+    derived_from: positions
+  - field_id: "88"
+    field_name: Europe (other than EEA) AuM value percentage
+    category: composite
+    derived_from: positions
+  - field_id: "89"
+    field_name: Europe EEA AuM value percentage
+    category: composite
+    derived_from: positions
+  - field_id: "90"
+    field_name: Middle East AuM value percentage
+    category: composite
+    derived_from: positions
+  - field_id: "91"
+    field_name: North America AuM value percentage
+    category: composite
+    derived_from: positions
+  - field_id: "92"
+    field_name: South America AuM value percentage
+    category: composite
+    derived_from: positions
+  - field_id: "93"
+    field_name: Supra National AuM value percentage
+    category: composite
+    derived_from: positions
+
+  # ── 10 principal exposures (Q94-102) — COMPOSITE from positions ───────────
+  - field_id: "94"
+    field_name: Ranking (10 principal exposures)
+    category: composite
+    derived_from: positions
+  - field_id: "95"
+    field_name: Macro asset type of the 10 principal exposures
+    category: composite
+    derived_from: positions
+  - field_id: "96"
+    field_name: Sub-asset type of the 10 principal exposures
+    category: composite
+    derived_from: positions
+  - field_id: "97"
+    field_name: Position type of the 10 principal exposures
+    category: composite
+    derived_from: positions
+  - field_id: "98"
+    field_name: Aggregated value of the 10 principal exposures
+    category: composite
+    derived_from: positions
+  - field_id: "99"
+    field_name: Aggregated value percentage of the 10 principal exposures
+    category: composite
+    derived_from: positions
+  - field_id: "100"
+    field_name: Counterparty Name of the 10 principal exposures
+    category: composite
+    derived_from: positions
+  - field_id: "101"
+    field_name: Counterparty LEI code of the 10 principal exposures
+    category: composite
+    derived_from: positions
+  - field_id: "102"
+    field_name: Counterparty BIC code of the 10 principal exposures
+    category: composite
+    derived_from: positions
+
+  # ── Portfolio concentrations (Q103-112) — COMPOSITE from positions ────────
+  - field_id: "103"
+    field_name: Ranking (Portfolio concentration)
+    category: composite
+    derived_from: positions
+  - field_id: "104"
+    field_name: Asset type code for portfolio concentration
+    category: composite
+    derived_from: positions
+  - field_id: "105"
+    field_name: Position type for portfolio concentration
+    category: composite
+    derived_from: positions
+  - field_id: "106"
+    field_name: Market code type for portfolio concentration
+    category: composite
+    derived_from: positions
+  - field_id: "107"
+    field_name: Market code for portfolio concentration
+    category: composite
+    derived_from: positions
+  - field_id: "108"
+    field_name: Asset aggregated value for portfolio concentration
+    category: composite
+    derived_from: positions
+  - field_id: "109"
+    field_name: Asset aggregated value percentage
+    category: composite
+    derived_from: positions
+  - field_id: "110"
+    field_name: Counterparty name for portfolio concentration
+    category: composite
+    derived_from: positions
+  - field_id: "111"
+    field_name: Counterparty LEI code for portfolio concentration
+    category: composite
+    derived_from: positions
+  - field_id: "112"
+    field_name: Counterparty BIC code for portfolio concentration
+    category: composite
+    derived_from: positions
+
+  # ── Position size, principal markets, investor concentration ───────────────
+  - field_id: "113"
+    field_name: Position size type
+    category: entity
+    source_entity: fund
+    source_field: position_size_type
+
+  - field_id: "114"
+    field_name: Ranking (AIF principal markets)
+    category: composite
+    derived_from: positions
+  - field_id: "115"
+    field_name: Code type of principal market in which AIF trades
+    category: composite
+    derived_from: positions
+  - field_id: "116"
+    field_name: MIC code of principal market in which AIF trades
+    category: composite
+    derived_from: positions
+  - field_id: "117"
+    field_name: Aggregated value of principal market
+    category: composite
+    derived_from: positions
+
+  - field_id: "118"
+    field_name: Beneficially owned percentage by top 5 beneficial owners
+    category: entity
+    source_entity: fund
+    source_field: top5_beneficial_pct
+
+  - field_id: "119"
+    field_name: Investor Concentration percentage by professional clients
+    category: composite
+    derived_from: investors
+    reason: "Can be derived from INVESTOR_AMOUNT records"
+  - field_id: "120"
+    field_name: Investor Concentration percentage by retail investors
+    category: composite
+    derived_from: investors
+    reason: "Can be derived from INVESTOR_AMOUNT records"
+
+  # ── Individual exposures (Q121-124) — COMPOSITE from positions ────────────
+  - field_id: "121"
+    field_name: Sub-asset type code of individual exposure
+    category: composite
+    derived_from: positions
+  - field_id: "122"
+    field_name: Gross value of individual exposure
+    category: composite
+    derived_from: positions
+  - field_id: "123"
+    field_name: Long value of individual exposure
+    category: composite
+    derived_from: positions
+  - field_id: "124"
+    field_name: Short value of individual exposure
+    category: composite
+    derived_from: positions
+
+  # ── Turnover (Q125-127) — COMPOSITE from transactions ─────────────────────
+  - field_id: "125"
+    field_name: Sub-asset type code of turnover
+    category: composite
+    derived_from: transactions
+    reason: "Aggregated from TRANSACTION records within reporting period"
+  - field_id: "126"
+    field_name: Market value of turnover
+    category: composite
+    derived_from: transactions
+  - field_id: "127"
+    field_name: Notional value of turnover
+    category: composite
+    derived_from: transactions
+
+  # ── Currency exposures (Q128-130) — COMPOSITE from positions ──────────────
+  - field_id: "128"
+    field_name: Currency of the exposure
+    category: composite
+    derived_from: positions
+  - field_id: "129"
+    field_name: Currency Long Position Value
+    category: composite
+    derived_from: positions
+  - field_id: "130"
+    field_name: Currency Short Position Value
+    category: composite
+    derived_from: positions
+
+  # ── Dominant influence (Q131-136) — ENTITY ────────────────────────────────
+  - field_id: "131"
+    field_name: Dominant influence company name
+    category: entity
+    source_entity: controlled_company
+    source_field: name
+  - field_id: "132"
+    field_name: Dominant influence company LEI code
+    category: entity
+    source_entity: controlled_company
+    source_field: lei
+  - field_id: "133"
+    field_name: Dominant influence company BIC code
+    category: entity
+    source_entity: controlled_company
+    source_field: bic
+  - field_id: "134"
+    field_name: Transaction type
+    category: entity
+    source_entity: controlled_company
+    source_field: transaction_type
+  - field_id: "135"
+    field_name: Description of other transaction type
+    category: entity
+    source_entity: controlled_company
+    source_field: transaction_description
+  - field_id: "136"
+    field_name: "% Voting rights"
+    category: entity
+    source_entity: controlled_company
+    source_field: voting_pct
+
+  # ── Risk measures (Q137-147, Q302) — ENTITY (fund-level metrics) ──────────
+  - field_id: "137"
+    field_name: Expected annual investment return
+    category: entity
+    source_entity: fund
+    source_field: expected_return
+  - field_id: "138"
+    field_name: Risk measure type
+    category: entity
+    source_entity: risk_measure
+    source_field: type
+  - field_id: "139"
+    field_name: Risk measure value
+    category: entity
+    source_entity: risk_measure
+    source_field: value
+  - field_id: "140"
+    field_name: Risk measure value for bucket < 5 years
+    category: entity
+    source_entity: risk_measure
+    source_field: bucket_lt5y
+  - field_id: "141"
+    field_name: Risk measure value for bucket 5-15 years
+    category: entity
+    source_entity: risk_measure
+    source_field: bucket_5_15y
+  - field_id: "142"
+    field_name: Risk measure value for bucket >15 years
+    category: entity
+    source_entity: risk_measure
+    source_field: bucket_gt15y
+  - field_id: "143"
+    field_name: Risk measure value for Vega at current market levels
+    category: entity
+    source_entity: risk_measure
+    source_field: vega_current
+  - field_id: "144"
+    field_name: Risk measure value for Vega at market -10%
+    category: entity
+    source_entity: risk_measure
+    source_field: vega_minus10
+  - field_id: "145"
+    field_name: Risk measure value for Vega at market +10%
+    category: entity
+    source_entity: risk_measure
+    source_field: vega_plus10
+  - field_id: "302"
+    field_name: VAR Value
+    category: entity
+    source_entity: risk_measure
+    source_field: var_value
+  - field_id: "146"
+    field_name: VAR Calculation Method Code Type
+    category: entity
+    source_entity: risk_measure
+    source_field: var_method
+  - field_id: "147"
+    field_name: Risk Measure description
+    category: entity
+    source_entity: risk_measure
+    source_field: description
+
+  # ── Trading and clearing (Q148-159) — ENTITY (fund-level) ────────────────
+  - field_id: "148"
+    field_name: Pct securities traded on regulated exchanges
+    category: entity
+    source_entity: fund
+    source_field: pct_securities_regulated
+  - field_id: "149"
+    field_name: Pct securities traded on OTC
+    category: entity
+    source_entity: fund
+    source_field: pct_securities_otc
+  - field_id: "150"
+    field_name: Pct derivatives traded on regulated exchanges
+    category: entity
+    source_entity: fund
+    source_field: pct_derivatives_regulated
+  - field_id: "151"
+    field_name: Pct derivatives traded on OTC
+    category: entity
+    source_entity: fund
+    source_field: pct_derivatives_otc
+  - field_id: "152"
+    field_name: Pct derivatives cleared by a CCP
+    category: entity
+    source_entity: fund
+    source_field: pct_derivatives_ccp
+  - field_id: "153"
+    field_name: Pct derivatives cleared bilaterally
+    category: entity
+    source_entity: fund
+    source_field: pct_derivatives_bilateral
+  - field_id: "154"
+    field_name: Pct repos cleared by a CCP
+    category: entity
+    source_entity: fund
+    source_field: pct_repos_ccp
+  - field_id: "155"
+    field_name: Pct repos cleared bilaterally
+    category: entity
+    source_entity: fund
+    source_field: pct_repos_bilateral
+  - field_id: "156"
+    field_name: Pct repos with triparty
+    category: entity
+    source_entity: fund
+    source_field: pct_repos_triparty
+  - field_id: "157"
+    field_name: Collateral Cash amount posted
+    category: entity
+    source_entity: fund
+    source_field: collateral_cash
+  - field_id: "158"
+    field_name: Collateral Securities amount posted
+    category: entity
+    source_entity: fund
+    source_field: collateral_securities
+  - field_id: "159"
+    field_name: Other Collateral amount posted
+    category: entity
+    source_entity: fund
+    source_field: collateral_other
+
+  # ── Counterparty exposures (Q160-177) — COMPOSITE from positions ──────────
+  - field_id: "160"
+    field_name: Ranking (Counterparty AIF has greatest exposure to)
+    category: composite
+    derived_from: positions
+  - field_id: "161"
+    field_name: Counterparty exposure flag (AIF to counterparty)
+    category: composite
+    derived_from: positions
+  - field_id: "162"
+    field_name: Name counterparty AIF has greatest exposure to
+    category: composite
+    derived_from: positions
+  - field_id: "163"
+    field_name: LEI counterparty AIF has greatest exposure to
+    category: composite
+    derived_from: positions
+  - field_id: "164"
+    field_name: BIC counterparty AIF has greatest exposure to
+    category: composite
+    derived_from: positions
+  - field_id: "165"
+    field_name: NAV pct exposure (AIF to counterparty)
+    category: composite
+    derived_from: positions
+  - field_id: "166"
+    field_name: Ranking (Counterparty with greatest exposure to AIF)
+    category: composite
+    derived_from: positions
+  - field_id: "167"
+    field_name: Counterparty exposure flag (counterparty to AIF)
+    category: composite
+    derived_from: positions
+  - field_id: "168"
+    field_name: Name counterparty with greatest exposure to AIF
+    category: composite
+    derived_from: positions
+  - field_id: "169"
+    field_name: LEI counterparty with greatest exposure to AIF
+    category: composite
+    derived_from: positions
+  - field_id: "170"
+    field_name: BIC counterparty with greatest exposure to AIF
+    category: composite
+    derived_from: positions
+  - field_id: "171"
+    field_name: NAV pct exposure (counterparty to AIF)
+    category: composite
+    derived_from: positions
+  - field_id: "172"
+    field_name: Direct clearing flag
+    category: entity
+    source_entity: fund
+    source_field: direct_clearing_flag
+  - field_id: "173"
+    field_name: Ranking (CCP)
+    category: composite
+    derived_from: positions
+  - field_id: "174"
+    field_name: Name of CCP with greatest exposure
+    category: composite
+    derived_from: positions
+  - field_id: "175"
+    field_name: LEI code of CCP with greatest exposure
+    category: composite
+    derived_from: positions
+  - field_id: "176"
+    field_name: BIC code of CCP with greatest exposure
+    category: composite
+    derived_from: positions
+  - field_id: "177"
+    field_name: Exposure value of CCP
+    category: composite
+    derived_from: positions
+
+  # ── Portfolio liquidity (Q178-185) — ENTITY (fund-level) ──────────────────
+  - field_id: "178"
+    field_name: Portfolio liquidity 0-1 day pct
+    category: entity
+    source_entity: fund
+    source_field: portfolio_liq_0_1d
+  - field_id: "179"
+    field_name: Portfolio liquidity 2-7 days pct
+    category: entity
+    source_entity: fund
+    source_field: portfolio_liq_2_7d
+  - field_id: "180"
+    field_name: Portfolio liquidity 8-30 days pct
+    category: entity
+    source_entity: fund
+    source_field: portfolio_liq_8_30d
+  - field_id: "181"
+    field_name: Portfolio liquidity 31-90 days pct
+    category: entity
+    source_entity: fund
+    source_field: portfolio_liq_31_90d
+  - field_id: "182"
+    field_name: Portfolio liquidity 91-180 days pct
+    category: entity
+    source_entity: fund
+    source_field: portfolio_liq_91_180d
+  - field_id: "183"
+    field_name: Portfolio liquidity 181-365 days pct
+    category: entity
+    source_entity: fund
+    source_field: portfolio_liq_181_365d
+  - field_id: "184"
+    field_name: Portfolio liquidity >365 days pct
+    category: entity
+    source_entity: fund
+    source_field: portfolio_liq_gt365d
+  - field_id: "185"
+    field_name: Unencumbered cash amount
+    category: entity
+    source_entity: fund
+    source_field: unencumbered_cash
+
+  # ── Investor liquidity (Q186-192) — ENTITY (fund-level) ──────────────────
+  - field_id: "186"
+    field_name: Investor liquidity 0-1 day pct
+    category: entity
+    source_entity: fund
+    source_field: investor_liq_0_1d
+  - field_id: "187"
+    field_name: Investor liquidity 2-7 days pct
+    category: entity
+    source_entity: fund
+    source_field: investor_liq_2_7d
+  - field_id: "188"
+    field_name: Investor liquidity 8-30 days pct
+    category: entity
+    source_entity: fund
+    source_field: investor_liq_8_30d
+  - field_id: "189"
+    field_name: Investor liquidity 31-90 days pct
+    category: entity
+    source_entity: fund
+    source_field: investor_liq_31_90d
+  - field_id: "190"
+    field_name: Investor liquidity 91-180 days pct
+    category: entity
+    source_entity: fund
+    source_field: investor_liq_91_180d
+  - field_id: "191"
+    field_name: Investor liquidity 181-365 days pct
+    category: entity
+    source_entity: fund
+    source_field: investor_liq_181_365d
+  - field_id: "192"
+    field_name: Investor liquidity >365 days pct
+    category: entity
+    source_entity: fund
+    source_field: investor_liq_gt365d
+
+  # ── Investor redemptions (Q193-196) — ENTITY (fund-level) ────────────────
+  - field_id: "193"
+    field_name: Withdrawal redemption rights flag
+    category: entity
+    source_entity: fund
+    source_field: redemption_rights_flag
+  - field_id: "194"
+    field_name: Investor Redemption Frequency
+    category: entity
+    source_entity: fund
+    source_field: redemption_frequency
+  - field_id: "195"
+    field_name: Investor Redemption Notice Period
+    category: entity
+    source_entity: fund
+    source_field: redemption_notice_days
+  - field_id: "196"
+    field_name: Investor Redemption Lock Up Period
+    category: entity
+    source_entity: fund
+    source_field: redemption_lockup_days
+
+  # ── Special arrangements (Q197-207) — ENTITY (fund-level) ────────────────
+  - field_id: "197"
+    field_name: Side Pocket percentage
+    category: entity
+    source_entity: fund
+    source_field: side_pocket_pct
+  - field_id: "198"
+    field_name: Gates percentage
+    category: entity
+    source_entity: fund
+    source_field: gates_pct
+  - field_id: "199"
+    field_name: Dealing Suspension percentage
+    category: entity
+    source_entity: fund
+    source_field: dealing_suspension_pct
+  - field_id: "200"
+    field_name: Other Arrangement Type
+    category: entity
+    source_entity: fund
+    source_field: other_arrangement_type
+  - field_id: "201"
+    field_name: Other arrangement percentage
+    category: entity
+    source_entity: fund
+    source_field: other_arrangement_pct
+  - field_id: "202"
+    field_name: Total arrangement percentage
+    category: entity
+    source_entity: fund
+    source_field: total_arrangement_pct
+  - field_id: "203"
+    field_name: Investor preferential treatment Flag
+    category: entity
+    source_entity: fund
+    source_field: preferential_treatment_flag
+  - field_id: "204"
+    field_name: Disclosure Terms Preferential Treatment Flag
+    category: entity
+    source_entity: fund
+    source_field: disclosure_preferential
+  - field_id: "205"
+    field_name: Liquidity Terms Preferential Treatment Flag
+    category: entity
+    source_entity: fund
+    source_field: liquidity_preferential
+  - field_id: "206"
+    field_name: Fee Terms Preferential Treatment Flag
+    category: entity
+    source_entity: fund
+    source_field: fee_preferential
+  - field_id: "207"
+    field_name: Other Terms Preferential Treatment Flag
+    category: entity
+    source_entity: fund
+    source_field: other_preferential
+
+  # ── Investor breakdown (Q208-209) — COMPOSITE from investor amounts ───────
+  - field_id: "208"
+    field_name: Investor Group Type
+    category: composite
+    derived_from: investors
+    reason: "Aggregated from INVESTOR_AMOUNT records"
+  - field_id: "209"
+    field_name: Investor group NAV percentage
+    category: composite
+    derived_from: investors
+    reason: "Calculated from INVESTOR_AMOUNT totals per type"
+
+  # ── Financing liquidity (Q210-217) — ENTITY (fund-level) ─────────────────
+  - field_id: "210"
+    field_name: Available financing amount
+    category: entity
+    source_entity: fund
+    source_field: financing_available
+  - field_id: "211"
+    field_name: Financing liquidity 0-1 day pct
+    category: entity
+    source_entity: fund
+    source_field: financing_liq_0_1d
+  - field_id: "212"
+    field_name: Financing liquidity 2-7 days pct
+    category: entity
+    source_entity: fund
+    source_field: financing_liq_2_7d
+  - field_id: "213"
+    field_name: Financing liquidity 8-30 days pct
+    category: entity
+    source_entity: fund
+    source_field: financing_liq_8_30d
+  - field_id: "214"
+    field_name: Financing liquidity 31-90 days pct
+    category: entity
+    source_entity: fund
+    source_field: financing_liq_31_90d
+  - field_id: "215"
+    field_name: Financing liquidity 91-180 days pct
+    category: entity
+    source_entity: fund
+    source_field: financing_liq_91_180d
+  - field_id: "216"
+    field_name: Financing liquidity 181-365 days pct
+    category: entity
+    source_entity: fund
+    source_field: financing_liq_181_365d
+  - field_id: "217"
+    field_name: Financing liquidity >365 days pct
+    category: entity
+    source_entity: fund
+    source_field: financing_liq_gt365d
+
+  # ── Total open positions ──────────────────────────────────────────────────
+  - field_id: "218"
+    field_name: Total number of open positions
+    category: composite
+    derived_from: positions
+    reason: "Count of position records"
+
+  # ── Historical risk profile (Q219-278) — ENTITY (fund-level) ─────────────
+  # These are monthly snapshots — factual data about the fund's performance
+  - field_id: "219-278"
+    field_name: Historical risk profile (gross returns, net returns, NAV change, subscriptions, redemptions × 12 months)
+    category: entity
+    source_entity: fund_monthly_data
+    reason: "Monthly factual data — reusable across reports"
+
+  # ── Stress tests (Q279-280) — ENTITY (fund-level) ────────────────────────
+  - field_id: "279"
+    field_name: Stress test results Art 15(3)(b)
+    category: entity
+    source_entity: fund
+    source_field: stress_test_15_3_b
+  - field_id: "280"
+    field_name: Stress test results Art 16(1)
+    category: entity
+    source_entity: fund
+    source_field: stress_test_16_1
+
+  # ── Leverage and borrowings (Q281-295) — ENTITY (fund-level) ──────────────
+  - field_id: "281"
+    field_name: Rehypothecation flag
+    category: entity
+    source_entity: fund
+    source_field: rehypothecation_flag
+  - field_id: "282"
+    field_name: Rehypothecated pct of collateral
+    category: entity
+    source_entity: fund
+    source_field: rehypothecated_pct
+  - field_id: "283"
+    field_name: Unsecured borrowing amount
+    category: entity
+    source_entity: fund
+    source_field: unsecured_borrowing
+  - field_id: "284"
+    field_name: Secured borrowing via prime broker
+    category: entity
+    source_entity: fund
+    source_field: secured_borrowing_pb
+  - field_id: "285"
+    field_name: Secured borrowing via reverse repo
+    category: entity
+    source_entity: fund
+    source_field: secured_borrowing_repo
+  - field_id: "286"
+    field_name: Secured borrowing via other
+    category: entity
+    source_entity: fund
+    source_field: secured_borrowing_other
+  - field_id: "287"
+    field_name: Exchange traded derivatives exposure
+    category: entity
+    source_entity: fund
+    source_field: etd_exposure
+  - field_id: "288"
+    field_name: OTC derivatives exposure
+    category: entity
+    source_entity: fund
+    source_field: otc_exposure
+  - field_id: "289"
+    field_name: Short position borrowed securities value
+    category: entity
+    source_entity: fund
+    source_field: short_borrowed_value
+
+  # ── Controlled structures (Q290-293) — ENTITY ────────────────────────────
+  - field_id: "290"
+    field_name: Controlled structure Name
+    category: entity
+    source_entity: controlled_structure
+    source_field: name
+  - field_id: "291"
+    field_name: Controlled structure LEI code
+    category: entity
+    source_entity: controlled_structure
+    source_field: lei
+  - field_id: "292"
+    field_name: Controlled structure BIC code
+    category: entity
+    source_entity: controlled_structure
+    source_field: bic
+  - field_id: "293"
+    field_name: Controlled structure Exposure value
+    category: entity
+    source_entity: controlled_structure
+    source_field: exposure_value
+
+  # ── Leverage ratios (Q294-295) — COMPOSITE (calculated from borrowings) ──
+  - field_id: "294"
+    field_name: Leverage under gross method
+    category: composite
+    derived_from: positions
+    reason: "Calculated from total exposure and NAV"
+  - field_id: "295"
+    field_name: Leverage under commitment method
+    category: composite
+    derived_from: positions
+    reason: "Calculated from adjusted exposure and NAV"
+
+  # ── Borrowing sources (Q296-301) — ENTITY ────────────────────────────────
+  - field_id: "296"
+    field_name: Ranking (Source company)
+    category: composite
+    derived_from: positions
+  - field_id: "297"
+    field_name: Borrowing source flag
+    category: entity
+    source_entity: borrowing_source
+    source_field: source_flag
+  - field_id: "298"
+    field_name: Name of largest source of borrowed cash
+    category: entity
+    source_entity: borrowing_source
+    source_field: name
+  - field_id: "299"
+    field_name: LEI code of largest source
+    category: entity
+    source_entity: borrowing_source
+    source_field: lei
+  - field_id: "300"
+    field_name: BIC code of largest source
+    category: entity
+    source_entity: borrowing_source
+    source_field: bic
+  - field_id: "301"
+    field_name: Received leverage amount
+    category: entity
+    source_entity: borrowing_source
+    source_field: leverage_amount
+
+# =============================================================================
+# SUMMARY
+# =============================================================================
+# AIFM: 38 fields + 5 special
+#   entity:    6 fields  (name, jurisdiction, LEI, BIC, EEA flag, base currency)
+#   composite: 9 fields  (principal markets, instruments, AuM totals)
+#   report:   23 fields  (header, filing metadata, NCA-specific)
+#
+# AIF: 302 fields + 5 special
+#   entity:  ~155 fields (fund identification, share classes, strategies,
+#                         risk measures, liquidity profiles, leverage, etc.)
+#   composite: ~95 fields (derived from positions: geo, top-5, exposures,
+#                          turnover, investor breakdown, counterparties)
+#   report:   ~52 fields (header, filing metadata, NCA-specific)
+#
+# For ESMA/FCA XML imports:
+#   - entity fields → lifted to Source Canonical (reusable)
+#   - composite fields → stay at Report Canonical (not deconstructable)
+#   - report fields → stay at Report Canonical (filing-specific)
+# =============================================================================

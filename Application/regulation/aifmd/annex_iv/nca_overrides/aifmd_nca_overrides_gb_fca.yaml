@@ -1,0 +1,394 @@
+################################################################################
+# NCA-SPECIFIC OVERRIDES — FCA (United Kingdom)
+# Version: v1 — 2026-04-01
+# Base YAML: aifmd_validation_rules.yaml (v2.0)
+#
+# Schema: nca_rules entries use identical field layout as aif_rules/aifm_rules
+# in the base YAML, plus NCA-specific fields.
+#
+# Source: FCA AIFMD Q&A, RegData validation rules, M adapter FAQ
+#
+# Key differences vs ESMA base / other NCAs:
+#   - Region remapping: Europe (EEA) → Europe (other than UK)
+#                       Europe (Non-EEA) + GBP → UK
+#                       Europe (Non-EEA) + non-GBP → Europe (other than UK)
+#   - Share classes must have at least one identification code
+#   - PEQF funds must have Dominant Influence records
+#   - Sovereign bond sub-asset types differ from ESMA
+#   - FCA uses different question numbers (auto-mapped from ESMA by M adapter)
+################################################################################
+
+nca_overrides:
+  nca: FCA
+  country: GB
+  base_yaml: aifmd_validation_rules.yaml
+  base_yaml_version: '2.0'
+  source_document:
+    title: FCA AIFMD Reporting Q&A and RegData Technical Guidance
+    version: '1.0'
+    date: '2026-04-01'
+    publisher: Financial Conduct Authority (FCA)
+    url: https://www.fca.org.uk
+  changelog:
+  - version: v1
+    date: '2026-04-01'
+    changes:
+    - Initial FCA NCA override file
+    - 'NCA-FCA-RegionRemapping: Europe EEA/Non-EEA → UK and Europe (other than UK)'
+    - 'NCA-FCA-ShareClassCode: Mandatory identification code for share classes'
+    - 'NCA-FCA-DominantInfluence: Mandatory for PEQF funds'
+    - 'NCA-FCA-SovereignBondSubAsset: FCA-specific sub-asset types'
+
+  nca_rules:
+
+  # ── Section: AIFM/AIF Identifier — National Code ─────────────────────────
+
+  - rule_id: NCA-FCA-AIFMNationalCode
+    base_rule_id: AIFM-18
+    field_id: '18'
+    field_name: AIFM National Code (FRN)
+    xsd_element: <AIFMNationalCode>
+    xml_type: AIFMNationalCodeType
+    format: '[0-9]{6,7}'
+    data_type: N
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: AIFM - Identifiers
+    report_type: AIFM
+    severity: CRITICAL
+    rule_source: FCA RegData
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes: []
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: FCA RegData filing guidance
+    nca_doc_date: '2026-04-01'
+    base_rule_path:
+      aifm_report: aifm_report.identification.AIFMNationalCode
+    technical_guidance: >-
+      The FCA assigns AIFM national codes as 6 or 7 digit numeric identifiers (FCA Firm Reference Number).
+      Example: 123456 or 1234567.
+    eagle_action: ''
+    validation_rules:
+    - Must match regex ^[0-9]{6,7}$
+    - Length must be 6 or 7 digits
+    example: '123456'
+
+  - rule_id: NCA-FCA-AIFNationalCode
+    base_rule_id: AIF-17
+    field_id: '17'
+    field_name: AIF National Code (PRN)
+    xsd_element: <AIFNationalCode>
+    xml_type: AIFNationalCodeType
+    format: '[0-9]{6,7}'
+    data_type: N
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: AIF - Identifiers
+    report_type: AIF
+    severity: CRITICAL
+    rule_source: FCA RegData
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes: []
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: FCA RegData filing guidance
+    nca_doc_date: '2026-04-01'
+    base_rule_path:
+      aif_report: aif_report.identification.AIFNationalCode
+    technical_guidance: >-
+      The FCA assigns AIF national codes as 6 or 7 digit numeric identifiers (Product Reference Number).
+      Same format as the AIFM national code.
+    eagle_action: ''
+    validation_rules:
+    - Must match regex ^[0-9]{6,7}$
+    - Length must be 6 or 7 digits
+    example: '1234567'
+
+  - rule_id: NCA-FCA-AIFMEEAFlag
+    base_rule_id: AIFM-20
+    field_id: '20'
+    field_name: AIFM EEA Flag
+    xsd_element: <AIFMEEAFlag>
+    xml_type: AIFMEEAFlagType
+    format: ''
+    data_type: B
+    m_c_o_f: O
+    repetition: '[0..1]'
+    mandatory: false
+    conditional: false
+    section: AIFM - Header
+    report_type: AIFM
+    severity: INFO
+    rule_source: FCA post-Brexit guidance
+    esma_doc: ''
+    nca_error_codes:
+    - FCA-eea-flag-na
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: FCA AIFMD post-Brexit filing guidance
+    nca_doc_date: '2026-04-01'
+    base_rule_path: aifm_report.AIFMEEAFlag
+    technical_guidance: >-
+      Post-Brexit, UK is not part of the EEA. FCA filings do not include
+      AIFMEEAFlag as it is not applicable for non-EEA reporting member states.
+    eagle_action: >-
+      Adapter omits AIFMEEAFlag for GB filings.
+    validation_rules:
+    - AIFMEEAFlag is not applicable for GB filings (post-Brexit)
+
+  - rule_id: NCA-FCA-AIFEEAFlag
+    base_rule_id: AIF-19
+    field_id: '19'
+    field_name: AIF EEA Flag
+    xsd_element: <AIFEEAFlag>
+    xml_type: AIFEEAFlagType
+    format: ''
+    data_type: B
+    m_c_o_f: O
+    repetition: '[0..1]'
+    mandatory: false
+    conditional: false
+    section: AIF - Header
+    report_type: AIF
+    severity: INFO
+    rule_source: FCA post-Brexit guidance
+    esma_doc: ''
+    nca_error_codes:
+    - FCA-eea-flag-na
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: FCA AIFMD post-Brexit filing guidance
+    nca_doc_date: '2026-04-01'
+    base_rule_path: aif_report.AIFEEAFlag
+    technical_guidance: >-
+      Post-Brexit, UK is not part of the EEA. FCA filings do not include
+      AIFEEAFlag as it is not applicable for non-EEA reporting member states.
+    eagle_action: >-
+      Adapter omits AIFEEAFlag for GB filings.
+    validation_rules:
+    - AIFEEAFlag is not applicable for GB filings (post-Brexit)
+
+  - rule_id: NCA-FCA-EEANAVRate
+    base_rule_id: AIF-81
+    field_id: '81'
+    field_name: Europe EEA NAV percentage
+    xsd_element: <EEANAVRate>
+    xml_type: RateType
+    format: ''
+    data_type: N
+    m_c_o_f: O
+    repetition: '[0..1]'
+    mandatory: false
+    conditional: false
+    section: Geographical focus
+    report_type: AIF
+    severity: INFO
+    rule_source: FCA post-Brexit region remapping
+    esma_doc: ''
+    nca_error_codes:
+    - FCA-eea-nav-na
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: FCA AIFMD post-Brexit filing guidance
+    nca_doc_date: '2026-04-01'
+    base_rule_path: aif_report.geographical_focus.EEANAVRate
+    technical_guidance: >-
+      Post-Brexit, FCA uses UKNAVRate and EuropeNonUKNAVRate instead of
+      EEANAVRate and EuropeNAVRate. This ESMA element is not applicable.
+    eagle_action: >-
+      Adapter uses FCA region elements for GB filings.
+    validation_rules:
+    - EEANAVRate not applicable for GB — replaced by UKNAVRate
+
+  - rule_id: NCA-FCA-EuropeNAVRate
+    base_rule_id: AIF-80
+    field_id: '80'
+    field_name: Europe (other than EEA) NAV percentage
+    xsd_element: <EuropeNAVRate>
+    xml_type: RateType
+    format: ''
+    data_type: N
+    m_c_o_f: O
+    repetition: '[0..1]'
+    mandatory: false
+    conditional: false
+    section: Geographical focus
+    report_type: AIF
+    severity: INFO
+    rule_source: FCA post-Brexit region remapping
+    esma_doc: ''
+    nca_error_codes:
+    - FCA-europe-nav-na
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: FCA AIFMD post-Brexit filing guidance
+    nca_doc_date: '2026-04-01'
+    base_rule_path: aif_report.geographical_focus.EuropeNAVRate
+    technical_guidance: >-
+      Post-Brexit, FCA uses EuropeNonUKNAVRate instead of EuropeNAVRate.
+      This ESMA element is not applicable for GB filings.
+    eagle_action: >-
+      Adapter uses FCA region elements for GB filings.
+    validation_rules:
+    - EuropeNAVRate not applicable for GB — replaced by EuropeNonUKNAVRate
+
+  - rule_id: NCA-FCA-RegionRemapping
+    base_rule_id: AIF-GeographicalFocus
+    field_id: '78-93'
+    field_name: NAV/AUM Geographical Focus regions
+    xsd_element: <NAVGeographicalFocus>
+    xml_type: ComplexType
+    format: ''
+    data_type: ''
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: AIF - Principal Info
+    report_type: AIF
+    severity: CRITICAL
+    rule_source: FCA AIFMD Q&A
+    esma_doc: ''
+    nca_error_codes:
+    - FCA-region-remap
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: M adapter FAQ - FCA region rules
+    nca_doc_date: '2026-04-01'
+    base_rule_path: aif_report.complete_description.principal_info.NAVGeographicalFocus
+    technical_guidance: >-
+      FCA uses different geographic regions than ESMA. The mapping is:
+      - Europe (EEA) → Europe (other than UK)
+      - Europe (Non-EEA) with GBP currency → UK
+      - Europe (Non-EEA) with non-GBP currency → Europe (other than UK)
+      - All other regions remain unchanged
+      The adapter must remap positions when generating XML for GB filings.
+    eagle_action: >-
+      Adapter remaps geographic focus regions for GB filings based on
+      currency and original ESMA region. Requires position-level
+      currency information to distinguish UK vs Europe (other than UK).
+    validation_rules:
+    - Europe (EEA) positions must map to Europe (other than UK) for FCA
+    - Europe (Non-EEA) + GBP must map to UK
+    - Europe (Non-EEA) + non-GBP must map to Europe (other than UK)
+
+  - rule_id: NCA-FCA-ShareClassIdentification
+    base_rule_id: AIF-ShareClassCode
+    field_id: '34-39'
+    field_name: Share Class identification codes
+    xsd_element: <ShareClassIdentifier>
+    xml_type: ComplexType
+    format: ''
+    data_type: ''
+    m_c_o_f: C
+    repetition: '[1..*]'
+    mandatory: false
+    conditional: true
+    section: AIF - Share Class
+    report_type: AIF
+    severity: CRITICAL
+    rule_source: FCA RegData validation
+    esma_doc: ''
+    nca_error_codes:
+    - FCA-shareclass-code
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: M adapter FAQ - FCA share class rules
+    nca_doc_date: '2026-04-01'
+    base_rule_path: aif_report.record_info.ShareClassIdentifier
+    technical_guidance: >-
+      FCA RegData rejects share classes without any identification code
+      (AIF Questions 34-39). When no code is available, a dummy
+      ShareClassNationalCode with value "No Code Available" and a
+      sequence number must be added.
+    eagle_action: >-
+      Adapter checks share classes for GB filings and auto-inserts
+      dummy national code "No Code Available [N]" when no identification
+      code is present.
+    validation_rules:
+    - At least one type of identification code must be entered per share class
+    - IF no code available THEN insert "No Code Available" as ShareClassNationalCode
+
+  - rule_id: NCA-FCA-DominantInfluencePEQF
+    base_rule_id: AIF-DominantInfluence
+    field_id: '131-136'
+    field_name: Dominant Influence
+    xsd_element: <CompanyDominantInfluence>
+    xml_type: ComplexType
+    format: ''
+    data_type: ''
+    m_c_o_f: C
+    repetition: '[0..*]'
+    mandatory: false
+    conditional: true
+    section: AIF - Individual Info
+    report_type: AIF
+    severity: CRITICAL
+    rule_source: FCA RegData validation
+    esma_doc: ''
+    nca_error_codes:
+    - FCA-dominant-influence
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: M adapter FAQ - FCA dominant influence rules
+    nca_doc_date: '2026-04-01'
+    base_rule_path: aif_report.individual_info.CompanyDominantInfluence
+    technical_guidance: >-
+      FCA RegData rejects PEQF (Private Equity) funds without any
+      Dominant Influence records. When no dominant influence exists,
+      a dummy record with company name "Not Applicable" must be added.
+    eagle_action: >-
+      Adapter checks PEQF funds for GB filings and auto-inserts
+      dummy dominant influence record when none exists.
+    validation_rules:
+    - IF PredominantAIFType == PEQF THEN at least one DominantInfluence required
+    - IF no DominantInfluence for PEQF THEN insert dummy "Not Applicable"
+
+  - rule_id: NCA-FCA-SovereignBondSubAssetTypes
+    base_rule_id: AIF-SubAssetType
+    field_id: '65'
+    field_name: Sub-asset type of position
+    xsd_element: <SubAssetType>
+    xml_type: SubAssetTypeType
+    format: ''
+    data_type: A
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: AIF - Position
+    report_type: AIF
+    severity: WARNING
+    rule_source: FCA AIFMD Q&A
+    esma_doc: ''
+    nca_error_codes:
+    - FCA-subasset-sovereign
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: M adapter FAQ - FCA sub-asset type conversions
+    nca_doc_date: '2026-04-01'
+    base_rule_path: aif_report.complete_description.position.SubAssetType
+    technical_guidance: >-
+      FCA uses different sub-asset types for sovereign bonds than ESMA.
+      The exact mapping depends on the specific bond types. The M adapter
+      applies heuristic conversion for GB filings.
+    eagle_action: >-
+      Adapter converts sovereign bond sub-asset types for GB filings
+      using FCA-specific mapping rules.
+    validation_rules:
+    - Sovereign bond sub-asset types must use FCA codes for GB filings

@@ -1,0 +1,1121 @@
+version: '1.0'
+source: M adapter AIFMD Annex IV - Full & Light Templates V1
+description: Fixed column schema per record type. Column index is 1-based. Column 1
+  is always the record type identifier. Light-specific types (AIFM_LIGHT, AIF_LIGHT,
+  POSITION_COMPACT, SHARE_CLASS_COMPACT) are a subset of their Full counterparts.
+record_types:
+  # ── Light template record types ────────────────────────────────────────────
+  AIFM_LIGHT:
+    num_columns: 12
+    columns:
+    - index: 2
+      name: AIF(M) Reporting Member State
+      questions: 1, 24, AIF 1, 31
+    - index: 3
+      name: Filing Type
+      questions: '4'
+    - index: 4
+      name: Reporting Period Year
+      questions: 9, 6, 7, AIF 9, 6, 7
+    - index: 5
+      name: Last Reporting Flag
+      questions: '13'
+    - index: 6
+      name: AIFM Jurisdiction
+      questions: '17'
+    - index: 7
+      name: AIFM National Code
+      questions: '18'
+    - index: 8
+      name: AIFM Name
+      questions: '19'
+    - index: 9
+      name: AIFM No Reporting Flag (Nothing to report)
+      questions: '21'
+    - index: 10
+      name: AIFM LEI Code
+      questions: '22'
+    - index: 11
+      name: Old AIFM National Code
+      questions: '25'
+    - index: 12
+      name: Custom National Code
+      questions: CNC
+  AIF_LIGHT:
+    num_columns: 20
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Filing Type
+      questions: '4'
+    - index: 4
+      name: Last Reporting Flag
+      questions: '13'
+    - index: 5
+      name: AIF National Code
+      questions: '17'
+    - index: 6
+      name: AIF Name
+      questions: '18'
+    - index: 7
+      name: AIF Domicile
+      questions: '21'
+    - index: 8
+      name: AIF Inception Date
+      questions: '22'
+    - index: 9
+      name: AIF No Reporting Flag (Nothing to report)
+      questions: '23'
+    - index: 10
+      name: AIF LEI Code
+      questions: '24'
+    - index: 11
+      name: Old AIF National Code
+      questions: '32'
+    - index: 12
+      name: AIF Base Currency
+      questions: '49'
+    - index: 13
+      name: First funding source country
+      questions: '54'
+    - index: 14
+      name: Second funding source country
+      questions: '55'
+    - index: 15
+      name: Third funding source country
+      questions: '56'
+    - index: 16
+      name: Investment strategy code
+      questions: 58, 57
+    - index: 17
+      name: Description for strategy type Other
+      questions: '61'
+    - index: 18
+      name: Typical deal / position size
+      questions: '113'
+    - index: 19
+      name: Beneficially owned percentage by top 5 beneficial owners
+      questions: '118'
+    - index: 20
+      name: Investor Concentration NAV percentage by retail investors
+      questions: 120, 119
+  POSITION_COMPACT:
+    num_columns: 9
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Sub-Asset Type of Position
+      questions: 65, 41, 95, 96, 104
+    - index: 4
+      name: Instrument Name
+      questions: 67, 42
+    - index: 5
+      name: Long / Short
+      questions: '75'
+    - index: 6
+      name: Position value (Article 2 AIFMD)
+      questions: 48, 76, 86-93, 98, 108, 117
+    - index: 7
+      name: Net Asset Value (NAV)
+      questions: NAV, 78-85
+    - index: 8
+      name: Currency of the exposure
+      questions: '128'
+    - index: 9
+      name: Region
+      questions: 78-93
+  SHARE_CLASS_COMPACT:
+    num_columns: 3
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Share Class Name
+      questions: '40'
+  # ── Full template record types ─────────────────────────────────────────────
+  AIFM:
+    num_columns: 18
+    columns:
+    - index: 2
+      name: Filing Type
+      questions: '4'
+    - index: 3
+      name: AIFM Content Type
+      questions: '5'
+    - index: 4
+      name: (Legacy) Reporting Period Start Date
+      questions: '6'
+    - index: 5
+      name: Reporting Period End Date
+      questions: '7'
+    - index: 6
+      name: Reporting Period Type
+      questions: 8, 6, 7
+    - index: 7
+      name: Reporting Period Year
+      questions: 9, 6, 7
+    - index: 8
+      name: Change in AIFM Reporting Obligation Frequency Code
+      questions: '10'
+    - index: 9
+      name: Change in AIFM Reporting Obligation contents Code
+      questions: '11'
+    - index: 10
+      name: Change in AIFM Reporting Obligation Quarter
+      questions: '12'
+    - index: 11
+      name: Last Reporting Flag
+      questions: '13'
+    - index: 12
+      name: AIFM Reporting Code
+      questions: '16'
+    - index: 13
+      name: AIFM Jurisdiction
+      questions: 17, 20
+    - index: 14
+      name: AIFM Name
+      questions: '19'
+    - index: 15
+      name: (Legacy) AIFM EEA Flag
+      questions: '20'
+    - index: 16
+      name: AIFM No Reporting Flag (Nothing to report)
+      questions: '21'
+    - index: 17
+      name: AIFM LEI Code
+      questions: '22'
+    - index: 18
+      name: AIFM BIC Code
+      questions: '23'
+  AIFM_NATIONAL_CODE:
+    num_columns: 6
+    columns:
+    - index: 2
+      name: AIFM Reporting Member State
+      questions: '1'
+    - index: 3
+      name: AIFM National Code
+      questions: '18'
+    - index: 4
+      name: Old AIFM Reporting Member State
+      questions: '24'
+    - index: 5
+      name: Old AIFM National Code
+      questions: '25'
+    - index: 6
+      name: Custom National Code
+      questions: CNC
+  AIFM_ASSUMPTION:
+    num_columns: 3
+    columns:
+    - index: 2
+      name: Question Number
+      questions: '14'
+    - index: 3
+      name: Assumption Description
+      questions: '15'
+  AIF:
+    num_columns: 39
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Filing Type
+      questions: '4'
+    - index: 4
+      name: AIF Content Type
+      questions: '5'
+    - index: 5
+      name: (Legacy) Reporting Period Start Date
+      questions: '6'
+    - index: 6
+      name: (Legacy) Reporting Period End Date
+      questions: '7'
+    - index: 7
+      name: Reporting Period Type
+      questions: 8, 6, 7
+    - index: 8
+      name: (Legacy) Reporting Period Year
+      questions: '9'
+    - index: 9
+      name: Change in AIF Reporting Obligation Frequency Code
+      questions: '10'
+    - index: 10
+      name: Change in AIF Reporting Obligation contents Code
+      questions: '11'
+    - index: 11
+      name: Change in AIF Reporting Obligation Quarter
+      questions: '12'
+    - index: 12
+      name: Last Reporting Flag
+      questions: '13'
+    - index: 13
+      name: AIF Name
+      questions: '18'
+    - index: 14
+      name: (Legacy) AIF EEA Flag
+      questions: '19'
+    - index: 15
+      name: AIF Reporting Code
+      questions: '20'
+    - index: 16
+      name: AIF Domicile
+      questions: 21, 19
+    - index: 17
+      name: AIF Inception Date
+      questions: '22'
+    - index: 18
+      name: AIF No Reporting Flag (Nothing to report)
+      questions: '23'
+    - index: 19
+      name: AIF LEI Code
+      questions: '24'
+    - index: 20
+      name: AIF ISIN Code
+      questions: '25'
+    - index: 21
+      name: AIF CUSIP Code
+      questions: '26'
+    - index: 22
+      name: AIF Sedol Code
+      questions: '27'
+    - index: 23
+      name: AIF Bloomberg Code
+      questions: '28'
+    - index: 24
+      name: AIF Reuters Code
+      questions: '29'
+    - index: 25
+      name: AIF ECB Code
+      questions: '30'
+    - index: 26
+      name: (Legacy) Master-Feeder Status
+      questions: '41'
+    - index: 27
+      name: AIF Base Currency
+      questions: '49'
+    - index: 28
+      name: Total AuM amount of the AIF in base currency
+      questions: '48'
+    - index: 29
+      name: Total Net Asset Value of the AIF (NAV)
+      questions: '53'
+    - index: 30
+      name: First funding source country
+      questions: '54'
+    - index: 31
+      name: Second funding source country
+      questions: '55'
+    - index: 32
+      name: Third funding source country
+      questions: '56'
+    - index: 33
+      name: Number of transactions under HFT
+      questions: '62'
+    - index: 34
+      name: Market value of buys and sells in base currency under HFT
+      questions: '63'
+    - index: 35
+      name: Typical deal / position size
+      questions: '113'
+    - index: 36
+      name: Beneficially owned percentage by top 5 beneficial owners
+      questions: '118'
+    - index: 37
+      name: Expected annual investment return percentage
+      questions: '137'
+    - index: 38
+      name: Investor Concentration NAV percentage by retail investors
+      questions: 120, 119
+    - index: 39
+      name: Total number of open positions
+      questions: '218'
+  AIF_NATIONAL_CODE:
+    num_columns: 6
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: AIF Reporting Member State
+      questions: 1, 43
+    - index: 4
+      name: AIF National Code
+      questions: 17, 44
+    - index: 5
+      name: Old AIF Reporting Member State
+      questions: '31'
+    - index: 6
+      name: Old AIF National Code
+      questions: '32'
+  AIF_ASSUMPTION:
+    num_columns: 4
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Question Number
+      questions: '14'
+    - index: 4
+      name: Assumption Description
+      questions: '15'
+  SHARE_CLASS:
+    num_columns: 9
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Share Class National Code
+      questions: '34'
+    - index: 4
+      name: Share Class ISIN Code
+      questions: '35'
+    - index: 5
+      name: Share Class SEDOL Code
+      questions: '36'
+    - index: 6
+      name: Share Class CUSIP Code
+      questions: '37'
+    - index: 7
+      name: Share Class Bloomberg Code
+      questions: '38'
+    - index: 8
+      name: Share class Reuters Code
+      questions: '39'
+    - index: 9
+      name: Share Class Name
+      questions: '40'
+  PRIME_BROKER:
+    num_columns: 5
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Prime Broker Name
+      questions: '45'
+    - index: 4
+      name: Prime Broker LEI Code
+      questions: '46'
+    - index: 5
+      name: Prime Broker BIC Code
+      questions: '47'
+  STRATEGYv2:
+    num_columns: 5
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Investment strategy code
+      questions: 58, 57
+    - index: 4
+      name: Share in NAV (%)
+      questions: '60'
+    - index: 5
+      name: Description for strategy type Other
+      questions: '61'
+  STRATEGY:
+    num_columns: 6
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Investment strategy code
+      questions: 58, 57
+    - index: 4
+      name: Primary strategy flag
+      questions: '59'
+    - index: 5
+      name: Share in NAV (%)
+      questions: '60'
+    - index: 6
+      name: Description for strategy type Other
+      questions: '61'
+  POSITION:
+    num_columns: 24
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Sub-Asset Type of Position
+      questions: 65, 41, 95, 96, 104, 121
+    - index: 4
+      name: (Legacy) Instrument Code Type
+      questions: '66'
+    - index: 5
+      name: Instrument Name
+      questions: 67, 42
+    - index: 6
+      name: Instrument ISIN Code
+      questions: '68'
+    - index: 7
+      name: Market Type Code
+      questions: 106, 115
+    - index: 8
+      name: Market Identifier Code (MIC)
+      questions: 69, 107, 116
+    - index: 9
+      name: AII Exchange Product Code
+      questions: '70'
+    - index: 10
+      name: AII Derivative Type
+      questions: '71'
+    - index: 11
+      name: AII Put/Call Identifier
+      questions: '72'
+    - index: 12
+      name: AII exercise/maturity/expiry/delivery/prompt date
+      questions: '73'
+    - index: 13
+      name: AII Strike Price
+      questions: '74'
+    - index: 14
+      name: Long / Short
+      questions: 75, 124
+    - index: 15
+      name: Position value (Article 2 AIFMD)
+      questions: 48, 76, 86-93, 98, 108, 117, 123-124, 129-130
+    - index: 16
+      name: Net Asset Value (NAV)
+      questions: 53, 78-85, 165, 171
+    - index: 17
+      name: Hedging % for short position
+      questions: '77'
+    - index: 18
+      name: Counterparty Type
+      questions: '172'
+    - index: 19
+      name: Counterparty Name
+      questions: 100, 110, 162, 168
+    - index: 20
+      name: Counterparty LEI Code
+      questions: 101, 111, 163, 169
+    - index: 21
+      name: Counterparty BIC Code
+      questions: 102, 112, 164, 170
+    - index: 22
+      name: Currency of the exposure
+      questions: '128'
+    - index: 23
+      name: Region
+      questions: 78-93
+    - index: 24
+      name: Gross value of exposure
+      questions: '122'
+  TURNOVER:
+    num_columns: 5
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Sub-Asset Type of Turnover
+      questions: '125'
+    - index: 4
+      name: Market Value of Turnover
+      questions: '126'
+    - index: 5
+      name: Notional Value of Turnover
+      questions: '127'
+  DOMINANT_INFLUENCE:
+    num_columns: 8
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Dominant influence company name
+      questions: '131'
+    - index: 4
+      name: Dominant influence company LEI code
+      questions: '132'
+    - index: 5
+      name: Dominant influence company BIC code
+      questions: '133'
+    - index: 6
+      name: Transaction Type
+      questions: '134'
+    - index: 7
+      name: Description of other transaction type
+      questions: '135'
+    - index: 8
+      name: '% Voting Rights'
+      questions: '136'
+  RISK:
+    num_columns: 13
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Risk measure type
+      questions: '138'
+    - index: 4
+      name: Risk measure value in base currency
+      questions: '139'
+    - index: 5
+      name: Risk measure value for Net DV01 and CS01 for bucket < 5 years in base currency
+      questions: '140'
+    - index: 6
+      name: Risk measure value Net DV01 and CS01 for for bucket 5-15 years in base currency
+      questions: '141'
+    - index: 7
+      name: Risk measure value Net DV01 and CS01 for for bucket > 15 years in base currency
+      questions: '142'
+    - index: 8
+      name: Risk measure value for Vega exposure at current market levels in base currency
+      questions: '143'
+    - index: 9
+      name: Risk measure value for Vega exposure at market levels 10% lower in base currency
+      questions: '144'
+    - index: 10
+      name: Risk measure value for Vega exposure at market levels 10% higher in base currency
+      questions: '145'
+    - index: 11
+      name: VAR Value as a percentage
+      questions: '302'
+    - index: 12
+      name: VAR Calculation Method Code Type
+      questions: '146'
+    - index: 13
+      name: Risk Measure description
+      questions: '147'
+  COUNTERPARTY_RISK_PROFILE:
+    num_columns: 14
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Percentage of market value for securities traded on regulated exchanges (non-OTC)
+      questions: 148, 149
+    - index: 4
+      name: (Legacy) Percentage of market value for securities traded on OTC
+      questions: '149'
+    - index: 5
+      name: Percentage of trade volumes for derivatives traded on regulated exchanges (non-OTC)
+      questions: 150, 151
+    - index: 6
+      name: (Legacy) Percentage of trade volumes for derivatives traded on OTC
+      questions: '151'
+    - index: 7
+      name: Percentage of trade volumes for derivatives cleared by a CCP
+      questions: 152, 153
+    - index: 8
+      name: (Legacy) Percentage of trade volumes for derivatives cleared bilaterally
+      questions: '153'
+    - index: 9
+      name: Percentage of market value for repos trades cleared by a CCP
+      questions: '154'
+    - index: 10
+      name: Percentage of market value for repos trades cleared bilaterally
+      questions: '155'
+    - index: 11
+      name: Percentage of market value for repos trades cleared with triparty repos
+      questions: '156'
+    - index: 12
+      name: Collateral Cash amount posted to all counterparties
+      questions: '157'
+    - index: 13
+      name: Collateral Securities amount posted to all counterparties
+      questions: '158'
+    - index: 14
+      name: Other Collateral amount posted to all counterparties
+      questions: '159'
+  PORTFOLIO_LIQUIDITY_PROFILE:
+    num_columns: 10
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Percentage of portfolio liquidity in 0 to 1 day
+      questions: '178'
+    - index: 4
+      name: Percentage of portfolio liquidity in 2 to 7 days
+      questions: '179'
+    - index: 5
+      name: Percentage of portfolio liquidity in 8 to 30 days
+      questions: '180'
+    - index: 6
+      name: Percentage of portfolio liquidity in 31 to 90 days
+      questions: '181'
+    - index: 7
+      name: Percentage of portfolio liquidity in 91 to 180 days
+      questions: '182'
+    - index: 8
+      name: Percentage of portfolio liquidity in 181 to 365 days
+      questions: '183'
+    - index: 9
+      name: Percentage of portfolio liquidity in more than 365 days
+      questions: '184'
+    - index: 10
+      name: Unencumbered cash amount
+      questions: '185'
+  INVESTOR_LIQUIDITY_PROFILE:
+    num_columns: 9
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Percentage of investor liquidity in 0 to 1 day
+      questions: '186'
+    - index: 4
+      name: Percentage of investor liquidity in 2 to 7 days
+      questions: '187'
+    - index: 5
+      name: Percentage of investor liquidity in 8 to 30 days
+      questions: '188'
+    - index: 6
+      name: Percentage of investor liquidity in 31 to 90 days
+      questions: '189'
+    - index: 7
+      name: Percentage of investor liquidity in 91 to 180 days
+      questions: '190'
+    - index: 8
+      name: Percentage of investor liquidity in 181 to 365 days
+      questions: '191'
+    - index: 9
+      name: Percentage of investor liquidity in more than 365 days
+      questions: '192'
+  INVESTOR_REDEMPTION:
+    num_columns: 6
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: (Legacy) Withdrawal redemption rights flag
+      questions: '193'
+    - index: 4
+      name: Investor Redemption Frequency
+      questions: 194, 193
+    - index: 5
+      name: Investor Redemption Notice Period in days
+      questions: 195, 193
+    - index: 6
+      name: Investor Redemption Lock Up Period in days
+      questions: 196, 193
+  SPECIAL_ARRANGEMENT:
+    num_columns: 13
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Side Pocket percentage
+      questions: '197'
+    - index: 4
+      name: Gates percentage
+      questions: '198'
+    - index: 5
+      name: Dealing Suspension percentage
+      questions: '199'
+    - index: 6
+      name: Other Arrangement Type
+      questions: '200'
+    - index: 7
+      name: Other arrangement percentage
+      questions: '201'
+    - index: 8
+      name: Total arrangement percentage
+      questions: '202'
+    - index: 9
+      name: (Legacy) Investor preferential treatment Flag
+      questions: '203'
+    - index: 10
+      name: Disclosure Terms Preferential Treatment Flag
+      questions: 204, 203
+    - index: 11
+      name: Liquidity Terms Preferential Treatment Flag
+      questions: 205, 203
+    - index: 12
+      name: Fee Terms Preferential Treatment Flag
+      questions: 206, 203
+    - index: 13
+      name: Other Terms Preferential Treatment Flag
+      questions: 207, 203
+  INVESTOR:
+    num_columns: 4
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Investor Group Type
+      questions: '208'
+    - index: 4
+      name: Investor group NAV percentage
+      questions: '209'
+  FINANCING_LIQUIDITY:
+    num_columns: 10
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Available financing amount
+      questions: '210'
+    - index: 4
+      name: Percentage of financing amount in 0 to 1 day
+      questions: '211'
+    - index: 5
+      name: Percentage of financing amount in 2 to 7 days
+      questions: '212'
+    - index: 6
+      name: Percentage of financing amount in 8 to 30 days
+      questions: '213'
+    - index: 7
+      name: Percentage of financing amount in 31 to 90 days
+      questions: '214'
+    - index: 8
+      name: Percentage of financing amount in 91 to 180 days
+      questions: '215'
+    - index: 9
+      name: Percentage of financing amount in 181 to 365 days
+      questions: '216'
+    - index: 10
+      name: Percentage of financing amount longer than 365 days
+      questions: '217'
+  HISTORICAL_RISK_PROFILE:
+    num_columns: 8
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Month
+      questions: 219-278
+    - index: 4
+      name: Percentage of gross investment returns
+      questions: 219-230
+    - index: 5
+      name: Percentage of net investment returns
+      questions: 231-242
+    - index: 6
+      name: Percentage of NAV change
+      questions: 243-254
+    - index: 7
+      name: Subscriptions in base currency
+      questions: 255-266
+    - index: 8
+      name: Redemptions in base currency
+      questions: 267-278
+  STRESS_TEST:
+    num_columns: 4
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Results of stress tests performed in accordance with point(b) of Article 15(3)
+      questions: '279'
+    - index: 4
+      name: Results of stress tests performed in accordance with the second subparagraph of Article 16(1)
+      questions: '280'
+  FINANCE:
+    num_columns: 13
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Rehypothecation flag
+      questions: '281'
+    - index: 4
+      name: Rehypothecated percentage of collateral amount posted to all counterparties
+      questions: '282'
+    - index: 5
+      name: Unsecured cash borrowing amount
+      questions: '283'
+    - index: 6
+      name: Collaterised/secured cash borrowing via prime broker amount
+      questions: '284'
+    - index: 7
+      name: Collaterised/secured cash borrowing via reverse repo amount
+      questions: '285'
+    - index: 8
+      name: Collaterised/secured cash borrowing via other amount
+      questions: '286'
+    - index: 9
+      name: Exchange traded derivatives exposure amount
+      questions: '287'
+    - index: 10
+      name: OTC derivatives exposure amount
+      questions: '288'
+    - index: 11
+      name: Short position borrowed securities value
+      questions: '289'
+    - index: 12
+      name: Leverage under gross method
+      questions: '294'
+    - index: 13
+      name: Leverage under commitment method
+      questions: '295'
+  CONTROLLED_STRUCTURE:
+    num_columns: 6
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Controlled structure Name
+      questions: '290'
+    - index: 4
+      name: Controlled structure LEI code
+      questions: '291'
+    - index: 5
+      name: Controlled structure BIC code
+      questions: '292'
+    - index: 6
+      name: Controlled structure Exposure value
+      questions: '293'
+  BORROW_SOURCE:
+    num_columns: 6
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Name of the source
+      questions: '298'
+    - index: 4
+      name: LEI code of the source
+      questions: '299'
+    - index: 5
+      name: BIC code of the source
+      questions: '300'
+    - index: 6
+      name: Received leverage amount
+      questions: '301'
+  # ── Multi-NCA registration data ────────────────────────────────────────────
+  AIFM_NATIONAL_DATA:
+    num_columns: 10
+    columns:
+    - index: 2
+      name: AIFM Reporting Member State
+      questions: '1'
+    - index: 3
+      name: AIFM National Code
+      questions: '18'
+    - index: 4
+      name: Old AIFM Reporting Member State
+      questions: '24'
+    - index: 5
+      name: Old AIFM National Code
+      questions: '25'
+    - index: 6
+      name: Custom National Code
+      questions: CNC
+    - index: 7
+      name: AIFM Content Type
+      questions: '5'
+    - index: 8
+      name: Reporting Period Type
+      questions: 8, 6, 7
+    - index: 9
+      name: AIFM Reporting Code
+      questions: '16'
+    - index: 10
+      name: Sender ID
+      questions: SENDER_ID
+  AIF_NATIONAL_DATA:
+    num_columns: 10
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: AIF Reporting Member State
+      questions: 1, 43
+    - index: 4
+      name: AIF National Code
+      questions: 17, 44
+    - index: 5
+      name: Old AIF Reporting Member State
+      questions: '31'
+    - index: 6
+      name: Old AIF National Code
+      questions: '32'
+    - index: 7
+      name: AIF Content Type
+      questions: '5'
+    - index: 8
+      name: Reporting Period Type
+      questions: 8, 6, 7
+    - index: 9
+      name: AIF Reporting Code
+      questions: '20'
+    - index: 10
+      name: Inception Date of AIF
+      questions: '22'
+  # ── New enrichment and source data record types ───────────────────────────
+  INSTRUMENT:
+    num_columns: 11
+    columns:
+    - index: 2
+      name: Instrument Name
+      questions: 67, 42
+    - index: 3
+      name: Instrument ISIN Code
+      questions: '68'
+    - index: 4
+      name: Sub-Asset Type of Position
+      questions: 65, 41, 95, 96, 104, 121
+    - index: 5
+      name: Market Type Code
+      questions: 106, 115
+    - index: 6
+      name: Market Identifier Code (MIC)
+      questions: 69, 107, 116
+    - index: 7
+      name: Counterparty Type
+      questions: '172'
+    - index: 8
+      name: Counterparty Name
+      questions: 100, 110, 162, 168
+    - index: 9
+      name: Counterparty LEI Code
+      questions: 101, 111, 163, 169
+    - index: 10
+      name: Currency of the exposure
+      questions: '128'
+    - index: 11
+      name: Region or Country Code
+      questions: 78-93
+  TRANSACTION:
+    num_columns: 8
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Sub-Asset Type of Turnover
+      questions: '125'
+    - index: 4
+      name: Instrument Name
+      questions: INSTRUMENT 67
+    - index: 5
+      name: Market Value of Turnover
+      questions: '126'
+    - index: 6
+      name: Notional Value of Turnover
+      questions: '127'
+    - index: 7
+      name: Volume of Turnover
+      questions: 150, 151
+    - index: 8
+      name: Transaction Date
+      questions: TX_DATE
+  RISK_DEFAULT:
+    num_columns: 3
+    columns:
+    - index: 2
+      name: Risk measure type
+      questions: '138'
+    - index: 3
+      name: Risk Measure description
+      questions: '147'
+  INVESTOR_AMOUNT:
+    num_columns: 5
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Investor Name
+      questions: INV_NAME
+    - index: 4
+      name: Investor Type
+      questions: '208'
+    - index: 5
+      name: Investor Amount
+      questions: INV_AMOUNT
+  CUSTOM_FX_RATE:
+    num_columns: 6
+    columns:
+    - index: 2
+      name: Value Date
+      questions: FX_DATE
+    - index: 3
+      name: Currency
+      questions: '49'
+    - index: 4
+      name: Currency / EUR FX rate
+      questions: '50'
+    - index: 5
+      name: Rate type
+      questions: '51'
+    - index: 6
+      name: Description
+      questions: '52'
+  AIF_EXTERNAL:
+    num_columns: 8
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Reporting Period Start Date (Legacy)
+      questions: '6'
+    - index: 4
+      name: Reporting Period End Date (Legacy)
+      questions: '7'
+    - index: 5
+      name: (Legacy) Reporting Period Type
+      questions: '8'
+    - index: 6
+      name: (Legacy) Reporting Period Year
+      questions: '9'
+    - index: 7
+      name: Base currency of the AIF
+      questions: '49'
+    - index: 8
+      name: Total AuM amount of the AIF in base currency
+      questions: '48'
+  POSITION_EXTERNAL:
+    num_columns: 6
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Sub-Asset Type
+      questions: '65'
+    - index: 4
+      name: Market Type Code
+      questions: 106, 115
+    - index: 5
+      name: Market Identifier Code (MIC)
+      questions: 69, 107, 116
+    - index: 6
+      name: Position value (Article 2 AIFMD)
+      questions: 48, 76, 86-93, 98, 108, 117, 123-124, 129-130
+  # ── Master-Feeder record type ──────────────────────────────────────────────
+  MASTER:
+    num_columns: 5
+    columns:
+    - index: 2
+      name: Custom AIF Identification
+      questions: AIF_ID
+    - index: 3
+      name: Master AIF Name
+      questions: '149'
+    - index: 4
+      name: Master AIF national identifier - Reporting Member State
+      questions: '150'
+    - index: 5
+      name: Master AIF national identifier - National code
+      questions: '151'

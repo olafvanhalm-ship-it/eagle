@@ -1,0 +1,409 @@
+# =============================================================================
+# Framework Controls: General Data Protection Regulation (GDPR)
+# Regulation (EU) 2016/679
+# Version:   1.0
+# Date:      2026-03-23
+# Source:    Official Journal of the EU — OJ L 119, 4.5.2016
+# Scope:     Data processor and data controller obligations applicable to a
+#            B2B SaaS platform processing personal data on behalf of clients.
+# Note:      This document is drafted independently of any internal system
+#            documentation and serves as the authoritative regulatory baseline
+#            for gap comparison purposes.
+# =============================================================================
+
+metadata:
+  framework:   "General Data Protection Regulation (GDPR)"
+  regulation:  "Regulation (EU) 2016/679"
+  applicable_from: "2018-05-25"
+  version:     "1.0"
+  scope_note: >
+    A B2B SaaS platform acts as a data processor for client personal data
+    (typically staff user accounts and identity in audit logs) and may act
+    as a data controller for its own employee and prospect data. This
+    document covers both roles. Where a distinction applies it is noted.
+    Fund-level financial data (non-personal) is out of GDPR scope.
+
+# =============================================================================
+# CHAPTER I — GENERAL PRINCIPLES (Art. 5–11)
+# =============================================================================
+
+chapter_i_principles:
+
+  - id: GDPR-P-001
+    article: "Art. 5(1)"
+    title: "Data processing principles"
+    obligation_holder: controller_and_processor
+    controls:
+      - "Lawfulness, fairness and transparency: legal basis identified for every processing activity"
+      - "Purpose limitation: data collected for specified, explicit and legitimate purposes; not further processed incompatibly"
+      - "Data minimisation: only data adequate and relevant to stated purpose processed"
+      - "Accuracy: reasonable steps taken to correct or erase inaccurate data"
+      - "Storage limitation: retention periods defined for every data category; enforced by automated deletion"
+      - "Integrity and confidentiality: appropriate technical and organisational measures applied"
+
+  - id: GDPR-P-002
+    article: "Art. 5(2)"
+    title: "Accountability — demonstrating compliance"
+    obligation_holder: controller
+    controls:
+      - "Documentation maintained demonstrating compliance with Art. 5(1) principles"
+      - "Processing activities documented in Record of Processing Activities (RoPA)"
+      - "Compliance evidence retained and available for supervisory authority review"
+
+  - id: GDPR-P-003
+    article: "Art. 6"
+    title: "Lawful basis for processing"
+    obligation_holder: controller
+    legal_bases:
+      consent:         "Art. 6(1)(a) — freely given, specific, informed, unambiguous"
+      contract:        "Art. 6(1)(b) — processing necessary for contract performance"
+      legal_obligation: "Art. 6(1)(c) — processing required by EU or member state law"
+      vital_interests: "Art. 6(1)(d)"
+      public_task:     "Art. 6(1)(e)"
+      legitimate_interests: "Art. 6(1)(f) — requires balancing test (LIA)"
+    controls:
+      - "Legal basis identified and documented per processing activity in RoPA"
+      - "Legitimate Interests Assessment (LIA) completed and retained where Art. 6(1)(f) relied upon"
+      - "Legal basis communicated to data subjects in privacy notice"
+      - "Change of legal basis documented; data subjects re-informed where required"
+
+# =============================================================================
+# CHAPTER II — CONTROLLER AND PROCESSOR (Arts 24–32)
+# =============================================================================
+
+chapter_ii_controller_processor:
+
+  - id: GDPR-CP-001
+    article: "Art. 24"
+    title: "Responsibility of the controller"
+    obligation_holder: controller
+    controls:
+      - "Appropriate technical and organisational measures implemented and demonstrable"
+      - "Data protection policies maintained and reviewed regularly"
+      - "Measures proportionate to nature, scope, context and purpose of processing"
+      - "Measures reviewed and updated when necessary"
+
+  - id: GDPR-CP-002
+    article: "Art. 25"
+    title: "Data protection by design and by default"
+    obligation_holder: controller
+    controls:
+      - "Privacy by design integrated into system development lifecycle"
+      - "Privacy requirements considered at design phase of new features"
+      - "Data minimisation implemented technically — only minimum necessary data collected by default"
+      - "Default settings protective of data subject rights without user intervention"
+      - "Privacy impact reviewed before deployment of new processing capabilities"
+
+  - id: GDPR-CP-003
+    article: "Art. 28"
+    title: "Data Processing Agreement (DPA) — processor obligations"
+    obligation_holder: processor
+    dpa_mandatory_content:
+      - "Subject matter, duration, nature and purpose of processing"
+      - "Type of personal data and categories of data subjects"
+      - "Obligations and rights of the controller"
+      - "Processing only on documented instructions of the controller"
+      - "Confidentiality obligations of persons authorised to process"
+      - "Implementation of Art. 32 security measures"
+      - "Sub-processing: prior written authorisation; sub-processor bound by equivalent obligations"
+      - "Assistance to controller for DSR, security, breach notification, DPIA"
+      - "Deletion or return of all personal data at end of service"
+      - "Providing all information necessary to demonstrate compliance; allowing audits"
+    controls:
+      - "DPA executed before processing begins for every client relationship"
+      - "DPA template compliant with Art. 28(3) mandatory content"
+      - "Sub-processor DPA in place before sub-processor processes any personal data"
+      - "Client notification on sub-processor changes (addition, replacement) per DPA terms"
+      - "DPA reviewed and updated on material changes to processing or regulatory requirements"
+
+  - id: GDPR-CP-004
+    article: "Art. 29"
+    title: "Processing under authority of controller or processor"
+    obligation_holder: processor
+    controls:
+      - "Staff process personal data only on documented instructions of the controller"
+      - "Exceptions documented where processing required by EU or member state law"
+      - "Instructions documented; staff authorisations maintained"
+
+  - id: GDPR-CP-005
+    article: "Art. 30"
+    title: "Records of processing activities (RoPA)"
+    obligation_holder: controller_and_processor
+    ropa_controller_content:
+      - "Name and contact details of controller (and DPO if applicable)"
+      - "Purposes of processing"
+      - "Categories of data subjects and personal data"
+      - "Categories of recipients"
+      - "Transfers to third countries and safeguards"
+      - "Retention periods"
+      - "Description of technical and organisational security measures"
+    ropa_processor_content:
+      - "Name and contact details of processor and each controller"
+      - "Categories of processing carried out on behalf of each controller"
+      - "Transfers to third countries and safeguards"
+      - "General description of security measures"
+    controls:
+      - "RoPA maintained in written (electronic) form"
+      - "RoPA current: updated when processing activities change"
+      - "RoPA available to supervisory authority on request"
+      - "RoPA covers both controller and processor roles"
+
+  - id: GDPR-CP-006
+    article: "Art. 32"
+    title: "Security of processing"
+    obligation_holder: controller_and_processor
+    measures_to_consider:
+      - "Pseudonymisation and encryption of personal data"
+      - "Ongoing confidentiality, integrity, availability and resilience of systems"
+      - "Ability to restore access to data in timely manner after incident"
+      - "Regular testing of technical and organisational measures"
+    controls:
+      - "Encryption in transit applied to all personal data transmissions"
+      - "Encryption at rest applied to personal data storage"
+      - "Pseudonymisation applied where technically feasible"
+      - "Access control: personal data accessible only to authorised personnel"
+      - "Security measures proportionate to risk: risk assessment documented"
+      - "Security measures tested and evaluated regularly"
+      - "Processor ensures staff authorised to access personal data are bound by confidentiality"
+
+# =============================================================================
+# CHAPTER III — RIGHTS OF THE DATA SUBJECT (Arts 12–23)
+# =============================================================================
+
+chapter_iii_data_subject_rights:
+
+  - id: GDPR-DSR-001
+    article: "Art. 12"
+    title: "Transparent information and communication"
+    obligation_holder: controller
+    controls:
+      - "Responses to DSR requests provided within 1 month of receipt"
+      - "Extension to 3 months possible; data subject notified of extension within 1 month with reasons"
+      - "Responses provided in concise, transparent, intelligible form"
+      - "Responses free of charge; excessive/manifestly unfounded requests: fee or refusal with documented justification"
+      - "Identity verification process for DSR requests"
+
+  - id: GDPR-DSR-002
+    article: "Arts 13–14"
+    title: "Information obligations — privacy notice"
+    obligation_holder: controller
+    privacy_notice_content:
+      - "Identity and contact details of controller"
+      - "DPO contact details (where applicable)"
+      - "Purposes and legal basis for each processing activity"
+      - "Legitimate interests relied upon (Art. 6(1)(f))"
+      - "Recipients or categories of recipients"
+      - "Third country transfers and safeguards"
+      - "Retention periods"
+      - "Rights of data subjects"
+      - "Right to withdraw consent (where consent is the legal basis)"
+      - "Right to lodge complaint with supervisory authority"
+    controls:
+      - "Privacy notice provided at point of data collection (Art. 13) or within 1 month if data not from subject (Art. 14)"
+      - "Privacy notice reviewed and updated at minimum annually or on material change"
+      - "Privacy notice accessible and prominently displayed"
+
+  - id: GDPR-DSR-003
+    article: "Art. 15"
+    title: "Right of access"
+    obligation_holder: controller
+    controls:
+      - "Process to provide copy of all personal data held about a data subject"
+      - "Access request response within 1 month"
+      - "Supplementary information provided: purposes, categories, recipients, retention, rights"
+      - "Where data exported electronically, provided in commonly used machine-readable format"
+
+  - id: GDPR-DSR-004
+    article: "Art. 16"
+    title: "Right to rectification"
+    obligation_holder: controller
+    controls:
+      - "Process to correct inaccurate personal data without undue delay"
+      - "Process to complete incomplete personal data"
+      - "Rectification logged in audit trail"
+
+  - id: GDPR-DSR-005
+    article: "Art. 17"
+    title: "Right to erasure ('right to be forgotten')"
+    obligation_holder: controller
+    erasure_grounds:
+      - "Personal data no longer necessary for purpose for which collected"
+      - "Consent withdrawn and no other legal basis"
+      - "Data subject objects and no overriding legitimate grounds"
+      - "Personal data unlawfully processed"
+      - "Erasure required by legal obligation"
+    controls:
+      - "Erasure request process documented with workflow"
+      - "Technical capability to delete or irreversibly anonymise personal data"
+      - "Grounds for refusal documented (e.g., legal obligation to retain)"
+      - "Erasure communicated to recipients where data has been shared"
+      - "Erasure action logged in audit trail with justification"
+
+  - id: GDPR-DSR-006
+    article: "Art. 18"
+    title: "Right to restriction of processing"
+    obligation_holder: controller
+    controls:
+      - "Technical mechanism to flag account/record as RESTRICTED"
+      - "Processing ceases for restricted data except for storage"
+      - "Restriction lifted only on legitimate grounds; data subject notified"
+      - "Restriction and lifting logged in audit trail"
+
+  - id: GDPR-DSR-007
+    article: "Art. 20"
+    title: "Right to data portability"
+    obligation_holder: controller
+    applies_when: "Processing based on consent or contract; and carried out by automated means"
+    controls:
+      - "Personal data provided to data subject in structured, commonly used, machine-readable format (e.g. JSON, CSV)"
+      - "Direct transfer to another controller on request (where technically feasible)"
+      - "Data portability export within 1 month"
+
+  - id: GDPR-DSR-008
+    article: "Art. 21"
+    title: "Right to object"
+    obligation_holder: controller
+    controls:
+      - "Process to receive and handle objections to processing based on Art. 6(1)(e)/(f)"
+      - "Processing ceases on receipt of objection unless compelling legitimate grounds demonstrated"
+      - "Objection right communicated to data subjects at first contact"
+      - "Objection handled within 1 month; logged in audit trail"
+
+# =============================================================================
+# CHAPTER IV — DATA BREACH (Arts 33–34)
+# =============================================================================
+
+chapter_iv_breach_notification:
+
+  - id: GDPR-BR-001
+    article: "Art. 33"
+    title: "Notification of breach to supervisory authority"
+    obligation_holder: controller
+    processor_obligation: "Notify controller without undue delay on becoming aware of breach (Art. 28(3)(f))"
+    timeline: "Without undue delay; no later than 72 hours after becoming aware"
+    report_content:
+      - "Nature of breach including categories and approximate number of data subjects affected"
+      - "Categories and approximate number of records affected"
+      - "Name and contact details of DPO or other contact"
+      - "Likely consequences of the breach"
+      - "Measures taken or proposed to address the breach"
+    controls:
+      - "72-hour deadline counter initiated on breach classification"
+      - "Structured breach notification report template maintained"
+      - "Submitted notification stored as immutable audit artefact"
+      - "Records of all breaches maintained per Art. 33(5) (minimum 5 years)"
+      - "Processor-to-controller notification process documented and tested"
+      - "Phased/supplemented notifications permissible if full information not available within 72h"
+
+  - id: GDPR-BR-002
+    article: "Art. 34"
+    title: "Communication of breach to data subjects"
+    obligation_holder: controller
+    trigger: "Breach likely to result in HIGH risk to rights and freedoms of data subjects"
+    timeline: "Without undue delay after high-risk determination"
+    communication_content:
+      - "Nature of breach in plain language"
+      - "Name and contact details of DPO or contact point"
+      - "Likely consequences of breach"
+      - "Measures taken or proposed"
+    controls:
+      - "High-risk threshold assessment process documented (legal judgment — not automatable)"
+      - "Communication drafted and dispatched without undue delay on high-risk determination"
+      - "All sent notifications logged with recipient list, content hash and timestamp"
+      - "Exemptions documented: data encrypted; measures rendered risk unlikely; disproportionate effort (public communication)"
+
+# =============================================================================
+# CHAPTER IV — DATA PROTECTION IMPACT ASSESSMENT (Art. 35)
+# =============================================================================
+
+chapter_iv_dpia:
+
+  - id: GDPR-DPIA-001
+    article: "Art. 35"
+    title: "Data Protection Impact Assessment"
+    obligation_holder: controller
+    trigger_conditions:
+      - "Systematic and extensive profiling with legal or significant effects"
+      - "Large-scale processing of special categories (Art. 9) or criminal convictions"
+      - "Systematic monitoring of publicly accessible areas"
+      - "Any processing likely to result in high risk — consult WP29/EDPB guidelines"
+    controls:
+      - "DPIA trigger assessment process documented"
+      - "DPIA conducted before processing commences for high-risk activities"
+      - "DPIA content: description of processing; necessity assessment; risks; mitigation measures"
+      - "DPO consulted in DPIA process (where DPO appointed)"
+      - "DPIA reviewed when risk factors change"
+      - "Prior consultation with supervisory authority where residual risk remains high (Art. 36)"
+
+# =============================================================================
+# CHAPTER IV — DATA PROTECTION OFFICER (Arts 37–39)
+# =============================================================================
+
+chapter_iv_dpo:
+
+  - id: GDPR-DPO-001
+    article: "Arts 37–39"
+    title: "Data Protection Officer"
+    obligation_holder: controller_and_processor
+    mandatory_when:
+      - "Public authority or body"
+      - "Large-scale systematic monitoring of data subjects as core activity"
+      - "Large-scale processing of special categories (Art. 9) as core activity"
+      - "Member state law requires DPO appointment"
+    controls:
+      - "DPO appointment assessed; decision documented with rationale"
+      - "If DPO appointed: contact details published and notified to supervisory authority"
+      - "DPO involved in all matters relating to personal data protection"
+      - "DPO operates independently; not dismissed or penalised for performing tasks"
+      - "DPO contact details communicated to data subjects"
+
+# =============================================================================
+# CHAPTER V — INTERNATIONAL TRANSFERS (Arts 44–49)
+# =============================================================================
+
+chapter_v_international_transfers:
+
+  - id: GDPR-IT-001
+    article: "Arts 44–49"
+    title: "Transfers to third countries"
+    obligation_holder: controller_and_processor
+    lawful_transfer_mechanisms:
+      adequacy_decision: "Art. 45 — Commission adequacy decision in force for destination country"
+      standard_contractual_clauses: "Art. 46(2)(c) — SCC adopted by Commission"
+      binding_corporate_rules: "Art. 47"
+      derogations: "Art. 49 — consent; contract performance; important public interest; legal claims; vital interests"
+    controls:
+      - "Transfer mechanism identified and documented per third-country recipient"
+      - "SCC executed with each non-adequate-country processor (or sub-processor)"
+      - "Transfer Impact Assessment (TIA) completed where SCC relied upon"
+      - "Legal basis for transfer reviewed when adequacy decisions change"
+      - "International transfers logged with transfer mechanism and legal basis"
+      - "Data subjects informed of third-country transfers in privacy notice"
+
+# =============================================================================
+# ACCOUNTABILITY AND GOVERNANCE
+# =============================================================================
+
+governance:
+
+  - id: GDPR-GOV-001
+    article: "Arts 5(2), 24, 25"
+    title: "Data governance programme"
+    obligation_holder: controller
+    controls:
+      - "Data governance policy documented and approved at senior level"
+      - "Data protection responsibilities assigned across organisation"
+      - "Staff awareness and training programme on GDPR obligations"
+      - "Third-party due diligence: data protection assessment of all processors"
+      - "Data protection integrated into change management and product development"
+      - "Annual review of compliance posture against GDPR obligations"
+
+  - id: GDPR-GOV-002
+    article: "Art. 30"
+    title: "Records of Processing Activities — maintenance"
+    obligation_holder: controller_and_processor
+    controls:
+      - "RoPA maintained as live document; updated on any material change to processing"
+      - "RoPA reviewed at minimum annually"
+      - "New processing activities added to RoPA before commencement"
+      - "RoPA covers all processing by processors on controller's behalf"

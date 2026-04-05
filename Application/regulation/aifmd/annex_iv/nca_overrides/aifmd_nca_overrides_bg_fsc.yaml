@@ -1,0 +1,59 @@
+################################################################################
+# NCA-SPECIFIC OVERRIDES — FSC (BG)
+# Version: v1 — 2026-04-03
+# Base YAML: aifmd_validation_rules.yaml
+#
+# Source: Online research of NCA documentation and ESMA guidelines
+# National code: FSC-assigned identifier
+# Portal: FSC reporting portal
+# File packaging: ZIP
+# Deadline: Standard 30 days after reporting period end
+################################################################################
+nca_overrides:
+  nca: FSC
+  country: BG
+  base_yaml: aifmd_validation_rules.yaml
+  base_yaml_version: '1.0'
+  source_document:
+    title: AIFMD Annex IV Reporting Requirements — Financial Supervision Commission (FSC Bulgaria)
+    version: '1.0'
+    date: '2026-04-03'
+    publisher: Financial Supervision Commission (FSC Bulgaria)
+    url: https://www.fsc.bg
+  transmission:
+    portal: FSC reporting portal
+    method: File upload
+  file_format:
+    packaging: ZIP
+    national_code_info: FSC-assigned identifier
+  changelog:
+  - version: v1
+    date: '2026-04-03'
+    changes:
+    - Initial FSC NCA override file — based on web research of latest documentation
+  nca_rules:
+  - rule_id: NCA-FSC-BG-ReportingMemberState
+    base_rule_id: AIFM-1
+    field_id: '1'
+    field_name: Reporting Member State
+    xsd_element: <ReportingMemberState>
+    severity: CRITICAL
+    overrides_esma: true
+    status: active
+    nca_source_doc: Financial Supervision Commission (FSC Bulgaria) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: For reports submitted to FSC Bulgaria the value must always be BG. Only professional investors may
+      be marketed to in Bulgaria.
+    validation_rules: ReportingMemberState = "BG"
+  - rule_id: NCA-FSC-BG-FilePackaging
+    base_rule_id: ''
+    field_id: PACKAGING
+    field_name: File Packaging
+    xsd_element: ''
+    severity: MEDIUM
+    overrides_esma: false
+    status: active
+    nca_source_doc: Financial Supervision Commission (FSC Bulgaria) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: FSC requires XML files to be compressed in ZIP format with YYYYMMDD date stamps in filenames.
+    validation_rules: XML compressed into ZIP; standard ESMA date-stamped naming

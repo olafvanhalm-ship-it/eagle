@@ -1,0 +1,44 @@
+{
+  "AIFM_BE_0000071453_20241231": {
+    "hashes": {
+      "record_0": "7cd6f78b11aa4efe9581cb099827262adb7be4f9775967cce985cc4603122031"
+    },
+    "record_count": 1
+  },
+  "AIFM_DE_95320121_20241231": {
+    "hashes": {
+      "record_0": "30e333f979621cdbce025767f5dd9cbffd1ef7da7aa6ac3a01cfb224578fee11"
+    },
+    "record_count": 1
+  },
+  "AIFM_NL_TEK384_20241231": {
+    "hashes": {
+      "record_0": "6bf6f81a1ae6fe00e7a5ef8f98ef4fff4e635e9c76dbbf4ef07e0a68f887f845"
+    },
+    "record_count": 1
+  },
+  "AIF_BE_02694-0001_20241231": {
+    "hashes": {
+      "record_0": "5261891556919a3300a40cca7035435b1ecdecf8eadd3527f6a3203bc8160970"
+    },
+    "record_count": 1
+  },
+  "AIF_DE_31831063_20241231": {
+    "hashes": {
+      "record_0": "df725c4c4b42068db06fee2b8b2adbb4771c46132e529261f7ddca1b9614ab5a"
+    },
+    "record_count": 1
+  },
+  "AIF_DE_58966946_20241231": {
+    "hashes": {
+      "record_0": "eafde10473886c0182e3a000925b10a1f4ee2833bd2ff72a37f8712f362b79fd"
+    },
+    "record_count": 1
+  },
+  "AIF_NL_98753260_20241231": {
+    "hashes": {
+      "record_0": "40910d1f6bdbf316f66b3dc228c51bde0dc42e011cadb97ddc2052707f3ba5fc"
+    },
+    "record_count": 1
+  }
+}

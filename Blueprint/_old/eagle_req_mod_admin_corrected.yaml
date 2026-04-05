@@ -1,0 +1,526 @@
+# =============================================================================
+# Project Eagle — Eagle Administration (MOD-ADMIN)
+# Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml
+# Cross-cutting requirements defined in: eagle_requirements_overview.yaml
+# Manual controls: eagle_manual_controls_v1_1.yaml
+# =============================================================================
+
+metadata:
+  module: MOD-ADMIN
+  name: "Eagle Administration"
+  primary_users: [EAGLE_ADMIN]
+  pipeline_layers: [L11_IAM, L9_ORCHESTRATION]
+  module_req_count: 13
+  cross_req_count: 42
+  total_applicable: 55
+
+# =============================================================================
+# MODULE REQUIREMENTS  (13 requirements)
+# =============================================================================
+
+requirements:
+
+  # -------------------------------------------------------------------------
+  # Tenant management
+  # -------------------------------------------------------------------------
+  tenant_management:
+
+    - id: REQ-TEN-001
+      title: "Strict multi-tenant data isolation"
+      layer: [L11_IAM]
+      priority: MUST
+      phase: 1
+      principles: [P9, P10]
+      regulatory: [GDPR, DORA, ISO27001]
+      description: >
+        Every tenant's data is logically isolated at database and application layer.
+        No data from one tenant may be accessible by another under any circumstances
+        including error states, background jobs, or shared infrastructure.
+      acceptance_criteria:
+        - "Row-level security or equivalent enforced at data layer for all queries"
+        - "Background jobs are tenant-scoped; cross-tenant access is architecturally impossible"
+        - "Automated tests verify isolation boundary"
+        - "Isolation boundary documented in security architecture for ISAE audit"
+
+    - id: REQ-TEN-002
+      title: "Dual tenancy model: direct AIFM and service provider"
+      layer: [L11_IAM]
+      priority: MUST
+      phase: 1
+      principles: [P3, P9]
+      regulatory: [DORA, AIFMD]
+      description: >
+        A tenant may represent a single AIFM or a service provider managing
+        multiple AIFMs. In the service provider model each underlying AIFM is a
+        distinct sub-entity with isolated data and its own NCA identifiers.
+        For DORA register purposes Eagle is identifiable per AIFM sub-entity.
+      acceptance_criteria:
+        - "Service provider tenant can create, configure and archive AIFM sub-entities"
+        - "DORA register export produces one entry per AIFM sub-entity"
+
+    - id: REQ-TEN-003
+      title: "Tenant provisioning — CS Manager for paid, self-service for trial"
+      layer: [L11_IAM]
+      priority: MUST
+      phase: 1
+      principles: [P1, P2, P10]
+      regulatory: []
+      description: >
+        Two provisioning paths exist with strictly separated rules.
+        Paid tenant provisioning is a privileged action performed exclusively
+        by the Eagle Customer Success Manager; clients cannot self-register
+        for a paid account. Trial tenant provisioning is self-service via
+        the public website, subject to the legitimacy validation gate defined
+        in REQ-GTM-002 and REQ-TRIAL-001. A trial tenant is never activated
+        as a paid tenant without CS Manager action — conversion is a distinct
+        provisioning event, not an automatic upgrade.
+      paid_tenant_onboarding_checklist:
+        - "AIFM legal name and LEI validated against GLEIF"
+        - "At least one NCA registration configured per REQ-MJ-001"
+        - "Reporting regime confirmed per REQ-OBL-001"
+        - "Delivery channel selected per REQ-DEL-001 for each NCA registration"
+        - "GDPR DPA execution confirmed per REQ-GDPR-004"
+        - "ISAE 3402 CUECs acknowledged by TENANT_ADMIN per REQ-ISAE-001 (acknowledgement logged)"
+        - "AI Transparency Statement version acknowledged per REQ-AIACT-006"
+        - "At least one TENANT_ADMIN user created and notified"
+      trial_provisioning_rules:
+        - "Self-service registration via public website — no CS Manager step"
+        - "Legitimacy validation gate (REQ-GTM-002) runs before provisioning"
+        - "HIGH legitimacy score: trial provisioned automatically within 10 minutes"
+        - "MEDIUM/LOW score: trial held pending CCO review (same business day)"
+        - "Trial tenant type = TRIAL_TENANT; distinct from ACTIVE_TENANT"
+        - "TRIAL_TENANT cannot access paid features (per REQ-TRIAL-002)"
+        - "Trial-to-paid conversion requires CS Manager action and full paid checklist"
+      acceptance_criteria:
+        - "Paid tenant activation blocked until all paid checklist items complete"
+        - "Trial self-registration without CS Manager action completes within 10 minutes for HIGH legitimacy score"
+        - "TRIAL_TENANT attempting a paid-only action receives a clear upgrade prompt, not an error"
+        - "Conversion from TRIAL_TENANT to ACTIVE_TENANT is a distinct logged event requiring CS Manager identity"
+        - "Paid tenant provisioning event logged in audit trail with CS Manager identity, role, timestamp, and checklist completion state"
+
+    - id: REQ-TEN-004
+      title: "AIFM profile as authoritative configuration record"
+      layer: [L11_IAM]
+      priority: MUST
+      phase: 1
+      principles: [P4, P8, P10]
+      regulatory: [AIFMD, CDR231]
+      description: >
+        Each AIFM entity has a complete validated profile that is the single
+        source of truth for all downstream reporting logic and submission metadata.
+      required_fields:
+        legal_name:        "Full legal name of the AIFM"
+        lei:               "20-char LEI per ISO 17442 validated against GLEIF"
+        jurisdiction:      "ISO 3166-1 alpha-2 country of registration"
+        reporting_regime:  "ART3 or ART24 per REQ-OBL-001"
+        nca_registrations: "One or more NCA registrations per REQ-MJ-001"
+        contact_email:     "Submission contact for NCA correspondence"
+        aifmd_auth_date:   "Date of authorisation or registration"
+      acceptance_criteria:
+        - "Activation blocked if any required field is missing or invalid"
+        - "LEI validated against GLEIF at creation and flagged for annual re-validation"
+        - "Profile changes version-controlled and logged in audit trail"
+
+
+  # -------------------------------------------------------------------------
+  # User management and access control
+  # -------------------------------------------------------------------------
+  user_management_and_access_control:
+
+    - id: REQ-USR-001
+      title: "Role-based access control"
+      layer: [L11_IAM]
+      priority: MUST
+      phase: 1
+      principles: [P9, P10]
+      regulatory: [GDPR, DORA, ISO27001]
+      description: >
+        Five predefined roles govern all functions. No custom roles or ad-hoc
+        permission grants are supported.
+      roles:
+        EAGLE_ADMIN:
+          scope: "Eagle internal — CS Managers and operations staff"
+          permissions:
+            - "Provision and archive tenants"
+            - "Create and deactivate TENANT_ADMIN users"
+            - "Read-only tenant access for support (auto-logged)"
+            - "System-wide audit logs and reference data management"
+            - "Incident reporting workflow and EAGLE_ADMIN alerts"
+        TENANT_ADMIN:
+          scope: "Tenant-wide or per AIFM sub-entity"
+          permissions:
+            - "Manage users within tenant"
+            - "Configure AIFM/AIF profiles and NCA registrations"
+            - "Confirm reporting regime and marketing flags"
+            - "Manage API keys and credential vault"
+            - "Approve submissions and initiate CAF-level overrides"
+        DATA_PREPARER:
+          scope: "Tenant or specific AIFM sub-entity"
+          permissions:
+            - "Ingest data via all channels"
+            - "Trigger transformation and validation pipeline"
+            - "View validation results and quality flags"
+        COMPLIANCE_REVIEWER:
+          scope: "Tenant or specific AIFM sub-entity"
+          permissions:
+            - "All DATA_PREPARER permissions"
+            - "Approve records at review gate (individual and bulk)"
+            - "Override CAM and DQ flags with documented justification"
+            - "Initiate and approve amendment workflow"
+            - "Download packaged XML for MANUAL submissions"
+        READ_ONLY:
+          scope: "Tenant or specific AIFM sub-entity"
+          permissions:
+            - "View reports, submissions, validation output and audit trail"
+
+    - id: REQ-USR-002
+      title: "Authentication and session management"
+      layer: [L11_IAM]
+      priority: MUST
+      phase: 1
+      principles: [P9]
+      regulatory: [GDPR, ISO27001, DORA]
+      requirements:
+        - "Email and password with enforced minimum strength policy"
+        - "MFA mandatory for COMPLIANCE_REVIEWER, TENANT_ADMIN and EAGLE_ADMIN"
+        - "Session timeout after 30 minutes of inactivity"
+        - "All login events (success, failure, MFA) logged in audit trail"
+        - "Lockout after 5 consecutive failed login attempts"
+        - "Session tokens invalidated server-side on logout"
+
+    - id: REQ-USR-003
+      title: "API key authentication"
+      layer: [L10_API]
+      priority: MUST
+      phase: 1
+      principles: [P6, P9]
+      regulatory: [GDPR, DORA, ISO27001]
+      requirements:
+        - "Tenant-scoped API keys or OAuth 2.0 client credentials"
+        - "API keys hashed at rest; plaintext shown only at creation"
+        - "24-hour grace period on key rotation"
+        - "All API calls logged with key identifier, endpoint, timestamp and result"
+        - "Rate limiting enforced per key; configurable per tenant"
+
+
+  # -------------------------------------------------------------------------
+  # Reference data management
+  # -------------------------------------------------------------------------
+  reference_data_management:
+
+    - id: REQ-REF-001
+      title: "Reference data store with scheduled batch updates"
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P4, P7, P10]
+      regulatory: [AIFMD, GDPR, ISO27001]
+      description: >
+        All reference data cached in Eagle's own database and updated via
+        scheduled batch jobs. External API calls during the live submission
+        pipeline are minimised to avoid dependency failures at critical moments.
+      reference_data_types:
+        ecb_fx_rates:
+          source: "ECB XML feed"
+          frequency: "Daily Monday to Friday after ECB publication (~16:00 CET)"
+          staleness_warning: "2 business days since last update"
+          staleness_block: "10 business days — dependent calculations produce DATA_INCOMPLETE flag"
+          manual_override: "EAGLE_ADMIN can enter rate for specific currency pair and date with documented source"
+        gleif_lei_register:
+          source: "GLEIF Golden Copy files"
+          frequency: "Daily"
+          staleness_warning: "3 business days"
+          staleness_block: "Stale cache produces DQ warning only — LEI format validation is always deterministic"
+          real_time_fallback: "On-demand GLEIF API call for LEIs not in cache; result cached immediately"
+        nca_register_data:
+          source: "ESMA AIFMD registers and individual NCA registers"
+          frequency: "Weekly"
+          content: "Valid NCA national codes, submission endpoint URLs, operational status"
+        mic_codes:
+          source: "ISO 10383 MIC register"
+          frequency: "Monthly"
+          staleness_block: "Stale cache produces DQ warning — MIC format validation is deterministic"
+        country_codes:
+          source: "ISO 3166-1 alpha-2 — maintained internally"
+          frequency: "On ISO publication of changes"
+        currency_codes:
+          source: "ISO 4217 — maintained internally"
+          frequency: "On ISO publication of changes"
+      requirements:
+        - "Reference data catalogue is a configuration file (REQ-MOD-001)"
+        - "Batch update failure generates immediate EAGLE_ADMIN alert"
+        - "Reference data version stored with each validation report and each calculated field"
+        - "Reference data is read-only from application; updated only by scheduled jobs or EAGLE_ADMIN"
+      acceptance_criteria:
+        - "ECB rate for a specific date retrievable from cache in < 100 ms"
+        - "Batch update failure alert reaches EAGLE_ADMIN within 5 minutes"
+
+    - id: REQ-REF-002
+      title: "Reference data freshness dashboard"
+      layer: [L9_ORCHESTRATION]
+      priority: SHOULD
+      phase: 1
+      principles: [P1, P7]
+      regulatory: []
+      requirements:
+        - "EAGLE_ADMIN dashboard: each data type with last successful update, record count, staleness status"
+        - "Status colour-coded: GREEN (current), AMBER (warning threshold), RED (block or failed)"
+        - "Manual refresh trigger per data type for EAGLE_ADMIN"
+        - "TENANT_ADMIN sees simplified staleness indicator for data types affecting their submissions"
+
+
+  # -------------------------------------------------------------------------
+  # NCA credential vault
+  # -------------------------------------------------------------------------
+  nca_credential_vault:
+
+    - id: REQ-NCA-003
+      title: "NCA credential vault"
+      layer: [L11_IAM]
+      priority: MUST
+      phase: 1
+      principles: [P9]
+      regulatory: [GDPR, DORA, ISO27001]
+      description: >
+        Client NCA portal credentials and channel credentials stored in an
+        HSM-backed secrets management service (AWS Secrets Manager or equivalent).
+      requirements:
+        - "Credentials encrypted with tenant-specific data encryption key wrapped by HSM master key"
+        - "Credential plaintext never logged, transmitted in API responses, or shown in UI after entry"
+        - "Only robot execution process can retrieve credentials; cleared from memory after session"
+        - "TENANT_ADMIN can enter and update credentials; cannot retrieve existing values (write-only)"
+        - "Credential entry UI prevents browser auto-fill and clipboard logging"
+        - "Certificate and API token expiry monitoring; TENANT_ADMIN notified 30 days before expiry"
+        - "All credential access events logged with vault reference only — never plaintext"
+      acceptance_criteria:
+        - "Credential vault passes penetration test with no HIGH or CRITICAL credential-storage findings"
+        - "Credential retrieval audit log verified to contain only vault references, never plaintext"
+
+    - id: REQ-NCA-004
+      title: "Delivery channel governance per NCA registration"
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P3, P9, P10]
+      regulatory: [DORA]
+      requirements:
+        - "Channel set per NCA registration by TENANT_ADMIN; not a global setting"
+        - "ROBOT mode cannot be activated without a credential vault entry for that NCA registration"
+        - "Channel changes require TENANT_ADMIN authorisation and are logged in audit trail"
+        - "DORA Art.30 information pack documents delivery channels in use and is updated on any change"
+
+
+  # -------------------------------------------------------------------------
+  # Data lifecycle — admin
+  # -------------------------------------------------------------------------
+  data_lifecycle_admin:
+
+    - id: REQ-DAT-003
+      title: "Client data lifecycle management — update, correct and clear"
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P1, P4, P8, P10]
+      regulatory: [AIFMD, GDPR, DORA]
+      description: >
+        Clients must be able to manage the full lifecycle of their data within
+        Eagle: update or correct master data and historical records, clear
+        draft data before submission, archive deactivated funds, and request
+        purge of data beyond the minimum retention period. All lifecycle
+        actions are governed by role, logged in the audit trail, and subject
+        to regulatory retention obligations.
+      data_lifecycle_actions:
+        update_master_data:
+          description: "Update AIFM or AIF master data (name, LEI, profile fields)"
+          role: "TENANT_ADMIN"
+          effect: "New version created per REQ-DAT-001; historical submissions reference the version at submission time"
+          constraint: "LEI changes require EAGLE_ADMIN counter-confirmation for compliance reasons"
+        update_draft_position_data:
+          description: "Add, amend or remove positions in a period that has not yet been submitted"
+          role: "DATA_PREPARER, COMPLIANCE_REVIEWER, TENANT_ADMIN"
+          effect: "New position dataset version created; derived calculations re-run automatically"
+          constraint: "No constraint — data is in DRAFT status; free editing until review gate"
+        update_submitted_position_data:
+          description: "Correct position data for a period that has already been submitted to an NCA"
+          role: "COMPLIANCE_REVIEWER or TENANT_ADMIN"
+          effect: "Creates a new position dataset version linked to the period; triggers amendment workflow (REQ-AMD-001)"
+          constraint: "Cannot directly overwrite a submitted record; amendment workflow is mandatory"
+          audit: "Correction reason required; original and corrected datasets both retained"
+        clear_draft_period:
+          description: "Clear all ingested data and position data for a period in DRAFT status"
+          role: "TENANT_ADMIN"
+          effect: "All draft canonical records and position datasets for the selected (AIF, period, NCA) are deleted"
+          constraint: "Only available for periods in DRAFT, VALIDATION_PENDING, CAF_FAILED, or REVIEW_PENDING status — not for APPROVED or any post-submission status"
+          audit: "Clear event logged with clearing user, timestamp, and record count deleted"
+          warning: "UI presents explicit warning listing what will be deleted; requires typed confirmation"
+        archive_fund:
+          description: "Mark an AIF as archived when it is wound down or no longer active"
+          role: "TENANT_ADMIN"
+          effect: "AIF removed from active reporting calendar; historical data and submissions retained; fund visible in archived view"
+          constraint: "Cannot archive a fund with a pending or overdue submission"
+          reversible: "TENANT_ADMIN can reactivate an archived fund; reactivation triggers obligation re-confirmation"
+        purge_historical_data:
+          description: "Request permanent deletion of data beyond the minimum regulatory retention period"
+          role: "TENANT_ADMIN (request) + EAGLE_ADMIN (execution)"
+          constraint: "Only available for data older than 10 years; only if no pending regulatory enquiries or active litigation holds"
+          process: "TENANT_ADMIN raises purge request; EAGLE_ADMIN reviews and confirms; purge executed with full audit log"
+          irreversible: "Purge is permanent and cannot be reversed"
+          gdpr_note: "Personal data in audit trail anonymised per REQ-GDPR-001; fund/report data purged after retention period"
+      requirements:
+        - "All lifecycle actions require the minimum role specified above; lower roles receive a clear error"
+        - "Bulk operations (e.g. clear all drafts for a reporting period) supported with a preview step showing the scope before execution"
+        - "All lifecycle actions logged in audit trail with action type, scope, user, and timestamp"
+        - "Data that cannot be cleared or purged due to regulatory retention rules produces a clear explanatory message stating the constraint and the earliest date the action would be available"
+      acceptance_criteria:
+        - "Clear draft period for a fund with 200 positions completes within 30 seconds"
+        - "Archive fund is blocked if the fund has an OVERDUE status with explanatory message"
+        - "Purge request for data within the 10-year retention window is blocked with stated retention end date"
+
+    - id: REQ-DAT-004
+      title: "Report archive"
+      layer: [L8_AUDIT]
+      priority: MUST
+      phase: 1
+      principles: [P4, P7, P8, P10]
+      regulatory: [AIFMD, DORA, ISO27001]
+      description: >
+        Every generated submission package — the packaged XML, the validation
+        report, and the NCA acknowledgement — is retained in a structured
+        report archive for the full retention period. The archive is the
+        definitive record of what was sent to the NCA and under what conditions.
+        It supports amendment pre-population, NCA enquiry response, regulatory
+        audit, and ISAE 3402 evidence.
+      archived_components:
+        packaged_xml:
+          description: "The exact file(s) as packaged and delivered to the NCA per REQ-FMT-001"
+          format: "Original file bytes with checksum; includes all NCA-specific packaging"
+          retention: "10 years from submission date"
+          note: "The file as delivered — not a regenerated version. If packaging changed, this captures what the NCA actually received."
+        validation_report:
+          description: "Complete L3 and L4 validation output at the time of review gate approval"
+          format: "Structured JSON including per-field results, rule engine version, NCA override profile version"
+          retention: "10 years from submission date"
+        review_gate_record:
+          description: "Full review gate audit record per REQ-REV-001"
+          format: "Structured JSON including approver identity, role, checklist acknowledgements, canonical record hash"
+          retention: "10 years from submission date"
+        nca_acknowledgement:
+          description: "Raw NCA response as received plus parsed status and reference number"
+          format: "Original response file bytes plus parsed structured extract"
+          retention: "10 years from submission date"
+          note: "For ROBOT and MANUAL channels where no machine-readable acknowledgement is received, client-entered confirmation number is the archive record"
+        submission_metadata:
+          description: "Submission envelope: NCA code, period, filing type, delivery channel, submission timestamp, file hash"
+          format: "Structured JSON"
+          retention: "10 years from submission date"
+      search_and_retrieval:
+        searchable_by: ["NCA code", "Reporting period", "Filing type (INIT/AMND)", "AIF national code", "AIFM national code", "Submission status", "Date range"]
+        results_include: "Submission metadata, status, link to full archived package"
+        download: "COMPLIANCE_REVIEWER and TENANT_ADMIN can download the complete archive package for any submission"
+      amendment_integration:
+        description: "Amendment workflow (REQ-AMD-001) pre-populates from the archived canonical record of the original INIT; the archived packaged XML is available for reference alongside the amendment draft"
+      requirements:
+        - "Report archive is write-once; archived files cannot be modified or deleted before retention period expires"
+        - "Archive accessible via UI search and via API"
+        - "Archive search results load in < 3 seconds for queries across up to 10 years of history"
+        - "Report archive included in the data export per REQ-DORA-003 (packaged XML files included in export)"
+        - "Archive integrity monitoring: periodic checksum verification of stored files; failed verification triggers EAGLE_ADMIN alert"
+      acceptance_criteria:
+        - "Archived package for a submission from 3 years ago is retrievable and matches the original checksum"
+        - "Archive search for all Q4 submissions for a specific NCA returns correct results"
+        - "Amendment workflow correctly pre-populates from archived INIT canonical record"
+
+
+# =============================================================================
+# CROSS-CUTTING REQUIREMENTS  (42 applicable)
+# Definitions in eagle_requirements_overview.yaml — references only below.
+# =============================================================================
+
+cross_cutting_requirements_applied:
+
+  # -------------------------------------------------------------------------
+  # Security (REQ-SEC-*)         → eagle_requirements_overview.yaml §5.1
+  # -------------------------------------------------------------------------
+  - REQ-SEC-001  # Encryption in transit and at rest
+  - REQ-SEC-002  # Vulnerability management and security testing programme
+  - REQ-SEC-003  # Data retention and deletion
+
+  # -------------------------------------------------------------------------
+  # Resilience (REQ-RES-*)        → eagle_requirements_overview.yaml §5.2
+  # -------------------------------------------------------------------------
+  - REQ-RES-001  # Pipeline failure modes and fallback mechanisms
+  - REQ-RES-002  # Service availability targets
+
+  # -------------------------------------------------------------------------
+  # Scale (REQ-SCL-*)             → eagle_requirements_overview.yaml §5.3
+  # -------------------------------------------------------------------------
+  - REQ-SCL-001  # Priority queue architecture for pipeline execution
+
+  # -------------------------------------------------------------------------
+  # Performance (REQ-PER-*)       → eagle_requirements_overview.yaml §5.4
+  # -------------------------------------------------------------------------
+  - REQ-PER-001  # Performance targets
+
+  # -------------------------------------------------------------------------
+  # Modularity (REQ-MOD-*)        → eagle_requirements_overview.yaml §5.5
+  # -------------------------------------------------------------------------
+  - REQ-MOD-001  # Rules, overrides and reference data separated from application code
+  - REQ-MOD-002  # AI model replaceability
+
+  # -------------------------------------------------------------------------
+  # DORA operational (REQ-CPL-*)  → eagle_requirements_overview.yaml §5.6
+  # -------------------------------------------------------------------------
+  - REQ-CPL-001  # ICT incident classification and authority reporting workflow
+  - REQ-CPL-002  # DORA Art.30 contractual information pack
+  - REQ-CPL-003  # DORA register of information export for clients
+
+  # -------------------------------------------------------------------------
+  # Change & release (REQ-REL-*)  → eagle_requirements_overview.yaml §5.7
+  # -------------------------------------------------------------------------
+  - REQ-REL-001  # Validation rule and pipeline regression test suite
+  - REQ-REL-002  # CI/CD pipeline: formal definition, mandatory gates and integrity
+  - REQ-REL-003  # Four-eyes production deployment approval gate
+  - REQ-REL-004  # Staging acceptance test: mandatory pass criteria before production promotion
+  - REQ-REL-005  # Change freeze window around NCA submission deadlines
+  - REQ-REL-006  # Post-deployment verification and rollback trigger conditions
+  - REQ-REL-007  # Release communication to clients
+  - REQ-REL-008  # Infrastructure as Code: all environments defined in version-controlled IaC
+  - REQ-REL-009  # Automated configuration drift detection between IaC definition and live environment
+  - REQ-REL-010  # Formal release record: semantic versioning tying software, rules and configuration
+
+  # -------------------------------------------------------------------------
+  # Engineering ops (REQ-ENG-*)   → eagle_requirements_overview.yaml §5.8
+  # -------------------------------------------------------------------------
+  - REQ-ENG-001  # Production code test coverage thresholds
+  - REQ-ENG-002  # Incident runbook management
+  - REQ-ENG-003  # Monitoring and alerting infrastructure
+  - REQ-ENG-007  # Engineering onboarding and codebase documentation
+
+  # -------------------------------------------------------------------------
+  # ISO 27001 (REQ-ISO-*)         → eagle_requirements_overview.yaml §6
+  # -------------------------------------------------------------------------
+  - REQ-ISO-001  # Automated backup with verified recovery
+  - REQ-ISO-002  # Infrastructure redundancy and automatic failover
+  - REQ-ISO-003  # Security testing programme
+  - REQ-ISO-005  # Security incident management procedure
+  - REQ-ISO-006  # Authoritative time source for audit timestamps
+  - REQ-ISO-008  # Synthetic test data generation and anonymisation
+  - REQ-ISO-009  # Operational monitoring and anomaly alerting
+  - REQ-ISO-013  # Periodic formal IAM access rights review
+
+  # -------------------------------------------------------------------------
+  # GDPR (REQ-GDPR-*)             → eagle_requirements_overview.yaml §7
+  # -------------------------------------------------------------------------
+  - REQ-GDPR-001  # Data subject rights request workflow
+  - REQ-GDPR-002  # Data breach communication workflow
+  - REQ-GDPR-003  # Systematic data minimisation controls
+  - REQ-GDPR-004  # GDPR DPA existence check at tenant activation
+  - REQ-GDPR-005  # Anthropic sub-processor transfer control
+
+  # -------------------------------------------------------------------------
+  # DORA reqs (REQ-DORA-*)        → eagle_requirements_overview.yaml §9
+  # -------------------------------------------------------------------------
+  - REQ-DORA-001  # ICT incident authority notification workflow
+  - REQ-DORA-002  # ICT incident lessons-learned feedback loop
+  - REQ-DORA-003  # Client data export and exit support
+

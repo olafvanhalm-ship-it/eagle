@@ -1,0 +1,715 @@
+# =============================================================================
+# AIFMD M Adapter — Synthetic System Test Plan
+# =============================================================================
+# Author: System Tester (under CTO responsibility)
+# Date: 2026-04-04
+# Scope: Exhaustive domain value testing for all M adapter record types
+# NCA coverage: NL (AFM), DE (BaFin), BE (FSMA)
+# Template coverage: Light + Full
+# Filing types: INIT, AMND, CANCEL
+# =============================================================================
+
+schema_version: 1
+test_plan_id: SYNTH-2026-04-04
+objective: >
+  Validate that the M adapter correctly processes all allowed domain values
+  for every field across all record types, rejects or flags invalid values,
+  and produces XSD-valid XML with correct DQF findings per NCA jurisdiction.
+
+# ─── Test Suite Structure ────────────────────────────────────────────────────
+suites:
+
+  # ── SUITE 1: Light Template — NL (AFM) — INIT ─────────────────────────────
+  synthetic_light_nl_init:
+    template_type: Light
+    filing_type: INIT
+    nca: NL (AFM)
+    description: >
+      Light template with exhaustive domain value coverage for NL/AFM.
+      Multiple AIFs to cover all strategy codes, sub-asset types, regions.
+    records:
+      AIFM_LIGHT:
+        count: 1
+        fields_tested:
+          - field: "Reporting Member State"
+            valid_values: [NL]
+            invalid_values: [XX, N1, "", null]
+            expected_invalid_behavior: "XSD error on non-ISO country code"
+          - field: "Filing Type"
+            valid_values: [INIT]
+            invalid_values: [INVALID, init, ""]
+            expected_invalid_behavior: "XSD error: not in FilingTypeType enum"
+          - field: "Reporting Period Year"
+            valid_values: ["Q4 2025"]
+            invalid_values: ["X9 2025", ""]
+          - field: "Last Reporting Flag"
+            valid_values: [true, false]
+            invalid_values: [yes, 1, TRUE]
+          - field: "AIFM Jurisdiction"
+            valid_values: [NL]
+            invalid_values: [XX]
+          - field: "AIFM National Code"
+            valid_values: [BJQ306]
+            invalid_values: [XXX123, 12345678, ""]
+            expected_invalid_behavior: "DQF FAIL: NL format B[A-Z]{2}[0-9]{3}"
+          - field: "AIFM Name"
+            valid_values: ["Synthetic Test AIFM NL"]
+          - field: "AIFM No Reporting Flag"
+            valid_values: [false]
+            invalid_values: [yes]
+          - field: "AIFM LEI Code"
+            valid_values: ["529900T8BM49AURSDO55"]  # valid from gleif_seed
+            invalid_values: ["529900T8BM49AURSDO99", "INVALIDLEI12345678XX", ""]
+            expected_invalid_behavior: "LEI checkdigit fail or GLEIF lookup fail"
+
+      AIF_LIGHT:
+        count: 8  # need multiple AIFs to cover all strategy codes
+        fields_tested:
+          - field: "Filing Type"
+            valid_values: [INIT]
+          - field: "Last Reporting Flag"
+            valid_values: [true, false]
+          - field: "AIF National Code"
+            valid_values: [50020108, 50020109, 50020110, 50020111, 50020112, 50020113, 50020114, 50020115]
+            invalid_values: [12345678, ABCDEFGH, ""]
+            expected_invalid_behavior: "DQF FAIL: NL format 500[0-9]{5}"
+          - field: "AIF Name"
+            valid_values: ["Synthetic AIF 1", "Synthetic AIF 2", "..."]
+          - field: "AIF Domicile"
+            valid_values: [NL, DE, LU, GB, US, KY, JE, GG]
+            invalid_values: [XX, ""]
+          - field: "AIF Inception Date"
+            valid_values: ["2020-01-15"]
+            invalid_values: ["2030-01-01", "invalid-date"]
+          - field: "AIF No Reporting Flag"
+            valid_values: [false]
+          - field: "AIF LEI Code"
+            valid_values: ["213800FERQ5LE3H7WJ58"]  # valid from gleif_seed
+            invalid_values: ["213800FERQ5LE3H7WJ99"]
+          - field: "AIF Base Currency"
+            valid_values: [EUR, USD, GBP, CHF, JPY]
+            invalid_values: [XXX, EU, ""]
+            expected_invalid_behavior: "XSD error: not valid ISO 4217"
+          - field: "Funding Source Countries"
+            valid_values: [NL, DE, GB, US, KY, LU, ""]
+            invalid_values: [XX]
+          - field: "Investment Strategy Code"
+            coverage: ALL_STRATEGY_CODES
+            valid_values:
+              # Hedge Fund strategies (8 AIFs needed to cover all)
+              - EQTY_LGBS  # AIF 1
+              - RELV_FXIA  # AIF 2
+              - EVDR_DSRS  # AIF 3
+              - CRED_LGST  # AIF 4
+              - MACR_MACR  # AIF 5
+              - VENT_CAPL  # AIF 6 - PE
+              - RESL_REST  # AIF 7 - RE
+              - FOFS_FHFS  # AIF 8 - FoF
+            invalid_values: [INVALID_CODE, XXXX_XXXX]
+          - field: "Description for strategy type Other"
+            valid_values: ["", "Custom strategy description"]
+          - field: "Typical deal / position size"
+            valid_values: [V_SMALL, SMALL, LOW_MID_MKT, UP_MID_MKT, L_CAP, M_CAP]
+            invalid_values: [INVALID, HUGE, ""]
+          - field: "Beneficially owned % by top 5"
+            valid_values: [0, 25.5, 50, 75, 100]
+            invalid_values: [-1, 101, abc]
+          - field: "Investor Concentration NAV %"
+            valid_values: [0, 33.3, 100]
+
+      POSITION_COMPACT:
+        count: 72  # one per valid sub-asset type + invalid rows
+        fields_tested:
+          - field: "Sub-Asset Type"
+            coverage: ALL_90_SUB_ASSET_TYPES
+            valid_values:
+              # Securities (31)
+              - SEC_CSH_CODP
+              - SEC_CSH_COMP
+              - SEC_CSH_OTHD
+              - SEC_CSH_OTHC
+              - SEC_LEQ_IFIN
+              - SEC_LEQ_OTHR
+              - SEC_UEQ_UEQY
+              - SEC_CPN_INVG
+              - SEC_CPN_NIVG
+              - SEC_CPI_INVG
+              - SEC_CPI_NIVG
+              - SEC_SBD_EUBY
+              - SEC_SBD_EUBM
+              - SEC_SBD_NOGY
+              - SEC_SBD_NOGM
+              - SEC_SBD_EUGY
+              - SEC_SBD_EUGM
+              - SEC_MBN_MNPL
+              - SEC_CBN_INVG
+              - SEC_CBN_NIVG
+              - SEC_CBI_INVG
+              - SEC_CBI_NIVG
+              - SEC_LON_LEVL
+              - SEC_LON_OTHL
+              - SEC_SSP_SABS
+              - SEC_SSP_RMBS
+              - SEC_SSP_CMBS
+              - SEC_SSP_AMBS
+              - SEC_SSP_ABCP
+              - SEC_SSP_CDOC
+              - SEC_SSP_STRC
+              - SEC_SSP_SETP
+              - SEC_SSP_OTHS
+              # Derivatives (17)
+              - DER_EQD_FINI
+              - DER_EQD_OTHD
+              - DER_FID_FIXI
+              - DER_CDS_SNFI
+              - DER_CDS_SNSO
+              - DER_CDS_SNOT
+              - DER_CDS_INDX
+              - DER_CDS_EXOT
+              - DER_CDS_OTHR
+              - DER_FEX_INVT
+              - DER_FEX_HEDG
+              - DER_IRD_INTR
+              - DER_CTY_ECOL
+              - DER_CTY_ENNG
+              - DER_CTY_ENPW
+              - DER_CTY_ENOT
+              - DER_CTY_PMGD
+              - DER_CTY_PMOT
+              - DER_CTY_OTIM
+              - DER_CTY_OTLS
+              - DER_CTY_OTAP
+              - DER_CTY_OTHR
+              - DER_OTH_OTHR
+              # Physical (8)
+              - PHY_RES_RESL
+              - PHY_RES_COML
+              - PHY_RES_OTHR
+              - PHY_CTY_PCTY
+              - PHY_TIM_PTIM
+              - PHY_ART_PART
+              - PHY_TPT_PTPT
+              - PHY_OTH_OTHR
+              # CIU (6)
+              - CIU_OAM_MMFC
+              - CIU_OAM_AETF
+              - CIU_OAM_OTHR
+              - CIU_NAM_MMFC
+              - CIU_NAM_AETF
+              - CIU_NAM_OTHR
+              # Other (2)
+              - OTH_OTH_OTHR
+              - NTA_NTA_NOTA
+            invalid_values: [INVALID_TYPE, SEC_XXX_XXXX, ""]
+          - field: "Long / Short"
+            valid_values: [L, S]
+            invalid_values: [LONG, SHORT, X, ""]
+          - field: "Position Value"
+            valid_values: [1000000, 0, -500000, 999999999]
+          - field: "NAV"
+            valid_values: [1000000, 0]
+          - field: "Currency"
+            valid_values: [EUR, USD, GBP, CHF, JPY, SEK, NOK, DKK, PLN, HUF, CZK, AUD, CAD, HKD, SGD]
+            invalid_values: [XXX, EU, ""]
+          - field: "Region"
+            valid_values: [EUROPEEEA, EUROPENONEEA, NORTHAMERICA, ASIAPACIFIC, AFRICA, MIDDLEEAST, SOUTHAMERICA, SUPRANATIONAL]
+            invalid_values: [EUROPE, INVALID, ""]
+
+      SHARE_CLASS_COMPACT:
+        count: 8  # one per AIF
+        fields_tested:
+          - field: "Share Class Name"
+            valid_values: ["Class A", "Class B", "Institutional", "Retail"]
+
+  # ── SUITE 2: Light Template — DE (BaFin) — INIT ───────────────────────────
+  synthetic_light_de_init:
+    template_type: Light
+    filing_type: INIT
+    nca: DE (BaFin)
+    description: >
+      Light template for DE/BaFin. Tests BaFin-specific rules:
+      8-digit numeric codes, GZIP packaging, HFT omission, ShortValue omission.
+    records:
+      AIFM_LIGHT:
+        count: 1
+        fields_tested:
+          - field: "Reporting Member State"
+            valid_values: [DE]
+          - field: "AIFM National Code"
+            valid_values: ["40031432"]
+            invalid_values: [BJQ306, ABCDEFGH]
+            expected_invalid_behavior: "DQF FAIL: DE format [0-9]{8}"
+          - field: "AIFM LEI Code"
+            valid_values: ["529900T8BM49AURSDO55"]
+      AIF_LIGHT:
+        count: 4
+        fields_tested:
+          - field: "AIF National Code"
+            valid_values: ["70148498", "70148499", "70148500", "70148501"]
+            invalid_values: [50020108]
+          - field: "AIF Inception Date"
+            valid_values: ["2020-01-15"]
+            note: "BaFin requires STRICTLY BEFORE reporting period start"
+    nca_specific_expectations:
+      - "HFT fields must be OMITTED from generated XML"
+      - "ShortValue omitted when zero"
+      - "Risk measures limited to NET_EQTY_DELTA, NET_DV01, NET_CS01, VAR"
+      - "Individual XML files compressed to .gz (not .zip)"
+
+  # ── SUITE 3: Light Template — BE (FSMA) — INIT ────────────────────────────
+  synthetic_light_be_init:
+    template_type: Light
+    filing_type: INIT
+    nca: BE (FSMA)
+    description: >
+      Light template for BE/FSMA. Tests FSMA-specific rules:
+      10-digit zero-padded codes, ZIP packaging, HFT required, ShortValue required.
+    records:
+      AIFM_LIGHT:
+        count: 1
+        fields_tested:
+          - field: "AIFM National Code"
+            valid_values: ["0000071453"]
+            invalid_values: [71453, BJQ306]
+            expected_invalid_behavior: "DQF FAIL: BE format [0-9]{10}"
+      AIF_LIGHT:
+        count: 4
+        fields_tested:
+          - field: "AIF National Code"
+            valid_values: ["05044-0001", "05045-0001", "05046-0001", "05047-0001"]
+            invalid_values: [50020108]
+    nca_specific_expectations:
+      - "HFT fields MUST be present (even when 0)"
+      - "ShortValue MUST be present in AssetTypeExposure"
+      - "Additional risk measures: NET_FX_DELTA, NET_CTY_DELTA, VEGA_EXPO required"
+      - "Each XML wrapped individually in ZIP"
+
+  # ── SUITE 4: Full Template — NL (AFM) — INIT ──────────────────────────────
+  synthetic_full_nl_init:
+    template_type: Full
+    filing_type: INIT
+    nca: NL (AFM)
+    description: >
+      Full template with all 32 record types populated. Exhaustive coverage
+      of all domain values including cross-record relationships.
+    records:
+      AIFM:
+        count: 1
+        fields_tested:
+          - field: "Filing Type"
+            valid_values: [INIT]
+          - field: "AIFM Content Type"
+            valid_values: ["1", "2", "3"]
+            invalid_values: ["0", "4", ""]
+          - field: "Reporting Period Type"
+            valid_values: [Q1, Q2, Q3, Q4, H1, H2, Y1, X1, X2]
+            invalid_values: [Q5, M1, ""]
+          - field: "Change in AIFM Reporting Obligation Frequency Code"
+            valid_values: [NH, QY, YH, NY, YQ, NQ, HY, HQ, QH, ""]
+            invalid_values: [XX]
+          - field: "Change in AIFM Reporting Obligation contents Code"
+            valid_values: ["1", "2", "3", "4", "5", "6", ""]
+            invalid_values: ["0", "7"]
+          - field: "Last Reporting Flag"
+            valid_values: [true, false]
+          - field: "AIFM Reporting Code"
+            valid_values: ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
+            invalid_values: ["0", "10", ""]
+          - field: "AIFM LEI Code"
+            valid_values: ["529900T8BM49AURSDO55"]
+          - field: "AIFM BIC Code"
+            valid_values: [ABNANL2A, ""]
+
+      AIFM_NATIONAL_CODE:
+        count: 1
+        fields_tested:
+          - field: "AIFM Reporting Member State"
+            valid_values: [NL]
+          - field: "AIFM National Code"
+            valid_values: [BJQ306]
+
+      AIFM_ASSUMPTION:
+        count: 2
+        fields_tested:
+          - field: "Question Number"
+            valid_values: ["7", "15"]
+          - field: "Assumption Description"
+            valid_values: ["Period end date assumption", "Test assumption"]
+
+      AIF:
+        count: 6  # multiple AIFs for strategy/content type coverage
+        fields_tested:
+          - field: "AIF Content Type"
+            valid_values: ["1", "2", "3", "4", "5"]
+            invalid_values: ["0", "6"]
+          - field: "Reporting Period Type"
+            valid_values: [Q4]
+          - field: "AIF Reporting Code"
+            coverage: ALL_AIF_REPORTING_CODES
+            valid_values: ["1" through "45"]
+            invalid_values: ["0", "46"]
+          - field: "AIF Domicile"
+            valid_values: [NL, DE, LU, GB, US, KY]
+          - field: "Master-Feeder Status"
+            valid_values: [NONE, MASTER, FEEDER]
+            invalid_values: [INVALID]
+          - field: "AIF Base Currency"
+            valid_values: [EUR, USD, GBP]
+          - field: "Total AuM"
+            valid_values: [100000000, 500000000, 0]
+          - field: "Total NAV"
+            valid_values: [95000000, 480000000, 0]
+          - field: "Number of HFT transactions"
+            valid_values: [0, 1000, 50000]
+          - field: "Typical deal / position size"
+            valid_values: [V_SMALL, SMALL, LOW_MID_MKT, UP_MID_MKT, L_CAP, M_CAP]
+          - field: "Expected annual investment return %"
+            valid_values: [5.5, -2.0, 0, 15.0]
+          - field: "Total number of open positions"
+            valid_values: [10, 100, 0]
+
+      AIF_NATIONAL_CODE:
+        count: 6
+        fields_tested:
+          - field: "AIF National Code"
+            valid_values: [50020108, 50020109, 50020110, 50020111, 50020112, 50020113]
+
+      AIF_ASSUMPTION:
+        count: 2
+
+      SHARE_CLASS:
+        count: 12  # 2 per AIF
+        fields_tested:
+          - field: "Share Class National Code"
+            valid_values: ["SC001", "SC002"]
+          - field: "Share Class ISIN Code"
+            valid_values: [NL0000000001, LU0000000002, ""]
+
+      PRIME_BROKER:
+        count: 3
+        fields_tested:
+          - field: "Prime Broker LEI Code"
+            valid_values: ["529900T8BM49AURSDO55", "213800FERQ5LE3H7WJ58"]
+
+      STRATEGY:
+        count: 12  # all strategy codes spread across AIFs
+        fields_tested:
+          - field: "Investment Strategy Code"
+            coverage: ALL_STRATEGY_CODES
+            valid_values:
+              # All 30 strategy codes
+              - EQTY_LGBS
+              - EQTY_LGST
+              - EQTY_MTNL
+              - EQTY_STBS
+              - RELV_FXIA
+              - RELV_CBAR
+              - RELV_VLAR
+              - EVDR_DSRS
+              - EVDR_RAMA
+              - EVDR_EYSS
+              - CRED_LGST
+              - CRED_ABLG
+              - MACR_MACR
+              - MANF_CTAF
+              - MANF_CTAQ
+              - MULT_HFND
+              - OTHR_HFND
+              - VENT_CAPL
+              - GRTH_CAPL
+              - MZNE_CAPL
+              - MULT_PEQF
+              - OTHR_PEQF
+              - RESL_REST
+              - COML_REST
+              - INDL_REST
+              - MULT_REST
+              - OTHR_REST
+              - FOFS_FHFS
+              - FOFS_PRIV
+              - OTHR_FOFS
+              - OTHR_COMF
+              - OTHR_EQYF
+              - OTHR_FXIF
+              - OTHR_INFF
+              - OTHR_OTHF
+            invalid_values: [XXXX_XXXX, INVALID]
+          - field: "Primary strategy flag"
+            valid_values: [true, false]
+          - field: "Share in NAV (%)"
+            valid_values: [100, 50, 25, 0]
+
+      POSITION:
+        count: 72  # all sub-asset types
+        fields_tested:
+          - field: "Sub-Asset Type"
+            coverage: ALL_90_TYPES  # same as POSITION_COMPACT
+          - field: "Instrument Code Type"
+            valid_values: [NONE, ISIN, AII]
+            invalid_values: [INVALID]
+          - field: "Market Type Code"
+            valid_values: [MIC, OTC, XXX, NOT]
+            invalid_values: [INVALID]
+          - field: "Long / Short"
+            valid_values: [L, S]
+          - field: "Counterparty Type"
+            valid_values: ["", "CCP", "BANK", "OTHER"]
+
+      TURNOVER:
+        count: 28  # all turnover sub-asset types
+        fields_tested:
+          - field: "Sub-Asset Type of Turnover"
+            coverage: ALL_TURNOVER_CODES
+            valid_values:
+              - SEC_CSH_CSH
+              - SEC_LEQ_LEQ
+              - SEC_UEQ_UEQ
+              - SEC_CPN_IVG
+              - SEC_CPN_NIG
+              - SEC_CPI_CPI
+              - SEC_SBD_EUB
+              - SEC_SBD_NEU
+              - SEC_MUN_MUN
+              - SEC_CBD_CBD
+              - SEC_LON_LON
+              - SEC_SSP_SSP
+              - DER_EQD_EQD
+              - DER_FID_FID
+              - DER_CDS_CDS
+              - DER_FEX_INV
+              - DER_FEX_HED
+              - DER_IRD_IRD
+              - DER_CTY_CTY
+              - DER_OTH_OTH
+              - PHY_RES_RES
+              - PHY_CTY_CTY
+              - PHY_TIM_TIM
+              - PHY_ART_ART
+              - PHY_TPT_TPT
+              - PHY_OTH_OTH
+              - CIU_CIU_CIU
+              - OTH_OTH_OTH
+
+      RISK:
+        count: 7  # all risk measure types
+        fields_tested:
+          - field: "Risk measure type"
+            valid_values: [NET_EQTY_DELTA, NET_DV01, NET_CS01, VEGA_EXPO, VAR, NET_FX_DELTA, NET_CTY_DELTA]
+            invalid_values: [INVALID_TYPE]
+          - field: "VAR Calculation Method Code Type"
+            valid_values: [HISTO, CARLO, PARAM, ""]
+            invalid_values: [INVALID]
+
+      INVESTOR:
+        count: 10  # all investor group types
+        fields_tested:
+          - field: "Investor Group Type"
+            valid_values: [NFCO, BANK, INSC, OFIN, PFND, GENG, OCIU, HHLD, UNKN, NONE]
+            invalid_values: [INVALID, ""]
+          - field: "Investor group NAV %"
+            valid_values: [0, 10, 25, 50, 100]
+
+      INVESTOR_REDEMPTION:
+        count: 6
+        fields_tested:
+          - field: "Investor Redemption Frequency"
+            valid_values: [D, W, F, M, Q, H, Y, O, N]
+            invalid_values: [X, DAILY, ""]
+
+      DOMINANT_INFLUENCE:
+        count: 3
+        fields_tested:
+          - field: "Transaction Type"
+            valid_values: [ACAP, BOUT, CONS, CDIV, ESOP, GCAP, RCAP, SLIQ, TURN, OTHR]
+            invalid_values: [INVALID]
+
+      COUNTERPARTY_RISK_PROFILE:
+        count: 6
+        fields_tested:
+          - field: "Percentages"
+            note: "All percentage fields must sum correctly per profile"
+            valid_values: [0, 25, 50, 75, 100]
+
+      PORTFOLIO_LIQUIDITY_PROFILE:
+        count: 6
+        fields_tested:
+          - field: "Liquidity buckets"
+            note: "7 buckets must sum to ~100%"
+            valid_values: [5, 10, 15, 20, 25, 15, 10]
+
+      INVESTOR_LIQUIDITY_PROFILE:
+        count: 6
+
+      SPECIAL_ARRANGEMENT:
+        count: 6
+        fields_tested:
+          - field: "Preferential Treatment Flags"
+            valid_values: [true, false]
+
+      FINANCING_LIQUIDITY:
+        count: 6
+
+      HISTORICAL_RISK_PROFILE:
+        count: 72  # 12 months x 6 AIFs
+
+      STRESS_TEST:
+        count: 6
+
+      FINANCE:
+        count: 6
+        fields_tested:
+          - field: "Rehypothecation flag"
+            valid_values: [true, false]
+
+      CONTROLLED_STRUCTURE:
+        count: 3
+
+      BORROW_SOURCE:
+        count: 3
+
+      MASTER:
+        count: 1  # for the FEEDER AIF
+
+  # ── SUITE 5: Full Template — DE (BaFin) — INIT ────────────────────────────
+  synthetic_full_de_init:
+    template_type: Full
+    filing_type: INIT
+    nca: DE (BaFin)
+    description: >
+      Full template for DE/BaFin with BaFin-specific overrides.
+    nca_specific_expectations:
+      - "HFT fields omitted"
+      - "ShortValue omitted when 0"
+      - "Risk measures: base set only (4 of 7)"
+      - "GZIP packaging"
+      - "InceptionDate strictly before reporting period start"
+
+  # ── SUITE 6: Full Template — BE (FSMA) — INIT ─────────────────────────────
+  synthetic_full_be_init:
+    template_type: Full
+    filing_type: INIT
+    nca: BE (FSMA)
+    description: >
+      Full template for BE/FSMA with FSMA-specific overrides.
+    nca_specific_expectations:
+      - "HFT fields required (even 0)"
+      - "ShortValue required (even 0)"
+      - "All 7 risk measures including VEGA sub-elements"
+      - "ZIP packaging per XML"
+
+  # ── SUITE 7: AMND Filing — NL ─────────────────────────────────────────────
+  synthetic_amnd_nl:
+    template_type: Full
+    filing_type: AMND
+    nca: NL (AFM)
+    description: >
+      Amendment filing test. Verifies AMND-specific XML structure.
+
+  # ── SUITE 8: CANCEL Filing — NL ───────────────────────────────────────────
+  synthetic_cancel_nl:
+    template_type: Light
+    filing_type: CANCEL
+    nca: NL (AFM)
+    description: >
+      Cancellation filing test. Verifies CANCEL-specific XML structure.
+
+  # ── SUITE 9: Negative Tests — Cross-field Violations ───────────────────────
+  synthetic_negative_crossfield:
+    template_type: Full
+    filing_type: INIT
+    nca: NL (AFM)
+    description: >
+      Deliberately invalid cross-field combinations to test validator error detection.
+    negative_test_cases:
+      - id: NEG-001
+        description: "HFND strategy code with REST AIF type"
+        fields: {strategy: EQTY_LGBS, aif_type_override: REST}
+        expected: "DQF FAIL: strategy/AIF type mismatch"
+      - id: NEG-002
+        description: "FEEDER status without MASTER record"
+        fields: {master_feeder_status: FEEDER, master_record: null}
+        expected: "DQF FAIL: FEEDER requires master AIF reference"
+      - id: NEG-003
+        description: "Invalid sub-asset → turnover mapping"
+        fields: {position_sub_asset: SEC_CSH_CODP, turnover_sub_asset: DER_EQD_EQD}
+        expected: "DQF WARNING: position/turnover sub-asset mismatch"
+      - id: NEG-004
+        description: "Reporting period Q4 but start date not 2025-10-01"
+        fields: {period_type: Q4, start_date: "2025-07-01"}
+        expected: "CAM-002: reporting period start date not allowed"
+      - id: NEG-005
+        description: "NAV percentages don't sum to 100%"
+        fields: {portfolio_liquidity_buckets: [10, 10, 10, 10, 10, 10, 10]}
+        expected: "DQF WARNING: liquidity buckets sum 70% != 100%"
+      - id: NEG-006
+        description: "Investor group percentages exceed 100%"
+        fields: {investor_pcts: [50, 50, 50]}
+        expected: "DQF WARNING: investor concentration > 100%"
+      - id: NEG-007
+        description: "Invalid LEI checkdigit"
+        fields: {aifm_lei: "529900T8BM49AURSDO99"}
+        expected: "LEI validation FAIL: ISO 7064 check digit mismatch"
+      - id: NEG-008
+        description: "LEI not in GLEIF cache"
+        fields: {aif_lei: "999900UNKNOWN0000AA11"}
+        expected: "LEI enrichment WARNING: not found in GLEIF"
+      - id: NEG-009
+        description: "DE template with inception date = period start"
+        fields: {nca: DE, inception_date: "2025-10-01", period_start: "2025-10-01"}
+        expected: "BaFin-inception-strict: inception must be strictly before period start"
+      - id: NEG-010
+        description: "Empty mandatory fields"
+        fields: {aifm_name: "", reporting_member_state: ""}
+        expected: "XSD error: mandatory element missing"
+
+# ─── Expected Results Summary ────────────────────────────────────────────────
+expected_results_summary:
+  synthetic_light_nl_init:
+    xsd_valid: 9  # 1 AIFM + 8 AIF
+    xsd_invalid: 0
+    dqf_fail: 0  # all codes are NL-compliant
+    dqf_warning: 16  # 8x FXEURRate + 8x FXEURReferenceRateType for non-EUR AIFs
+    packaging: "individual .xml files"
+
+  synthetic_light_de_init:
+    xsd_valid: 5  # 1 AIFM + 4 AIF
+    xsd_invalid: 0
+    dqf_fail: 0
+    packaging: "individual .xml.gz files"
+
+  synthetic_light_be_init:
+    xsd_valid: 5  # 1 AIFM + 4 AIF
+    xsd_invalid: 0
+    dqf_fail: 0
+    packaging: "individual .xml wrapped in .zip"
+
+  synthetic_full_nl_init:
+    xsd_valid: 7  # 1 AIFM + 6 AIF
+    xsd_invalid: 0
+    dqf_fail: 0
+    dqf_warning: "TBD — depends on base currency mix"
+    packaging: "individual .xml files"
+
+  synthetic_negative_crossfield:
+    xsd_valid: "varies per test case"
+    xsd_invalid: "varies per test case"
+    dqf_fail: ">= 8 (one per negative test)"
+
+# ─── Coverage Matrix ─────────────────────────────────────────────────────────
+coverage:
+  record_types_covered: 32  # all record types in m_column_schema_v1.yaml
+  sub_asset_types_covered: 72  # all 72 from reference_tables.asset_sub_types
+  strategy_codes_covered: 35  # all 35 from reference_tables.strategy_codes
+  turnover_codes_covered: 28  # all 28 from reference_tables.asset_turnover_codes
+  investor_groups_covered: 10  # all 10 from reference_tables.investor_group
+  redemption_frequencies_covered: 9  # all 9 D/W/F/M/Q/H/Y/O/N
+  transaction_types_covered: 10  # all 10 ACAP-OTHR
+  risk_measure_types_covered: 7  # all 7
+  regions_covered: 8  # all 8
+  filing_types_covered: 3  # INIT, AMND, CANCEL
+  nca_jurisdictions_covered: 3  # NL, DE, BE
+  negative_test_cases: 10
+  lei_test_cases:
+    valid_lei: 2  # from gleif_seed
+    invalid_checkdigit: 1
+    unknown_gleif: 1

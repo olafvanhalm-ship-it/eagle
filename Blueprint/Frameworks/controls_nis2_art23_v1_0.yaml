@@ -1,0 +1,397 @@
+# =============================================================================
+# Framework Controls: NIS2 Directive — Article 23
+# Directive (EU) 2022/2555 — Reporting Obligations
+# Version:   1.0
+# Date:      2026-03-23
+# Source:    Official Journal of the EU — OJ L 333, 27.12.2022
+# Scope:     Essential and important entities subject to NIS2 — incident
+#            reporting obligations under Article 23, in context of
+#            Articles 20–24 (security and reporting requirements).
+# Note:      This document is drafted independently of any internal system
+#            documentation and serves as the authoritative regulatory baseline
+#            for gap comparison purposes. Art. 23 cannot be read in isolation
+#            from Arts 20–22 which define the security measures underpinning
+#            what must be reported.
+# =============================================================================
+
+metadata:
+  framework:       "NIS2 — Network and Information Security Directive 2"
+  directive:       "Directive (EU) 2022/2555"
+  applicable_from: "2024-10-17"
+  version:         "1.0"
+  scope_note: >
+    NIS2 applies to 'essential entities' and 'important entities' operating
+    in sectors listed in Annexes I and II. Digital infrastructure, digital
+    service providers, managed service providers and managed security
+    service providers are explicitly in scope. Financial market
+    infrastructure and financial sector firms may also be in scope.
+    Entity classification (essential vs important) determines supervisory
+    intensity; Article 23 reporting obligations apply to both.
+
+# =============================================================================
+# ENTITY CLASSIFICATION AND APPLICABILITY
+# =============================================================================
+
+entity_classification:
+
+  - id: NIS2-EC-001
+    article: "Art. 3"
+    title: "Essential entities"
+    annex_i_sectors:
+      - "Energy (electricity, oil, gas, hydrogen)"
+      - "Transport (air, rail, water, road)"
+      - "Banking"
+      - "Financial market infrastructures"
+      - "Health"
+      - "Drinking water"
+      - "Wastewater"
+      - "Digital infrastructure (IXPs, DNS, TLD registries, cloud, data centres, CDNs, trust services, electronic communications)"
+      - "ICT service management (MSPs, MSSPs)"
+      - "Public administration"
+      - "Space"
+    classification_criteria:
+      - "Exceeds thresholds for large enterprise (250+ employees OR €50M+ turnover AND €43M+ balance sheet)"
+      - "Or designated essential regardless of size due to criticality"
+
+  - id: NIS2-EC-002
+    article: "Art. 3"
+    title: "Important entities"
+    annex_ii_sectors:
+      - "Postal and courier services"
+      - "Waste management"
+      - "Manufacture of critical products (chemicals, food, medical devices, etc.)"
+      - "Digital providers (online marketplaces, online search engines, social networking)"
+      - "Research organisations"
+    classification_criteria:
+      - "Medium enterprise (50–249 employees OR €10M–€50M turnover)"
+      - "Or smaller entity in critical sector"
+
+  - id: NIS2-EC-003
+    article: "Art. 3(4)"
+    title: "Self-registration obligation"
+    controls:
+      - "Entity registers with national competent authority (NCA) where required by member state transposition"
+      - "Registration includes: name, sector, contact details, IP address ranges"
+      - "Registration updated when material information changes"
+
+# =============================================================================
+# ARTICLE 21 — SECURITY MEASURES (context for Art. 23 reporting)
+# =============================================================================
+
+article_21_security_measures:
+
+  - id: NIS2-SM-001
+    article: "Art. 21(1)"
+    title: "Proportionate risk-based security measures"
+    controls:
+      - "Risk analysis and information system security policies in place"
+      - "Measures proportionate to risk considering: size, exposure, economic impact, severity of incidents"
+      - "Security measures cover all network and information systems"
+      - "State of the art considered when determining appropriateness"
+
+  - id: NIS2-SM-002
+    article: "Art. 21(2)"
+    title: "Minimum security measures"
+    required_measures:
+      a: "Policies on risk analysis and information system security"
+      b: "Incident handling"
+      c: "Business continuity and crisis management (backup, disaster recovery, crisis management)"
+      d: "Supply chain security including security-related aspects of relationships with direct suppliers"
+      e: "Security in network and information systems acquisition, development and maintenance including vulnerability handling and disclosure"
+      f: "Policies and procedures to assess effectiveness of cybersecurity risk management measures"
+      g: "Basic cyber hygiene practices and cybersecurity training"
+      h: "Policies and procedures regarding use of cryptography and encryption"
+      i: "Human resources security, access control policies, and asset management"
+      j: "Use of multi-factor authentication or continuous authentication solutions"
+    controls:
+      - "Policy documented for each of the 10 measures in Art. 21(2)(a)–(j)"
+      - "Implementation evidenced for each measure"
+      - "Periodic review of measures against current risk landscape"
+      - "Governance at management level: management body approves measures and oversees implementation (Art. 20)"
+
+  - id: NIS2-SM-003
+    article: "Art. 21(3)"
+    title: "Multi-factor authentication"
+    controls:
+      - "MFA or continuous authentication implemented for privileged access"
+      - "MFA or continuous authentication implemented for remote access"
+      - "Secured voice, video and text communications"
+      - "Secured emergency communication systems where relevant"
+
+# =============================================================================
+# ARTICLE 23 — REPORTING OBLIGATIONS (primary scope of this document)
+# =============================================================================
+
+article_23_reporting_obligations:
+
+  # ─────────────────────────────────────────────────────────────────
+  # 23(1) — What triggers a reporting obligation
+  # ─────────────────────────────────────────────────────────────────
+
+  - id: NIS2-R-001
+    article: "Art. 23(1)"
+    title: "Significant incident — definition and trigger"
+    description: >
+      Entities must notify CSIRT (or competent authority) without undue delay
+      of any 'significant incident'. An incident is 'significant' where it meets
+      any of the criteria in Art. 23(3).
+    significance_criteria:
+      art_23_3_a: "Incident has caused or is capable of causing severe operational disruption or financial loss to the entity"
+      art_23_3_b: "Incident has affected or is capable of affecting other natural or legal persons by causing considerable material or non-material damage"
+    controls:
+      - "Incident significance assessment process documented"
+      - "Assessment criteria aligned with Art. 23(3) significance thresholds"
+      - "Significance determination made by designated decision-maker"
+      - "Significance decision documented with rationale and retained as evidence"
+      - "Assessment conducted without undue delay after incident detection"
+
+  - id: NIS2-R-002
+    article: "Art. 23(1) + Recital 101"
+    title: "What constitutes an 'incident' under NIS2"
+    description: >
+      An 'incident' means any event compromising the availability, authenticity,
+      integrity or confidentiality of stored, transmitted or processed data, or
+      of services offered by or accessible via network and information systems.
+    incident_categories:
+      - "Availability disruption of services or systems"
+      - "Integrity compromise of data or systems"
+      - "Confidentiality breach (data exposure or exfiltration)"
+      - "Authenticity attacks (impersonation, certificate compromise)"
+      - "Ransomware or malware affecting services"
+      - "DDoS causing significant service degradation"
+      - "Supply chain incidents affecting the entity's services"
+    controls:
+      - "Incident classification taxonomy documented and aligned with NIS2 incident categories"
+      - "Detection and monitoring capability covers all NIS2 incident categories"
+      - "Threshold for 'significant' classification documented and applied consistently"
+
+  # ─────────────────────────────────────────────────────────────────
+  # 23(1) — Notification timeline (3-stage)
+  # ─────────────────────────────────────────────────────────────────
+
+  - id: NIS2-R-003
+    article: "Art. 23(1)(a)"
+    title: "Stage 1 — Early warning"
+    timeline: "Without undue delay and in any event within 24 hours of becoming aware"
+    trigger: "Becoming aware of a significant incident"
+    report_content:
+      - "Indication of whether significant incident is suspected to be caused by unlawful or malicious acts"
+      - "Indication of whether incident has or may have cross-border impact"
+    recipients:
+      - "CSIRT (Computer Security Incident Response Team)"
+      - "Or competent authority where CSIRT not designated as recipient"
+    controls:
+      - "24-hour early warning deadline counter initiated on significant incident classification"
+      - "Early warning template covering Art. 23(1)(a) content requirements maintained"
+      - "Designated CSIRT / competent authority contact and submission channel documented"
+      - "Alert fired at T+12 hours if early warning not yet submitted"
+      - "Submission confirmation and reference number retained"
+
+  - id: NIS2-R-004
+    article: "Art. 23(1)(b)"
+    title: "Stage 2 — Incident notification"
+    timeline: "Without undue delay and in any event within 72 hours of becoming aware"
+    report_content:
+      - "Initial assessment of significant incident including severity and impact"
+      - "Indicators of compromise where available"
+      - "If early warning indicated unlawful/malicious act: confirmation or update"
+    recipients:
+      - "CSIRT or competent authority"
+      - "Significant points of contact if affected by the incident"
+    controls:
+      - "72-hour notification deadline counter maintained from initial awareness"
+      - "Incident notification template covering Art. 23(1)(b) content requirements maintained"
+      - "Initial impact assessment process documented"
+      - "Alert fired at T+60 hours if notification not yet submitted"
+      - "Submitted notification stored as immutable audit artefact"
+
+  - id: NIS2-R-005
+    article: "Art. 23(1)(c)"
+    title: "Stage 3 — Final report"
+    timeline: "No later than 1 month after submission of incident notification"
+    report_content:
+      - "Detailed description of incident"
+      - "Type of threat or root cause that likely triggered the incident"
+      - "Applied and ongoing mitigation measures"
+      - "Where applicable, cross-border impact of incident"
+    recipients:
+      - "CSIRT or competent authority"
+    controls:
+      - "1-month final report deadline tracked from Stage 2 submission"
+      - "Final report template covering Art. 23(1)(c) content requirements maintained"
+      - "Root cause analysis feeds final report"
+      - "Final report reviewed and approved by designated authority (e.g. CISO / Head of Compliance)"
+      - "Final report stored as immutable audit artefact alongside incident record"
+
+  - id: NIS2-R-006
+    article: "Art. 23(1) in fine"
+    title: "Interim reporting"
+    description: >
+      Where an entity is still handling an ongoing incident at the time the
+      final report is due, an interim report is provided at that time, and a
+      final report within 1 month of incident closure.
+    controls:
+      - "Ongoing-incident status tracked; interim report triggered if final report deadline arrives before closure"
+      - "Interim report notes ongoing status and updated impact assessment"
+      - "Final report submitted within 1 month of incident closure"
+
+  # ─────────────────────────────────────────────────────────────────
+  # 23(2) — Notification to recipients of services
+  # ─────────────────────────────────────────────────────────────────
+
+  - id: NIS2-R-007
+    article: "Art. 23(2)"
+    title: "Notification to affected service recipients"
+    trigger: "Significant incident that is likely to adversely affect the provision of services to recipients"
+    timeline: "Without undue delay"
+    report_content:
+      - "Nature of significant incident"
+      - "Mitigation measures that recipients can take to protect themselves"
+    controls:
+      - "Client notification process linked to significant incident workflow"
+      - "Notification triggered without undue delay when client service impact assessed as likely"
+      - "Client notification template maintained covering Art. 23(2) content"
+      - "Client contact register current and accessible from incident management workflow"
+      - "All client notifications logged with recipient, content hash and timestamp"
+      - "Client notification distinct from and additional to CSIRT notification"
+
+  # ─────────────────────────────────────────────────────────────────
+  # 23(3) — CSIRT may grant extension
+  # ─────────────────────────────────────────────────────────────────
+
+  - id: NIS2-R-008
+    article: "Art. 23(3) + Art. 23(4)"
+    title: "CSIRT advisory support and extension"
+    description: >
+      CSIRT may provide guidance or operational support to the entity. CSIRT
+      may also grant an extension to the 72-hour notification deadline at
+      the entity's reasoned request.
+    controls:
+      - "Reasoned extension request process documented in incident response procedures"
+      - "Extension requests submitted before 72-hour deadline expires"
+      - "CSIRT extension grant documented and retained"
+
+  # ─────────────────────────────────────────────────────────────────
+  # 23(5) — Notification to other authorities
+  # ─────────────────────────────────────────────────────────────────
+
+  - id: NIS2-R-009
+    article: "Art. 23(5)"
+    title: "Notification to other competent authorities — financial sector"
+    description: >
+      For entities that are credit institutions, stock exchanges or other
+      financial entities, the competent authority under NIS2 shall inform
+      the relevant financial supervisory authorities. Entities in this
+      intersection must be aware of both NIS2 and sector-specific notification
+      obligations (e.g. DORA Art. 19 for financial entities).
+    controls:
+      - "Dual reporting obligation assessed and documented where entity is in scope of both NIS2 and DORA"
+      - "Coordination process between NIS2 and DORA notification workflows documented"
+      - "Information shared with financial supervisor without breaching confidentiality obligations"
+
+  # ─────────────────────────────────────────────────────────────────
+  # 23(6) — ENISA aggregate reporting
+  # ─────────────────────────────────────────────────────────────────
+
+  - id: NIS2-R-010
+    article: "Art. 23(6)"
+    title: "ENISA summary reporting"
+    description: >
+      CSIRT and competent authorities submit technical summary reports to
+      ENISA on significant incidents. This is a competent authority obligation;
+      entities support by providing accurate and timely information.
+    controls:
+      - "Incident records contain all information required for competent authority reporting to ENISA"
+
+# =============================================================================
+# ARTICLE 20 — GOVERNANCE (management accountability for Art. 23)
+# =============================================================================
+
+article_20_governance:
+
+  - id: NIS2-GOV-001
+    article: "Art. 20(1)"
+    title: "Management body approval and oversight"
+    controls:
+      - "Management body approves cybersecurity risk management measures"
+      - "Management body oversees implementation of measures"
+      - "Management body held liable for entity's compliance with NIS2 obligations"
+      - "Significant incident notification to CSIRT escalated to management body without undue delay"
+
+  - id: NIS2-GOV-002
+    article: "Art. 20(2)"
+    title: "Management cybersecurity training"
+    controls:
+      - "Members of management body receive regular cybersecurity training"
+      - "Training sufficient to understand cybersecurity risks and their management"
+      - "Training records retained"
+
+# =============================================================================
+# OPERATIONAL CONTROLS SUPPORTING ART. 23 COMPLIANCE
+# =============================================================================
+
+operational_controls:
+
+  - id: NIS2-OC-001
+    title: "Incident detection capability"
+    description: >
+      Art. 23 notification obligations can only be met if incidents are
+      detected promptly. Monitoring and detection are prerequisite controls.
+    controls:
+      - "Continuous monitoring of network and information systems in place"
+      - "Automated alerting for anomalous behaviour"
+      - "Security event logging with retention aligned to incident investigation needs"
+      - "Threat detection covering all NIS2 incident categories"
+      - "24/7 detection capability or defined response to out-of-hours alerts"
+
+  - id: NIS2-OC-002
+    title: "Incident response readiness"
+    controls:
+      - "Incident response plan documented covering NIS2 significant incident scenarios"
+      - "Response roles and responsibilities assigned"
+      - "Designated point of contact for NIS2 reporting"
+      - "CSIRT and NCA contact details documented and current"
+      - "Incident response plan tested at minimum annually"
+      - "Tabletop exercises covering NIS2 notification timeline scenarios"
+
+  - id: NIS2-OC-003
+    title: "Notification workflow — automated deadline management"
+    controls:
+      - "Deadline tracking system for all three notification stages"
+      - "Automated alerts at defined intervals before each deadline"
+      - "Escalation path defined if designated notification owner is unavailable"
+      - "Templates maintained for each notification stage (early warning, notification, final)"
+      - "Submission history retained with: submitted date, content, reference, submitter"
+
+  - id: NIS2-OC-004
+    title: "Audit trail and evidence"
+    controls:
+      - "All notification submissions retained as immutable audit artefacts"
+      - "Significance assessment decisions documented with rationale"
+      - "Timeline of awareness → classification → notification recorded per incident"
+      - "Evidence retained for minimum 5 years"
+
+  - id: NIS2-OC-005
+    title: "Coordination with DORA Art. 19 notification (where both apply)"
+    description: >
+      Entities in scope of both NIS2 and DORA must coordinate notifications
+      to avoid duplication and ensure consistency. DORA Art. 2(7) notes that
+      financial entities complying with DORA for incident notification are
+      deemed to comply with equivalent NIS2 obligations.
+    controls:
+      - "Dual-scope assessment documented: which incidents trigger DORA, NIS2, or both"
+      - "Single incident record feeds both notification workflows"
+      - "Content consistency check between DORA and NIS2 notifications on same incident"
+      - "Competent authority routing documented: NCA under NIS2 vs DORA supervisor"
+
+  - id: NIS2-OC-006
+    title: "Supply chain incident coverage"
+    description: >
+      NIS2 Art. 21(2)(d) explicitly requires supply chain security measures.
+      Supply chain incidents (e.g. third-party ICT provider incident) can
+      trigger the entity's own Art. 23 reporting obligation.
+    controls:
+      - "Monitoring of key supplier security incidents"
+      - "Process to assess significance of supplier incidents to the entity's own services"
+      - "Contractual right to receive timely incident information from key suppliers"
+      - "Supplier incident feeds entity incident management workflow"

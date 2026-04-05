@@ -1,0 +1,439 @@
+# =============================================================================
+# Project Eagle — Audit Trail, Lineage and Archive (MOD-AUDIT)
+# Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml
+# Cross-cutting requirements defined in: eagle_requirements_overview.yaml
+# Manual controls: eagle_manual_controls_v1_1.yaml
+# =============================================================================
+
+metadata:
+  module: MOD-AUDIT
+  name: "Audit Trail, Lineage and Archive"
+  primary_users: [COMPLIANCE_REVIEWER, TENANT_ADMIN, READ_ONLY, EAGLE_ADMIN]
+  pipeline_layers: [L8_AUDIT]
+  module_req_count: 8
+  cross_req_count: 26
+  total_applicable: 34
+
+# =============================================================================
+# MODULE REQUIREMENTS  (8 requirements)
+# =============================================================================
+
+requirements:
+
+  # -------------------------------------------------------------------------
+  # Audit trail and lineage
+  # -------------------------------------------------------------------------
+  audit_trail_and_lineage:
+
+    - id: REQ-AUD-001
+      title: "Immutable append-only audit trail"
+      layer: [L8_AUDIT]
+      priority: MUST
+      phase: 1
+      principles: [P4, P8, P9, P10]
+      regulatory: [DORA, GDPR, ISO27001, AI_ACT]
+      description: >
+        Every event across all pipeline layers is recorded in an immutable
+        append-only audit trail. No event may be modified or deleted after
+        creation. Supports ISAE 3402, SOC 2, ISO 27001, and EU AI Act evidence.
+      events_logged:
+        ingestion: "Channel, source identifier, payload hash, user/API key, timestamp"
+        transformation: "AI model version, per-field extraction result, confidence scores, source text references"
+        validation: "Rule engine version, per-rule result, actual vs expected values, ESMA error codes"
+        quality: "DQEF check ID, result, flagged value"
+        review_gate: "Reviewer identity, role, timestamp, checklist acknowledgements, canonical record hash"
+        submission: "Channel type, target NCA, packaged file hash, delivery timestamp, NCA response"
+        amendment: "Initiator, reason, fields changed with original and corrected values"
+        user_events: "Login, logout, MFA, role changes, API key lifecycle"
+        system_events: "Rule engine updates, schema changes, NCA override updates, reference data updates"
+        override_events: "Rule ID, flag category, justification, authoriser, countersignature"
+      requirements:
+        - "Audit trail records are write-once; no update or delete at any layer including database administration"
+        - "Retention: minimum 10 years"
+        - "User identity stored as pseudonymous user_id reference; name/email resolved at display time"
+        - "Tamper attempt logs itself as a security alert"
+      acceptance_criteria:
+        - "Audit trail queryable by submission ID, fund ID, user ID, date range, and event type"
+        - "Audit trail export available in machine-readable JSON for external auditor access"
+
+    - id: REQ-AUD-002
+      title: "Field-level lineage and logic audit record"
+      layer: [L8_AUDIT]
+      priority: MUST
+      phase: 1
+      principles: [P4, P5, P8, P11]
+      regulatory: [AI_ACT, DORA, AIFMD]
+      description: >
+        The audit trail records field-level lineage for every canonical record.
+        For each field: the full provenance record per REQ-POS-004 (including
+        formula applied, inputs used, AI confidence and source text, or user
+        identity), plus the complete validation outcome against every rule that
+        assessed that field, plus the logic version used at each step.
+        This makes it possible to reconstruct exactly how any reported value
+        was produced — from raw input through transformation, derivation,
+        validation, and approval — without relying on institutional memory.
+      audit_record_per_field:
+        field_identifier: "Canonical field name and ESMA Annex IV field reference"
+        current_provenance: "Full provenance record per REQ-POS-004"
+        full_history: "Ordered list of all provenance records for this field since ingestion"
+        validation_results:
+          description: "All L3 rule results that assessed this field"
+          per_rule: "rule_id, rule_version, result (PASS/CAF/CAM/DQ), actual value, constraint, ESMA error code, NCA code the rule applied to"
+        logic_versions_applied:
+          validation_rule_engine: "aifmd_annex_iv_validation_rules version"
+          nca_override_profile: "NCA override profile version for each NCA the field was validated against"
+          calculation_engine: "Calculation engine version (if DERIVED provenance)"
+          ai_model: "Model name and version (if AI_PROPOSED provenance)"
+      ai_step_tagging:
+        description: "All AI-assisted steps tagged distinctly from deterministic steps throughout the audit record"
+        tagged_events: "AI extraction, AI confidence scoring, AI field mapping, AI input quality check"
+        confirmation_status: "Whether the human reviewer confirmed, modified, or rejected the AI proposal"
+      requirements:
+        - "Field-level audit record stored as part of the immutable submission audit trail (REQ-AUD-001)"
+        - "Logic versions (rule engine, NCA override, calculation engine, AI model) recorded per audit event — not just per submission"
+        - "AI-tagged events filterable separately from deterministic events"
+        - "Model version changes are versioned system events in audit trail"
+        - "Field lineage audit record is the data source for the UI lineage view (REQ-LIN-001) and logic transparency panel (REQ-LIN-002)"
+      acceptance_criteria:
+        - "Field lineage audit record for a DERIVED field contains formula ID, input values, engine version, and reference data used"
+        - "Field lineage audit record for an AI_PROPOSED field contains model version, confidence score, and source text fragment"
+        - "Field lineage audit record for a MANUALLY_OVERRIDDEN field contains original value, override reason, and user role"
+        - "All three audit record types queryable and renderable in the UI lineage view (REQ-LIN-001)"
+
+    - id: REQ-AUD-003
+      title: "Submission history and status dashboard"
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P1, P4]
+      regulatory: [AIFMD]
+      submission_statuses:
+        DRAFT: "Data ingested, validation not yet run"
+        VALIDATION_PENDING: "Pipeline triggered, validation in progress"
+        CAF_FAILED: "One or more CAF errors present; returned to DATA_PREPARER"
+        REVIEW_PENDING: "Validation passed; awaiting review gate approval"
+        APPROVED: "Review gate completed; awaiting submission trigger"
+        SUBMITTING: "Direct submission or robot in progress"
+        SUBMITTED: "Transmitted; awaiting NCA acknowledgement"
+        ACCEPTED: "NCA acknowledged (DIRECT/ROBOT) or client confirmed (other channels)"
+        PENDING_CONFIRMATION: "Client has downloaded/received file; awaiting NCA confirmation number"
+        REJECTED: "NCA returned rejection; requires correction and resubmission"
+        RESPONSE_PARSE_ERROR: "NCA response received but could not be parsed"
+        AMENDMENT_INITIATED: "Amendment workflow started"
+        AMENDED: "AMND record submitted; original INIT superseded"
+        CANCELLED: "Cancellation record submitted"
+        OVERDUE: "Submission deadline passed without accepted submission"
+      acceptance_criteria:
+        - "Dashboard loads in < 2 seconds for tenants with up to 50 AIFs"
+        - "Overdue submissions prominently highlighted"
+
+    - id: REQ-AUD-004
+      title: "Use of AI Register"
+      layer: [L8_AUDIT]
+      priority: MUST
+      phase: 1
+      principles: [P8, P10]
+      regulatory: [AI_ACT]
+      register_content:
+        model_name: "Claude (Anthropic)"
+        model_version: "Recorded per deployment; updated on model changes"
+        deployment_purpose: "L2 data transformation and normalisation only"
+        inputs: "Raw ingested fund data and unstructured documents"
+        outputs: "Candidate field mappings with confidence scores"
+        human_oversight: "Mandatory confirmation before AI output enters validation; mandatory review gate before NCA submission"
+        validation_mechanism: "All AI outputs pass L3 deterministic validation before use"
+        ai_classification_flag: "ai_produces_regulatory_output = FALSE (REQ-AIACT-002)"
+        retention: "5 years from end of service"
+      acceptance_criteria:
+        - "Register exportable for regulatory authority requests"
+        - "Model version changes recorded as versioned system events"
+
+    - id: REQ-AUD-005
+      title: "Historical submission import"
+      layer: [L8_AUDIT]
+      priority: COULD
+      phase: 2
+      principles: [P4]
+      regulatory: [AIFMD]
+      description: >
+        Clients migrating from another system can import historical accepted INIT
+        records for audit continuity and amendment tracing. Imported records are
+        not re-validated and are clearly marked IMPORTED_HISTORICAL.
+      acceptance_criteria:
+        - "Import via structured JSON or Excel template"
+        - "Imported records available as source for amendment workflow"
+
+
+  # -------------------------------------------------------------------------
+  # Field lineage and logic transparency
+  # -------------------------------------------------------------------------
+  field_lineage_and_logic_transparency:
+
+    - id: REQ-LIN-001
+      title: "Field lineage view — per-field audit trail accessible from the UI"
+      layer: [L9_ORCHESTRATION, L8_AUDIT]
+      priority: MUST
+      phase: 1
+      principles: [P1, P4, P5, P8, P10]
+      regulatory: [AIFMD, AI_ACT, DORA]
+      description: >
+        Any user with at least READ_ONLY access can click on any field in any
+        canonical record and open a field lineage panel that shows the complete
+        history of that field's value and provenance in a human-readable,
+        non-technical format. The lineage view is the primary UI surface for
+        understanding how a reported value was produced. It draws from the
+        field-level audit record (REQ-AUD-002) and the provenance model
+        (REQ-POS-004) and does not require navigating to a separate audit log.
+      lineage_panel_content:
+        current_value_summary:
+          field_label: "Human-readable field name and ESMA Annex IV field reference number"
+          current_value: "Current value with unit/currency if applicable"
+          provenance_badge: "Prominent badge: DERIVED / AI_PROPOSED / MANUALLY_ENTERED / MANUALLY_OVERRIDDEN / IMPORTED / SMART_DEFAULT / LOCKED"
+          one_line_summary: "Plain-English sentence: e.g. 'This value was calculated from your position data using the Gross Method leverage formula (CDR Art.7). Calculated on 2026-03-15.' or 'This value was extracted from uploaded PDF by AI with HIGH confidence.' or 'This value was entered manually by a Compliance Reviewer on 2026-03-14.'"
+        provenance_detail:
+          for_DERIVED:
+            - "Formula used: [formula_description in plain English]"
+            - "Legal basis: [CDR article or ESMA guideline]"
+            - "Inputs used: [list of input field names and values at calculation time]"
+            - "Reference data: [e.g. ECB rate EUR/USD 1.0823 as of 2026-03-19]"
+            - "Calculated at: [timestamp]"
+            - "Calculation engine version: [version]"
+          for_AI_PROPOSED:
+            - "Extracted by Claude [model version] on [timestamp]"
+            - "Confidence: [HIGH / MEDIUM / LOW] ([numeric score])"
+            - "Source text: [verbatim extracted fragment in a styled quote block]"
+            - "Source document: [hash and filename if available]"
+            - "Confirmed by: [user role and timestamp if confirmed; 'Awaiting confirmation' if not]"
+          for_MANUALLY_ENTERED:
+            - "Entered by: [role] on [timestamp] via [WEB_UI or API]"
+          for_MANUALLY_OVERRIDDEN:
+            - "Original value: [value]"
+            - "Original provenance: [provenance type]"
+            - "Overridden by: [role] on [timestamp]"
+            - "Override reason: [reason text]"
+          for_IMPORTED:
+            - "Imported from: [adapter name and version]"
+            - "Source template field: [field name in template]"
+            - "Enrichment applied: [list of calculations]"
+          for_SMART_DEFAULT:
+            - "Applied by rule: [rule description]"
+            - "Trigger condition: [fund characteristic that triggered the rule]"
+        validation_results:
+          description: "All validation rules that assessed this field, per NCA"
+          per_nca_group:
+            - "NCA: [code]"
+            - "Rule: [rule_id] — [plain-English rule description]"
+            - "Result: PASS / CAF / CAM / DQ"
+            - "Rule logic link: [click to open logic transparency panel REQ-LIN-002]"
+        change_history:
+          description: "Complete ordered list of all provenance changes since the field was first populated"
+          per_history_entry:
+            - "Timestamp, provenance type, value, source/user, one-line summary"
+          note: "History is immutable and cannot be edited or deleted"
+      ui_behaviour:
+        trigger: "Click on any field value anywhere in the application — data entry forms, validation report, review gate, archive view"
+        presentation: "Slide-out panel alongside the current view; does not navigate away"
+        depth: "Full detail always available; no truncation of source text or input lists"
+        export: "Lineage panel content exportable as PDF or JSON for NCA enquiry evidence"
+        role_access: "Available to all roles including READ_ONLY; no sensitive data exposed (user IDs are pseudonymous)"
+      requirements:
+        - "Lineage panel available on every field in every canonical record view in the application"
+        - "Lineage panel loads within 2 seconds for any field"
+        - "Plain-English one-line summary generated for all provenance types without exception"
+        - "Source text for AI_PROPOSED fields shown verbatim in the panel — never summarised or truncated"
+        - "Lineage panel export produces a document suitable for inclusion in an NCA enquiry response pack"
+      acceptance_criteria:
+        - "Click on a DERIVED field opens lineage panel showing formula, inputs, reference data, and timestamp within 2 seconds"
+        - "Click on an AI_PROPOSED field opens lineage panel showing confidence score and verbatim source text"
+        - "Click on a MANUALLY_OVERRIDDEN field shows original value, override reason, and full change history"
+        - "Lineage panel available in the archived submission view for submissions up to 10 years old"
+
+    - id: REQ-LIN-002
+      title: "Logic transparency panel — rule and formula explanation for any check or derivation"
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P1, P5, P8, P10]
+      regulatory: [AIFMD, CDR231, AI_ACT]
+      description: >
+        Any user can access a plain-English explanation of the rule or formula
+        that produced any validation result or calculated value, without needing
+        to read the YAML rule files or legal texts directly. The logic transparency
+        panel bridges the technical rule definitions in the validation rules YAML
+        and NCA override files with a comprehensible explanation that a compliance
+        professional can use to understand, investigate, and explain a result.
+        This is distinct from the field lineage view (REQ-LIN-001) which shows
+        what happened to a specific field instance; the logic transparency panel
+        shows what the rule or formula itself specifies.
+      panel_content:
+        for_validation_rules:
+          rule_identity:
+            - "Rule ID and human-readable rule name"
+            - "Applies to: [field label and ESMA field reference]"
+            - "Rule category: CAF / CAM / DQ"
+            - "NCA scope: applies to all NCAs / specific NCAs listed"
+          plain_english_explanation:
+            - "What this rule checks: [one or two sentences]"
+            - "Why this rule exists: [regulatory basis in plain English]"
+          technical_detail:
+            - "Validation constraint: [from rule YAML — e.g. 'value must be > 0 and <= 100']"
+            - "Legal basis: [ESMA error code, CDR article, or ESMA guideline reference with full citation]"
+            - "Rule version: [version identifier from rule engine]"
+            - "Effective from: [date this rule version became active]"
+          nca_override_note:
+            - "If the rule behaviour differs for a specific NCA, the difference is shown: 'For CSSF: this field is mandatory (vs. optional at ESMA baseline)'"
+          example_correct_value: "An example of a value that would pass this rule"
+          remediation_guidance: "What to check and how to correct a CAF or CAM result"
+        for_calculation_formulas:
+          formula_identity:
+            - "Formula ID and human-readable formula name"
+            - "Produces: [field label and ESMA field reference]"
+          plain_english_explanation:
+            - "What this formula calculates: [one or two sentences]"
+            - "Why this method is used: [regulatory basis]"
+          technical_detail:
+            - "Formula: [symbolic or step-by-step description]"
+            - "Inputs required: [list of input fields with descriptions]"
+            - "Assumptions: [e.g. 'Short positions are treated as absolute values in the Gross Method']"
+            - "Legal basis: [CDR article with full citation]"
+            - "Formula version: [version identifier from calculation engine]"
+            - "Effective from: [date]"
+          worked_example: "Numeric worked example using anonymised or illustrative figures"
+        for_dqef_checks:
+          check_identity:
+            - "DQEF check ID and name"
+            - "Assessed field(s)"
+          plain_english_explanation: "What the check tests and why it flags unusual values"
+          technical_detail:
+            - "Check method: [plausibility range, statistical threshold, or cross-record rule]"
+            - "ESMA DQEF reference: [DQEF document reference and section]"
+            - "Check version: [version]"
+      ui_behaviour:
+        trigger_from_lineage_panel: "Rule logic link in the validation results section of REQ-LIN-001"
+        trigger_from_validation_report: "Click on rule ID or CAF/CAM/DQ badge in REQ-DSH-002"
+        trigger_from_field: "Hover tooltip on any DERIVED field shows formula name; click opens full panel"
+        presentation: "Second-level panel; navigable back to field lineage panel"
+        search: "EAGLE_ADMIN and TENANT_ADMIN can search logic transparency content by rule ID, field name, or keyword"
+        export: "Panel content exportable as PDF"
+      requirements:
+        - "Every validation rule in aifmd_annex_iv_validation_rules_v0_3.yaml has a corresponding logic transparency entry"
+        - "Every calculation formula in REQ-POS-002 has a corresponding logic transparency entry"
+        - "Every DQEF check in REQ-VAL-003 has a corresponding logic transparency entry"
+        - "Logic transparency content is version-controlled alongside the rule files — when a rule changes, its transparency entry is updated as part of the same change process"
+        - "Logic transparency content is maintained by EAGLE_ADMIN; drafts reviewed by Head of Compliance before publication"
+        - "NCA override differences surfaced explicitly — a reviewer can see at a glance if a rule is stricter for a specific NCA"
+      acceptance_criteria:
+        - "Every CAF result in the validation report has a working link to its logic transparency entry"
+        - "Logic transparency entry for the Gross Method leverage formula includes the CDR Art.7 citation, the formula, and a worked numeric example"
+        - "Logic transparency entry for a CSSF override rule shows the difference vs. the ESMA baseline"
+        - "Logic transparency content search returns results for 'leverage' in < 1 second"
+
+    - id: REQ-LIN-003
+      title: "Submission-level traceability report"
+      layer: [L9_ORCHESTRATION, L8_AUDIT]
+      priority: SHOULD
+      phase: 1
+      principles: [P1, P4, P8, P10]
+      regulatory: [DORA, AIFMD, ISO27001]
+      description: >
+        For any completed or archived submission, a structured traceability report
+        can be generated summarising: the provenance composition of all fields,
+        the logic versions applied, the review gate decisions, and a field-by-field
+        exception list (any field that is not DERIVED or MANUALLY_ENTERED).
+        The report is designed as a self-contained document for NCA enquiries,
+        ISAE 3402 auditor review, or internal compliance sign-off.
+      report_sections:
+        cover:
+          - "AIFM name, AIF name, reporting period, NCA, filing type, submission date"
+          - "Overall provenance composition: X fields DERIVED (N%), Y fields MANUALLY_ENTERED (N%), Z fields AI_PROPOSED-confirmed (N%), W fields MANUALLY_OVERRIDDEN (N%)"
+        logic_versions:
+          - "Validation rule engine version and effective date"
+          - "NCA override profile version and effective date"
+          - "Calculation engine version and effective date"
+          - "AI model version (if any AI_PROPOSED fields present)"
+          - "Reference data versions (ECB rate snapshot date, GLEIF snapshot date)"
+        review_gate_summary:
+          - "Approver role and timestamp"
+          - "Checklist acknowledgements"
+          - "Overridden checks: count, category breakdown, justifications"
+        field_exception_list:
+          description: "Every field that is not DERIVED or MANUALLY_ENTERED listed with provenance and one-line summary"
+          includes: [MANUALLY_OVERRIDDEN, AI_PROPOSED_confirmed, IMPORTED, SMART_DEFAULT, LOCKED]
+      requirements:
+        - "Report generated on demand for any submission in ACCEPTED, AMENDED, or archived status"
+        - "Report exported as PDF and machine-readable JSON"
+        - "COMPLIANCE_REVIEWER and TENANT_ADMIN can generate; READ_ONLY cannot"
+        - "Generation completes within 60 seconds for a full AIFM + 200 AIF batch"
+      acceptance_criteria:
+        - "Traceability report for an accepted submission is complete and self-consistent — all counts match the archived canonical record"
+        - "Report included in the archive package export per REQ-DORA-003"
+
+# =============================================================================
+# CROSS-CUTTING REQUIREMENTS  (26 applicable)
+# Definitions in eagle_requirements_overview.yaml — references only below.
+# =============================================================================
+
+cross_cutting_requirements_applied:
+
+  # -------------------------------------------------------------------------
+  # Security (REQ-SEC-*)         → eagle_requirements_overview.yaml §5.1
+  # -------------------------------------------------------------------------
+  - REQ-SEC-001  # Encryption in transit and at rest
+  - REQ-SEC-002  # Vulnerability management and security testing programme
+  - REQ-SEC-003  # Data retention and deletion
+
+  # -------------------------------------------------------------------------
+  # Resilience (REQ-RES-*)        → eagle_requirements_overview.yaml §5.2
+  # -------------------------------------------------------------------------
+  - REQ-RES-001  # Pipeline failure modes and fallback mechanisms
+
+  # -------------------------------------------------------------------------
+  # Scale (REQ-SCL-*)             → eagle_requirements_overview.yaml §5.3
+  # -------------------------------------------------------------------------
+  - REQ-SCL-001  # Priority queue architecture for pipeline execution
+
+  # -------------------------------------------------------------------------
+  # Performance (REQ-PER-*)       → eagle_requirements_overview.yaml §5.4
+  # -------------------------------------------------------------------------
+  - REQ-PER-001  # Performance targets
+
+  # -------------------------------------------------------------------------
+  # Modularity (REQ-MOD-*)        → eagle_requirements_overview.yaml §5.5
+  # -------------------------------------------------------------------------
+  - REQ-MOD-001  # Rules, overrides and reference data separated from application code
+
+  # -------------------------------------------------------------------------
+  # ISO 27001 (REQ-ISO-*)         → eagle_requirements_overview.yaml §6
+  # -------------------------------------------------------------------------
+  - REQ-ISO-001  # Automated backup with verified recovery
+  - REQ-ISO-002  # Infrastructure redundancy and automatic failover
+  - REQ-ISO-005  # Security incident management procedure
+  - REQ-ISO-006  # Authoritative time source for audit timestamps
+  - REQ-ISO-008  # Synthetic test data generation and anonymisation
+
+  # -------------------------------------------------------------------------
+  # GDPR (REQ-GDPR-*)             → eagle_requirements_overview.yaml §7
+  # -------------------------------------------------------------------------
+  - REQ-GDPR-001  # Data subject rights request workflow
+  - REQ-GDPR-002  # Data breach communication workflow
+  - REQ-GDPR-003  # Systematic data minimisation controls
+  - REQ-GDPR-004  # GDPR DPA existence check at tenant activation
+  - REQ-GDPR-005  # Anthropic sub-processor transfer control
+
+  # -------------------------------------------------------------------------
+  # EU AI Act (REQ-AIACT-*)       → eagle_requirements_overview.yaml §8
+  # -------------------------------------------------------------------------
+  - REQ-AIACT-001  # AI input data quality controls
+  - REQ-AIACT-002  # AI classification safeguard — formal in-application control
+  - REQ-AIACT-003  # AI serious incident reporting to Anthropic
+  - REQ-AIACT-004  # Prompt injection prevention for unstructured ingestion
+  - REQ-AIACT-005  # Post-market monitoring plan — formal documented artefact per Art.26(5)
+  - REQ-AIACT-006  # AI transparency notice to users — in-app and contractual per Art.13
+
+  # -------------------------------------------------------------------------
+  # DORA reqs (REQ-DORA-*)        → eagle_requirements_overview.yaml §9
+  # -------------------------------------------------------------------------
+  - REQ-DORA-001  # ICT incident authority notification workflow
+  - REQ-DORA-002  # ICT incident lessons-learned feedback loop
+  - REQ-DORA-003  # Client data export and exit support
+

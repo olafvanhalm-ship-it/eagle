@@ -1,0 +1,47 @@
+################################################################################
+# NCA-SPECIFIC OVERRIDES — HCMC (GR)
+# Version: v1 — 2026-04-03
+# Base YAML: aifmd_validation_rules.yaml
+#
+# Source: Online research of NCA documentation and ESMA guidelines
+# National code: HCMC reference code (format: XX/XXX/DD-MM-YYYY)
+# Portal: HCMC web-based system (RiskValue platform)
+# File packaging: XML
+# Deadline: Standard 30 days after reporting period end
+################################################################################
+nca_overrides:
+  nca: HCMC
+  country: GR
+  base_yaml: aifmd_validation_rules.yaml
+  base_yaml_version: '1.0'
+  source_document:
+    title: AIFMD Annex IV Reporting Requirements — Hellenic Capital Market Commission (HCMC)
+    version: '1.0'
+    date: '2026-04-03'
+    publisher: Hellenic Capital Market Commission (HCMC)
+    url: http://www.hcmc.gr
+  transmission:
+    portal: HCMC web-based system (RiskValue platform)
+    method: XML upload
+  file_format:
+    packaging: XML
+    national_code_info: 'HCMC reference code (format: XX/XXX/DD-MM-YYYY)'
+  changelog:
+  - version: v1
+    date: '2026-04-03'
+    changes:
+    - Initial HCMC NCA override file — based on web research of latest documentation
+  nca_rules:
+  - rule_id: NCA-HCMC-GR-ReportingMemberState
+    base_rule_id: AIFM-1
+    field_id: '1'
+    field_name: Reporting Member State
+    xsd_element: <ReportingMemberState>
+    severity: CRITICAL
+    overrides_esma: true
+    status: active
+    nca_source_doc: Hellenic Capital Market Commission (HCMC) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: For reports submitted to HCMC the value must always be GR. HCMC uses the SYSTEMIC RiskValue platform
+      for receiving and validating Annex IV XML files.
+    validation_rules: ReportingMemberState = "GR"

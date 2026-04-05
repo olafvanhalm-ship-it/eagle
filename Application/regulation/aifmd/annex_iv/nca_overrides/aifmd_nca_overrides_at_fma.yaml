@@ -1,0 +1,72 @@
+################################################################################
+# NCA-SPECIFIC OVERRIDES — FMA (AT)
+# Version: v1 — 2026-04-03
+# Base YAML: aifmd_validation_rules.yaml
+#
+# Source: Online research of NCA documentation and ESMA guidelines
+# National code: FMA-assigned AIFM registration code
+# Portal: FMA Incoming Platform (Meldewesen)
+# File packaging: ZIP
+# Deadline: Standard 30 days; EUR 1,100 processing fee per submission
+################################################################################
+nca_overrides:
+  nca: FMA
+  country: AT
+  base_yaml: aifmd_validation_rules.yaml
+  base_yaml_version: '1.0'
+  source_document:
+    title: AIFMD Annex IV Reporting Requirements — Finanzmarktaufsicht (FMA Austria)
+    version: '1.0'
+    date: '2026-04-03'
+    publisher: Finanzmarktaufsicht (FMA Austria)
+    url: https://www.fma.gv.at
+  transmission:
+    portal: FMA Incoming Platform (Meldewesen)
+    method: File upload
+  file_format:
+    packaging: ZIP
+    national_code_info: FMA-assigned AIFM registration code
+  changelog:
+  - version: v1
+    date: '2026-04-03'
+    changes:
+    - Initial FMA NCA override file — based on web research of latest documentation
+  nca_rules:
+  - rule_id: NCA-FMA-AT-ReportingMemberState
+    base_rule_id: AIFM-1
+    field_id: '1'
+    field_name: Reporting Member State
+    xsd_element: <ReportingMemberState>
+    severity: CRITICAL
+    overrides_esma: true
+    status: active
+    nca_source_doc: Finanzmarktaufsicht (FMA Austria) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: For reports submitted to FMA Austria the value must always be AT.
+    validation_rules: ReportingMemberState = "AT"
+  - rule_id: NCA-FMA-AT-FilePackaging
+    base_rule_id: ''
+    field_id: PACKAGING
+    field_name: File Packaging
+    xsd_element: ''
+    severity: HIGH
+    overrides_esma: false
+    status: active
+    nca_source_doc: Finanzmarktaufsicht (FMA Austria) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: FMA requires XML files to be compressed into ZIP format. No password protection allowed. Automatic
+      formal validation checks performed post-submission.
+    validation_rules: Single XML compressed into ZIP (filename.xml → filename.zip); ZIP must NOT be password-protected
+  - rule_id: NCA-FMA-AT-SubmissionFee
+    base_rule_id: ''
+    field_id: FEE
+    field_name: Submission Processing Fee
+    xsd_element: ''
+    severity: LOW
+    overrides_esma: false
+    status: active
+    nca_source_doc: Finanzmarktaufsicht (FMA Austria) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: FMA charges a processing fee of EUR 1,100 per Annex IV submission. This is an administrative requirement,
+      not a validation rule.
+    validation_rules: EUR 1,100 per Annex IV submission

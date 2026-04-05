@@ -1,0 +1,47 @@
+################################################################################
+# NCA-SPECIFIC OVERRIDES — LB (LV)
+# Version: v1 — 2026-04-03
+# Base YAML: aifmd_validation_rules.yaml
+#
+# Source: Online research of NCA documentation and ESMA guidelines
+# National code: Latvijas Banka assigned code; requires IP registration + 2 designated supervisors
+# Portal: Latvijas Banka data submission portal
+# File packaging: ZIP
+# Deadline: Standard 30 days; Regulation No 226 governs electronic submission
+################################################################################
+nca_overrides:
+  nca: LB
+  country: LV
+  base_yaml: aifmd_validation_rules.yaml
+  base_yaml_version: '1.0'
+  source_document:
+    title: AIFMD Annex IV Reporting Requirements — Latvijas Banka (formerly FCMC)
+    version: '1.0'
+    date: '2026-04-03'
+    publisher: Latvijas Banka (formerly FCMC)
+    url: https://www.bank.lv
+  transmission:
+    portal: Latvijas Banka data submission portal
+    method: File upload
+  file_format:
+    packaging: ZIP
+    national_code_info: Latvijas Banka assigned code; requires IP registration + 2 designated supervisors
+  changelog:
+  - version: v1
+    date: '2026-04-03'
+    changes:
+    - Initial LB NCA override file — based on web research of latest documentation
+  nca_rules:
+  - rule_id: NCA-LB-LV-ReportingMemberState
+    base_rule_id: AIFM-1
+    field_id: '1'
+    field_name: Reporting Member State
+    xsd_element: <ReportingMemberState>
+    severity: CRITICAL
+    overrides_esma: true
+    status: active
+    nca_source_doc: Latvijas Banka (formerly FCMC) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: For reports submitted to Latvijas Banka the value must always be LV. FCMC merged into Latvijas Banka
+      in 2023. Regulation No 226 (24 October 2022) governs electronic information exchange.
+    validation_rules: ReportingMemberState = "LV"

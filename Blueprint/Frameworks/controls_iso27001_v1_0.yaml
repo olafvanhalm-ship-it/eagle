@@ -1,0 +1,715 @@
+# =============================================================================
+# Framework Controls: ISO/IEC 27001:2022
+# Information Security Management Systems — Requirements
+# Version:   1.0
+# Date:      2026-03-23
+# Source:    ISO/IEC 27001:2022 (published October 2022)
+# Scope:     ISMS requirements and Annex A controls applicable to a cloud-
+#            hosted B2B SaaS company processing regulated client data.
+# Note:      This document is drafted independently of any internal system
+#            documentation and serves as the authoritative regulatory baseline
+#            for gap comparison purposes.
+#            Clause 4–10 = mandatory ISMS requirements.
+#            Annex A = reference control set (93 controls across 4 themes).
+# =============================================================================
+
+metadata:
+  framework:   "ISO/IEC 27001:2022"
+  standard:    "Information Security Management Systems — Requirements"
+  published:   "2022-10"
+  version:     "1.0"
+  scope_note: >
+    ISO 27001:2022 requires an organisation to establish, implement, maintain
+    and continually improve an Information Security Management System (ISMS).
+    All Clause 4–10 requirements are mandatory. Annex A controls are selected
+    or excluded via a Statement of Applicability (SoA) with documented
+    justification for exclusions.
+
+# =============================================================================
+# MANDATORY CLAUSES (4–10) — ISMS Requirements
+# =============================================================================
+
+clause_4_context:
+
+  - id: ISO-4.1
+    clause: "4.1"
+    title: "Understanding the organisation and its context"
+    controls:
+      - "Internal and external issues relevant to the ISMS determined and documented"
+      - "Issues reviewed and updated at defined intervals and when significant changes occur"
+
+  - id: ISO-4.2
+    clause: "4.2"
+    title: "Understanding the needs of interested parties"
+    controls:
+      - "Interested parties identified: clients, regulators, employees, suppliers, investors"
+      - "Requirements of interested parties relevant to information security determined"
+      - "Requirements reviewed at defined intervals"
+
+  - id: ISO-4.3
+    clause: "4.3"
+    title: "ISMS scope"
+    controls:
+      - "Scope of ISMS defined and documented considering internal/external issues and requirements"
+      - "Scope statement includes: business functions, locations, assets and technology in scope"
+      - "Scope available as documented information"
+
+  - id: ISO-4.4
+    clause: "4.4"
+    title: "ISMS establishment and maintenance"
+    controls:
+      - "ISMS established, implemented, maintained and continually improved"
+      - "Processes needed for ISMS determined including inputs, outputs and sequence"
+
+clause_5_leadership:
+
+  - id: ISO-5.1
+    clause: "5.1"
+    title: "Leadership and commitment"
+    controls:
+      - "Information security policy established by top management"
+      - "ISMS objectives aligned with strategic direction"
+      - "Resources required for ISMS provided"
+      - "Information security integrated into business processes"
+      - "Continual improvement promoted"
+
+  - id: ISO-5.2
+    clause: "5.2"
+    title: "Policy"
+    controls:
+      - "Information security policy appropriate to the purpose of the organisation"
+      - "Policy includes objectives or framework for setting objectives"
+      - "Policy includes commitment to satisfying applicable requirements"
+      - "Policy includes commitment to continual improvement"
+      - "Policy communicated internally and available to interested parties"
+
+  - id: ISO-5.3
+    clause: "5.3"
+    title: "Roles, responsibilities and authorities"
+    controls:
+      - "Responsibilities and authorities for information security assigned and communicated"
+      - "ISMS performance reported to top management"
+      - "Accountability for ISMS at senior management level"
+
+clause_6_planning:
+
+  - id: ISO-6.1
+    clause: "6.1"
+    title: "Actions to address risks and opportunities"
+    controls:
+      - "Actions planned to address risks and opportunities arising from context"
+      - "Information security risk assessment process established including criteria for risk acceptance"
+      - "Risk assessment identifies, analyses and evaluates information security risks"
+      - "Risk assessment produces consistent, valid and comparable results"
+      - "Risk assessments documented and retained"
+      - "Information security risk treatment plan produced"
+      - "Risk treatment options selected and controls determined"
+      - "Risk owners approve risk treatment plan"
+      - "Statement of Applicability (SoA) produced: all Annex A controls; included/excluded with justification"
+      - "Residual risk accepted by risk owners"
+
+  - id: ISO-6.2
+    clause: "6.2"
+    title: "Information security objectives"
+    controls:
+      - "Information security objectives established at relevant functions and levels"
+      - "Objectives measurable (where practicable) and monitored"
+      - "Objectives communicated and updated as appropriate"
+      - "Plans documented for how objectives will be achieved"
+
+  - id: ISO-6.3
+    clause: "6.3"
+    title: "Planning of changes"
+    controls:
+      - "Changes to ISMS carried out in planned manner"
+
+clause_7_support:
+
+  - id: ISO-7.1
+    clause: "7.1"
+    title: "Resources"
+    controls:
+      - "Resources necessary for ISMS determined and provided"
+
+  - id: ISO-7.2
+    clause: "7.2"
+    title: "Competence"
+    controls:
+      - "Competence of persons performing information security work determined"
+      - "Competence ensured through training, education or experience"
+      - "Documented evidence of competence retained"
+
+  - id: ISO-7.3
+    clause: "7.3"
+    title: "Awareness"
+    controls:
+      - "Persons aware of information security policy"
+      - "Persons understand their contribution to ISMS effectiveness"
+      - "Persons understand implications of non-conformity"
+
+  - id: ISO-7.4
+    clause: "7.4"
+    title: "Communication"
+    controls:
+      - "Internal and external communications about ISMS determined: what, when, with whom, how"
+
+  - id: ISO-7.5
+    clause: "7.5"
+    title: "Documented information"
+    controls:
+      - "Documented information required by ISO 27001 created and maintained"
+      - "Documented information controlled: available, suitable, adequately protected"
+      - "Distribution, access, retrieval, storage, version control, retention and disposal managed"
+
+clause_8_operation:
+
+  - id: ISO-8.1
+    clause: "8.1"
+    title: "Operational planning and control"
+    controls:
+      - "Processes to meet information security requirements planned, implemented and controlled"
+      - "Planned changes controlled; unintended changes reviewed"
+      - "Outsourced processes controlled"
+
+  - id: ISO-8.2
+    clause: "8.2"
+    title: "Information security risk assessment — operational"
+    controls:
+      - "Risk assessments performed at planned intervals or when significant changes occur"
+      - "Results documented and retained"
+
+  - id: ISO-8.3
+    clause: "8.3"
+    title: "Information security risk treatment — operational"
+    controls:
+      - "Risk treatment plan implemented"
+      - "Results documented and retained"
+
+clause_9_performance:
+
+  - id: ISO-9.1
+    clause: "9.1"
+    title: "Monitoring, measurement, analysis and evaluation"
+    controls:
+      - "Information security performance monitored and measured"
+      - "Methods for monitoring, measurement, analysis and evaluation valid and reproducible"
+      - "Results analysed and evaluated"
+      - "Documented information retained as evidence"
+
+  - id: ISO-9.2
+    clause: "9.2"
+    title: "Internal audit"
+    controls:
+      - "Internal audits conducted at planned intervals"
+      - "Audit programme considers importance of processes and results of previous audits"
+      - "Auditors selected to ensure objectivity and impartiality"
+      - "Results reported to management"
+      - "Audit results retained as documented information"
+
+  - id: ISO-9.3
+    clause: "9.3"
+    title: "Management review"
+    controls:
+      - "Top management reviews ISMS at planned intervals"
+      - "Review inputs include: previous actions; changes in external/internal context; security performance; risk treatment effectiveness; opportunities for improvement"
+      - "Review outputs documented and retained"
+
+clause_10_improvement:
+
+  - id: ISO-10.1
+    clause: "10.1"
+    title: "Continual improvement"
+    controls:
+      - "ISMS continually improved in suitability, adequacy and effectiveness"
+
+  - id: ISO-10.2
+    clause: "10.2"
+    title: "Nonconformity and corrective action"
+    controls:
+      - "Nonconformities identified and reacted to; corrective actions taken"
+      - "Root cause analysis conducted"
+      - "Corrective actions effective; reviewed for effectiveness"
+      - "Changes to ISMS if necessary"
+      - "Documented information retained as evidence"
+
+# =============================================================================
+# ANNEX A — REFERENCE CONTROLS (93 controls, 4 themes)
+# ISO 27001:2022 restructured controls from 114 (2013) to 93 (2022)
+# =============================================================================
+
+annex_a_theme_5_organisational:  # 37 controls
+
+  - id: ISO-A.5.1
+    control: "Policies for information security"
+    controls:
+      - "Information security policy and topic-specific policies defined, approved, published, communicated and reviewed at planned intervals or when significant changes occur"
+
+  - id: ISO-A.5.2
+    control: "Information security roles and responsibilities"
+    controls:
+      - "Information security roles and responsibilities defined and allocated"
+
+  - id: ISO-A.5.3
+    control: "Segregation of duties"
+    controls:
+      - "Conflicting duties and conflicting areas of responsibility segregated"
+
+  - id: ISO-A.5.4
+    control: "Management responsibilities"
+    controls:
+      - "Management requires all personnel to apply information security per established policies and procedures"
+
+  - id: ISO-A.5.5
+    control: "Contact with authorities"
+    controls:
+      - "Contacts with relevant authorities maintained"
+
+  - id: ISO-A.5.6
+    control: "Contact with special interest groups"
+    controls:
+      - "Contacts with special interest groups, security forums and professional associations maintained"
+
+  - id: ISO-A.5.7
+    control: "Threat intelligence"
+    controls:
+      - "Information relating to information security threats collected, analysed and acted upon"
+
+  - id: ISO-A.5.8
+    control: "Information security in project management"
+    controls:
+      - "Information security integrated into project management throughout the project lifecycle"
+
+  - id: ISO-A.5.9
+    control: "Inventory of information and other associated assets"
+    controls:
+      - "Inventory of information and associated assets developed and maintained"
+      - "Ownership of assets identified"
+
+  - id: ISO-A.5.10
+    control: "Acceptable use of information and other associated assets"
+    controls:
+      - "Rules for acceptable use and handling of information and assets identified, documented and implemented"
+
+  - id: ISO-A.5.11
+    control: "Return of assets"
+    controls:
+      - "Personnel and other interested parties return all assets upon change or termination of employment/contract"
+
+  - id: ISO-A.5.12
+    control: "Classification of information"
+    controls:
+      - "Information classified according to security needs based on confidentiality, integrity and availability"
+
+  - id: ISO-A.5.13
+    control: "Labelling of information"
+    controls:
+      - "Appropriate set of procedures for information labelling developed and implemented"
+
+  - id: ISO-A.5.14
+    control: "Information transfer"
+    controls:
+      - "Information transfer rules, procedures or agreements for all types of transfer facilities"
+
+  - id: ISO-A.5.15
+    control: "Access control"
+    controls:
+      - "Rules to control physical and logical access to information and assets based on business and security requirements"
+
+  - id: ISO-A.5.16
+    control: "Identity management"
+    controls:
+      - "Full lifecycle of identities managed"
+
+  - id: ISO-A.5.17
+    control: "Authentication information"
+    controls:
+      - "Allocation and management of authentication information controlled by a management process"
+
+  - id: ISO-A.5.18
+    control: "Access rights"
+    controls:
+      - "Access rights provisioned, reviewed, modified and removed per topic-specific access control policy"
+
+  - id: ISO-A.5.19
+    control: "Information security in supplier relationships"
+    controls:
+      - "Processes and procedures defined and implemented to manage information security risks in use of suppliers' products or services"
+
+  - id: ISO-A.5.20
+    control: "Addressing information security within supplier agreements"
+    controls:
+      - "Relevant information security requirements established and agreed with each supplier per risk type"
+
+  - id: ISO-A.5.21
+    control: "Managing information security in the ICT supply chain"
+    controls:
+      - "Processes and procedures defined and implemented to manage information security risks related to ICT products and services supply chain"
+
+  - id: ISO-A.5.22
+    control: "Monitoring, review and change management of supplier services"
+    controls:
+      - "Organisation regularly monitors, reviews, evaluates and manages change in supplier information security practices and service delivery"
+
+  - id: ISO-A.5.23
+    control: "Information security for use of cloud services"
+    controls:
+      - "Processes for acquisition, use, management and exit from cloud services established per information security requirements"
+
+  - id: ISO-A.5.24
+    control: "Information security incident management planning and preparation"
+    controls:
+      - "Organisation plans and prepares for managing information security incidents"
+      - "Roles and procedures for responding to incidents defined"
+
+  - id: ISO-A.5.25
+    control: "Assessment and decision on information security events"
+    controls:
+      - "Information security events assessed and decided whether to classify as incidents"
+
+  - id: ISO-A.5.26
+    control: "Response to information security incidents"
+    controls:
+      - "Information security incidents responded to in accordance with documented procedures"
+
+  - id: ISO-A.5.27
+    control: "Learning from information security incidents"
+    controls:
+      - "Knowledge gained from incidents used to strengthen and improve controls"
+
+  - id: ISO-A.5.28
+    control: "Collection of evidence"
+    controls:
+      - "Organisation establishes and implements procedures for identification, collection, acquisition and preservation of evidence relating to incidents"
+
+  - id: ISO-A.5.29
+    control: "Information security during disruption"
+    controls:
+      - "Organisation plans how to maintain appropriate level of information security during disruption"
+
+  - id: ISO-A.5.30
+    control: "ICT readiness for business continuity"
+    controls:
+      - "ICT readiness planned, implemented, maintained and tested based on BCP and ICT continuity requirements"
+
+  - id: ISO-A.5.31
+    control: "Legal, statutory, regulatory and contractual requirements"
+    controls:
+      - "Legal, statutory, regulatory and contractual requirements relevant to information security identified, documented and kept up to date"
+
+  - id: ISO-A.5.32
+    control: "Intellectual property rights"
+    controls:
+      - "Procedures implemented to protect intellectual property rights"
+
+  - id: ISO-A.5.33
+    control: "Protection of records"
+    controls:
+      - "Records protected from loss, destruction, falsification, unauthorised access and unauthorised release"
+
+  - id: ISO-A.5.34
+    control: "Privacy and protection of PII"
+    controls:
+      - "Privacy and protection of PII requirements identified and met per applicable legislation and regulations"
+
+  - id: ISO-A.5.35
+    control: "Independent review of information security"
+    controls:
+      - "Organisation's approach to managing information security and implementation reviewed independently at planned intervals or when significant changes occur"
+
+  - id: ISO-A.5.36
+    control: "Compliance with policies, rules and standards for information security"
+    controls:
+      - "Compliance with information security policy and topic-specific policies regularly reviewed"
+
+  - id: ISO-A.5.37
+    control: "Documented operating procedures"
+    controls:
+      - "Operating procedures for information processing facilities documented and made available to personnel"
+
+annex_a_theme_6_people:  # 8 controls
+
+  - id: ISO-A.6.1
+    control: "Screening"
+    controls:
+      - "Background verification checks on all candidates for employment carried out prior to joining per applicable laws, regulations and ethics"
+
+  - id: ISO-A.6.2
+    control: "Terms and conditions of employment"
+    controls:
+      - "Employment contracts state information security responsibilities of personnel"
+
+  - id: ISO-A.6.3
+    control: "Information security awareness, education and training"
+    controls:
+      - "Personnel and relevant interested parties receive appropriate information security awareness education and training"
+      - "Regular updates on policies and procedures relevant to their job function"
+
+  - id: ISO-A.6.4
+    control: "Disciplinary process"
+    controls:
+      - "Disciplinary process formalised and communicated for personnel who commit information security policy violations"
+
+  - id: ISO-A.6.5
+    control: "Responsibilities after termination or change of employment"
+    controls:
+      - "Information security responsibilities and duties that remain valid after termination or change of employment defined, enforced and communicated"
+
+  - id: ISO-A.6.6
+    control: "Confidentiality or non-disclosure agreements"
+    controls:
+      - "Confidentiality or NDA agreements signed by personnel reflecting information protection needs"
+
+  - id: ISO-A.6.7
+    control: "Remote working"
+    controls:
+      - "Security measures implemented when personnel work remotely to protect information accessed, processed or stored outside the organisation's premises"
+
+  - id: ISO-A.6.8
+    control: "Information security event reporting"
+    controls:
+      - "Mechanism for personnel to report information security events through appropriate channels in a timely manner"
+
+annex_a_theme_7_physical:  # 14 controls
+
+  - id: ISO-A.7.1
+    control: "Physical security perimeters"
+    controls:
+      - "Security perimeters defined and used to protect areas containing information and associated assets"
+
+  - id: ISO-A.7.2
+    control: "Physical entry"
+    controls:
+      - "Secure areas protected by appropriate entry controls and access points"
+
+  - id: ISO-A.7.3
+    control: "Securing offices, rooms and facilities"
+    controls:
+      - "Physical security for offices, rooms and facilities designed and implemented"
+
+  - id: ISO-A.7.4
+    control: "Physical security monitoring"
+    controls:
+      - "Premises continuously monitored for unauthorised physical access"
+
+  - id: ISO-A.7.5
+    control: "Protecting against physical and environmental threats"
+    controls:
+      - "Protection against physical and environmental threats designed and implemented"
+
+  - id: ISO-A.7.6
+    control: "Working in secure areas"
+    controls:
+      - "Security measures for working in secure areas designed and implemented"
+
+  - id: ISO-A.7.7
+    control: "Clear desk and clear screen"
+    controls:
+      - "Clear desk rules for papers and removable storage media and clear screen rules for information processing facilities defined and enforced"
+
+  - id: ISO-A.7.8
+    control: "Equipment siting and protection"
+    controls:
+      - "Equipment sited securely and protected"
+
+  - id: ISO-A.7.9
+    control: "Security of assets off-premises"
+    controls:
+      - "Off-site assets protected"
+
+  - id: ISO-A.7.10
+    control: "Storage media"
+    controls:
+      - "Storage media managed through acquisition, use, transportation and disposal per classification scheme"
+
+  - id: ISO-A.7.11
+    control: "Supporting utilities"
+    controls:
+      - "Equipment protected from power failures and other disruptions caused by supporting utility failures"
+
+  - id: ISO-A.7.12
+    control: "Cabling security"
+    controls:
+      - "Cables carrying power and data protected from interception or damage"
+
+  - id: ISO-A.7.13
+    control: "Equipment maintenance"
+    controls:
+      - "Equipment maintained correctly to ensure availability, integrity and confidentiality"
+
+  - id: ISO-A.7.14
+    control: "Secure disposal or re-use of equipment"
+    controls:
+      - "Items of equipment containing storage media verified that data and licensed software has been deleted or securely overwritten before disposal or reuse"
+
+annex_a_theme_8_technological:  # 34 controls
+
+  - id: ISO-A.8.1
+    control: "User endpoint devices"
+    controls:
+      - "Information stored on, processed by or accessible via user endpoint devices protected"
+
+  - id: ISO-A.8.2
+    control: "Privileged access rights"
+    controls:
+      - "Allocation and use of privileged access rights restricted and managed"
+
+  - id: ISO-A.8.3
+    control: "Information access restriction"
+    controls:
+      - "Access to information and other associated assets restricted per topic-specific access control policy"
+
+  - id: ISO-A.8.4
+    control: "Access to source code"
+    controls:
+      - "Read and write access to source code, development tools and software libraries managed appropriately"
+
+  - id: ISO-A.8.5
+    control: "Secure authentication"
+    controls:
+      - "Secure authentication technologies and procedures implemented based on information access restrictions"
+
+  - id: ISO-A.8.6
+    control: "Capacity management"
+    controls:
+      - "Use of resources monitored and adjusted in line with current and expected capacity requirements"
+
+  - id: ISO-A.8.7
+    control: "Protection against malware"
+    controls:
+      - "Protection against malware implemented and supported by appropriate user awareness"
+
+  - id: ISO-A.8.8
+    control: "Management of technical vulnerabilities"
+    controls:
+      - "Information about technical vulnerabilities obtained; organisation's exposure evaluated; appropriate measures taken"
+
+  - id: ISO-A.8.9
+    control: "Configuration management"
+    controls:
+      - "Configurations, including security configurations, of hardware, software, services and networks established, documented, implemented, monitored and reviewed"
+
+  - id: ISO-A.8.10
+    control: "Information deletion"
+    controls:
+      - "Information stored in information systems, devices or any other storage media deleted when no longer required"
+
+  - id: ISO-A.8.11
+    control: "Data masking"
+    controls:
+      - "Data masking used in accordance with organisation's topic-specific access control policy and other related policies; applicable legislation"
+
+  - id: ISO-A.8.12
+    control: "Data leakage prevention"
+    controls:
+      - "Data leakage prevention measures applied to systems, networks and any other devices that process, store or transmit sensitive information"
+
+  - id: ISO-A.8.13
+    control: "Information backup"
+    controls:
+      - "Backup copies of information, software and systems maintained and regularly tested"
+
+  - id: ISO-A.8.14
+    control: "Redundancy of information processing facilities"
+    controls:
+      - "Information processing facilities implemented with redundancy sufficient to meet availability requirements"
+
+  - id: ISO-A.8.15
+    control: "Logging"
+    controls:
+      - "Logs that record activities, exceptions, faults and other relevant events produced, stored, protected and analysed"
+
+  - id: ISO-A.8.16
+    control: "Monitoring activities"
+    controls:
+      - "Networks, systems and applications monitored for anomalous behaviour; appropriate actions taken to evaluate potential incidents"
+
+  - id: ISO-A.8.17
+    control: "Clock synchronisation"
+    controls:
+      - "Clocks of information processing systems synchronised to approved time sources"
+
+  - id: ISO-A.8.18
+    control: "Use of privileged utility programs"
+    controls:
+      - "Use of utility programs capable of overriding system and application controls restricted and tightly controlled"
+
+  - id: ISO-A.8.19
+    control: "Installation of software on operational systems"
+    controls:
+      - "Procedures and measures implemented to securely manage software installation on operational systems"
+
+  - id: ISO-A.8.20
+    control: "Networks security"
+    controls:
+      - "Networks and network devices secured, managed and controlled to protect information in systems and applications"
+
+  - id: ISO-A.8.21
+    control: "Security of network services"
+    controls:
+      - "Security mechanisms, service levels and requirements of network services identified, implemented and monitored"
+
+  - id: ISO-A.8.22
+    control: "Segregation of networks"
+    controls:
+      - "Groups of information services, users and information systems segregated in the organisation's networks"
+
+  - id: ISO-A.8.23
+    control: "Web filtering"
+    controls:
+      - "Access to external websites managed to reduce exposure to malicious content"
+
+  - id: ISO-A.8.24
+    control: "Use of cryptography"
+    controls:
+      - "Rules for effective use of cryptography defined and implemented"
+      - "Key management policy established and applied"
+
+  - id: ISO-A.8.25
+    control: "Secure development life cycle"
+    controls:
+      - "Rules for secure development of software and systems established and applied"
+
+  - id: ISO-A.8.26
+    control: "Application security requirements"
+    controls:
+      - "Information security requirements identified, specified and approved for application development or acquisition"
+
+  - id: ISO-A.8.27
+    control: "Secure system architecture and engineering principles"
+    controls:
+      - "Principles for engineering secure systems established, documented, maintained and applied to any information system development activity"
+
+  - id: ISO-A.8.28
+    control: "Secure coding"
+    controls:
+      - "Secure coding principles applied to software development"
+
+  - id: ISO-A.8.29
+    control: "Security testing in development and acceptance"
+    controls:
+      - "Security testing processes defined and implemented in the development lifecycle"
+
+  - id: ISO-A.8.30
+    control: "Outsourced development"
+    controls:
+      - "Organisation supervises and monitors the activity of outsourced system development"
+
+  - id: ISO-A.8.31
+    control: "Separation of development, test and production environments"
+    controls:
+      - "Development, testing and production environments separated and secured"
+
+  - id: ISO-A.8.32
+    control: "Change management"
+    controls:
+      - "Changes to information processing facilities and information systems subject to change management procedures"
+
+  - id: ISO-A.8.33
+    control: "Test information"
+    controls:
+      - "Test information appropriately selected, protected and managed"
+
+  - id: ISO-A.8.34
+    control: "Protection of information systems during audit testing"
+    controls:
+      - "Audit tests and other assurance activities involving assessment of operational systems planned and agreed between tester and appropriate management"

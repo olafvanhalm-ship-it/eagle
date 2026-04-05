@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ESMA AIF. Created by Eagle Platform (M adapter). -->
+<AIFReportingInfo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" CreationDateAndTime="2026-04-04T20:05:04" ReportingMemberState="LU" Version="1.2" xsi:noNamespaceSchemaLocation="AIFMD_DATAIF_V1.2.xsd">
+  <AIFRecordInfo>
+    <FilingType>INIT</FilingType>
+    <AIFContentType>2</AIFContentType>
+    <ReportingPeriodStartDate>2024-07-01</ReportingPeriodStartDate>
+    <ReportingPeriodEndDate>2024-09-30</ReportingPeriodEndDate>
+    <ReportingPeriodType>Q3</ReportingPeriodType>
+    <ReportingPeriodYear>2024</ReportingPeriodYear>
+    <LastReportingFlag>false</LastReportingFlag>
+    <Assumptions>
+      <Assumption>
+        <QuestionNumber>8</QuestionNumber>
+        <AssumptionDescription>All numbers are from the previous quarter</AssumptionDescription>
+      </Assumption>
+      <Assumption>
+        <QuestionNumber>8</QuestionNumber>
+        <AssumptionDescription>All numbers are from the previous quarter</AssumptionDescription>
+      </Assumption>
+      <Assumption>
+        <QuestionNumber>8</QuestionNumber>
+        <AssumptionDescription>All numbers are from the previous quarter</AssumptionDescription>
+      </Assumption>
+      <Assumption>
+        <QuestionNumber>8</QuestionNumber>
+        <AssumptionDescription>All numbers are from the previous quarter</AssumptionDescription>
+      </Assumption>
+      <Assumption>
+        <QuestionNumber>8</QuestionNumber>
+        <AssumptionDescription>All numbers are from the previous quarter</AssumptionDescription>
+      </Assumption>
+      <Assumption>
+        <QuestionNumber>8</QuestionNumber>
+        <AssumptionDescription>All numbers are from the previous quarter</AssumptionDescription>
+      </Assumption>
+      <Assumption>
+        <QuestionNumber>8</QuestionNumber>
+        <AssumptionDescription>All numbers are from the previous quarter</AssumptionDescription>
+      </Assumption>
+      <Assumption>
+        <QuestionNumber>8</QuestionNumber>
+        <AssumptionDescription>All numbers are from the previous quarter</AssumptionDescription>
+      </Assumption>
+      <Assumption>
+        <QuestionNumber>8</QuestionNumber>
+        <AssumptionDescription>All numbers are from the previous quarter</AssumptionDescription>
+      </Assumption>
+      <Assumption>
+        <QuestionNumber>8</QuestionNumber>
+        <AssumptionDescription>All numbers are from the previous quarter</AssumptionDescription>
+      </Assumption>
+      <Assumption>
+        <QuestionNumber>8</QuestionNumber>
+        <AssumptionDescription>All numbers are from the previous quarter</AssumptionDescription>
+      </Assumption>
+    </Assumptions>
+    <AIFMNationalCode>A00007891</AIFMNationalCode>
+    <AIFNationalCode>O00025390_00000000</AIFNationalCode>
+    <AIFName>Alpine VI Parallel Fund, L.P.</AIFName>
+    <AIFEEAFlag>false</AIFEEAFlag>
+    <AIFReportingCode>45</AIFReportingCode>
+    <AIFDomicile>US</AIFDomicile>
+    <InceptionDate>2023-09-30</InceptionDate>
+    <AIFNoReportingFlag>true</AIFNoReportingFlag>
+  </AIFRecordInfo>
+</AIFReportingInfo>

@@ -1,0 +1,433 @@
+# =============================================================================
+# Project Eagle — Client Compliance Portal (MOD-CLIENT)
+# Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml
+# Cross-cutting requirements defined in: eagle_requirements_overview.yaml
+# Manual controls: eagle_manual_controls.yaml
+# =============================================================================
+
+metadata:
+  module: MOD-CLIENT
+  name: "Client Compliance Portal"
+  primary_users: [TENANT_ADMIN, COMPLIANCE_REVIEWER, DATA_PREPARER, READ_ONLY]
+  pipeline_layers: [L9_ORCHESTRATION, L11_IAM]
+  module_req_count: 14
+  cross_req_count: 14
+  total_applicable: 28
+
+# =============================================================================
+# MODULE REQUIREMENTS  (14 requirements)
+# =============================================================================
+
+requirements:
+
+  # -------------------------------------------------------------------------
+  # Multi-jurisdiction and NCA registration
+  # -------------------------------------------------------------------------
+  multi_jurisdiction_and_nca_registration:
+
+    - id: REQ-MJ-001
+      title: "Multiple NCA registrations per AIFM"
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P4, P8, P10]
+      regulatory: [AIFMD, CDR231]
+      description: >
+        An AIFM may report to multiple NCAs simultaneously. Each NCA registration
+        is fully independent with its own regime, frequency, content override
+        profile, delivery channel, NCA-specific identifiers, and deadline calendar.
+      per_registration_fields:
+        nca_code:                 "NCA identifier e.g. AFM, CSSF, BaFin"
+        nca_aifm_national_code:   "AIFM national code assigned by this NCA"
+        registration_type:        "HOME_NCA | NPPR_HOST | NPPR_MARKETING"
+        reporting_regime:         "ART3 or ART24 — may differ per NCA"
+        reporting_frequency:      "Q / H / Y — may differ per NCA"
+        delivery_channel:         "Per REQ-DEL-001"
+        content_override_profile: "NCA override config reference"
+        first_reporting_period:   "Effective from date"
+        last_reporting_period:    "Effective until date — null means ongoing"
+        credential_vault_ref:     "Vault reference for ROBOT or S3/SFTP channels"
+      requirements:
+        - "Supports 1 to 27 NCA registrations per AIFM"
+        - "Each registration independently configurable for all parameters"
+        - "Independent deadline calendar generated per NCA registration"
+        - "Registration changes require TENANT_ADMIN authorisation and are logged"
+      acceptance_criteria:
+        - "AIFM with 3 NCA registrations each with different frequencies has 3 independent calendars"
+
+    - id: REQ-MJ-002
+      title: "AIF marketing jurisdiction as the reporting obligation trigger"
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P4, P8, P10]
+      regulatory: [AIFMD, CDR231]
+      description: >
+        Whether an AIF reports to a given NCA is driven by is_marketed_in_jurisdiction
+        per (AIF, NCA) pair. AIFM-level records are always required for every NCA
+        registration. AIF-level records are required only where the marketing flag
+        is true. Two AIFs under the same AIFM can have completely different NCA coverage.
+      aif_nca_fields:
+        nca_code:                    "Must match a code in the parent AIFM registrations"
+        aif_nca_national_code:       "AIF national code assigned by this NCA"
+        is_marketed_in_jurisdiction: "Boolean — primary obligation trigger"
+        reporting_obligation:        "Derived from marketing flag; manually overridable with documented reason"
+      requirements:
+        - "Changing is_marketed_in_jurisdiction triggers confirmation workflow with prospective effective date"
+        - "Reporting calendar regenerates when any marketing flag changes"
+        - "Manual obligation overrides require documented justification logged in audit trail"
+      acceptance_criteria:
+        - "AIF-A with NL+LU flags and AIF-B with LU-only flag produces correct per-NCA batches"
+
+    - id: REQ-MJ-003
+      title: "Per-NCA reporting obligation matrix view"
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P1, P4]
+      regulatory: [AIFMD]
+      description: >
+        Dashboard provides a matrix view: rows = AIFs, columns = NCA registrations,
+        cells = marketing flag, obligation status, and deadline. Eagle generates one
+        independent submission batch per NCA per period. Cross-NCA batch triggerable
+        in one action; each NCA batch retains an independent review gate.
+      acceptance_criteria:
+        - "Matrix view exportable as PDF for client compliance record"
+
+    - id: REQ-MJ-004
+      title: "NPPR submission envelope and NCA routing"
+      layer: [L7_SUBMISSION]
+      priority: MUST
+      phase: 1
+      principles: [P3, P8]
+      regulatory: [AIFMD, IT_TECH_R6]
+      description: >
+        For NPPR and cross-border submissions ReportingMemberState is set to the
+        target NCA jurisdiction. AIFMNationalCode and AIFNationalCode use
+        NCA-specific codes from the registration record. Non-EU AIFM NPPR codes
+        validated against the full 45-code AIFReportingCode set.
+      acceptance_criteria:
+        - "US AIFM with AFM and CSSF NPPR registrations produces two XML submissions with correct ReportingMemberState and different NCA national codes"
+
+    - id: REQ-MJ-005
+      title: "Per-NCA validation using NCA-specific override profiles"
+      layer: [L3_VALIDATION]
+      priority: MUST
+      phase: 1
+      principles: [P3, P5, P8, P10]
+      regulatory: [AIFMD, CDR231, ESMA_GUIDE]
+      description: >
+        A single canonical record is validated once per NCA registration using the
+        appropriate NCA override profile. A field may be PASS for one NCA and CAF
+        for another. Validation reports group results by NCA. Override profiles are
+        version-controlled configuration files loaded at runtime.
+      acceptance_criteria:
+        - "Field optional at ESMA level but mandatory under CSSF override produces PASS for AFM and CAF for CSSF from the same canonical record"
+
+    - id: REQ-MJ-006
+      title: "Cross-NCA identical-content grouped approval"
+      layer: [L5_REVIEW]
+      priority: MUST
+      phase: 1
+      principles: [P1, P2, P8]
+      regulatory: [DORA, AIFMD, AI_ACT]
+      description: >
+        NCA variants of the same AIF that are content-identical — differing only in
+        NCA routing metadata — are offered for single-action grouped approval. Identity
+        is determined by canonical content hash over substantive fields. Where NCA
+        overrides add or modify substantive fields variants require individual review
+        with a diff view highlighting differences.
+      acceptance_criteria:
+        - "AIF identical for AFM and CSSF correctly grouped for single-action approval"
+        - "AIF where CSSF override adds a mandatory field shows individual review items with diff highlighting"
+
+
+  # -------------------------------------------------------------------------
+  # Reporting obligation management
+  # -------------------------------------------------------------------------
+  reporting_obligation_management:
+
+    - id: REQ-OBL-001
+      title: "Reporting regime determination and confirmation"
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P4, P5, P8, P10]
+      regulatory: [AIFMD, CDR231]
+      description: >
+        Eagle proposes the applicable reporting regime and frequency based on AuM,
+        fund count, leverage use and domicile. Requires explicit confirmation from
+        TENANT_ADMIN or COMPLIANCE_REVIEWER before activation.
+      regime_logic:
+        art3_sub_threshold:
+          thresholds: "EUR 100M general; EUR 500M for unleveraged funds with 5yr lock-up"
+          frequency: "Annual Y1 — AIFM record only; reduced data requirements"
+          dora_applicable: false
+        art24_full:
+          aum_below_1bn: "Annual Y1"
+          aum_1bn_to_10bn: "Half-yearly H1/H2"
+          aum_above_10bn: "Quarterly Q1-Q4"
+          hedge_fund_500m: "Quarterly regardless of total AuM"
+      acceptance_criteria:
+        - "Regime cannot be activated without explicit confirmation"
+        - "Regime change triggers re-confirmation workflow"
+
+    - id: REQ-OBL-002
+      title: "Reporting calendar and deadline management"
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P2, P7, P10]
+      regulatory: [AIFMD, CDR231, DQEF]
+      description: >
+        Independent reporting calendars per AIFM per NCA registration. Active
+        notifications via email and in-app at scheduled points.
+      deadline_rules:
+        standard:      "30 calendar days after period end"
+        fund_of_funds: "45 calendar days after period end"
+        amnd_flag:     "AMND flagged if submitted more than 90 days after INIT (DQEF DQ-T-002)"
+      notification_schedule:
+        t_minus_30: "Period opens"
+        t_minus_14: "14 days to deadline"
+        t_minus_7:  "7 days — escalate if data not ingested"
+        t_minus_2:  "2 days — escalate if not approved"
+        t_plus_1:   "Overdue — immediate escalation required"
+
+    - id: REQ-OBL-003
+      title: "AIF fund profile management"
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P4, P10]
+      regulatory: [AIFMD, CDR231]
+      required_fields:
+        aif_name:              "Legal name of the AIF"
+        lei:                   "Validated against GLEIF if provided"
+        domicile:              "ISO 3166-1 alpha-2"
+        aif_type:              "Hedge fund, PE, RE, FoF, other"
+        inception_date:        "Mandatory per ESMA guidance"
+        base_currency:         "ISO 4217 3-character code"
+        fund_of_funds_flag:    "Affects deadline calculation (45 days)"
+        feeder_flag:           "Feeder fund indicator"
+        master_aif_identifier: "If feeder: identifier of master AIF"
+        umbrella_flag:         "Enables share class sub-records"
+        nca_registrations:     "Per REQ-MJ-002 — subset of parent AIFM registrations"
+      acceptance_criteria:
+        - "Fund activation requires TENANT_ADMIN confirmation"
+
+
+  # -------------------------------------------------------------------------
+  # Dashboards
+  # -------------------------------------------------------------------------
+  dashboards:
+
+    - id: REQ-DSH-001
+      title: "Client compliance dashboard"
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P1, P4]
+      regulatory: []
+      required_elements:
+        - "Reporting calendar with all NCA registrations, period statuses and days-to-deadline"
+        - "NCA obligation matrix per REQ-MJ-003"
+        - "AIFM aggregation status indicator (COMPLETE / PARTIAL / MANUAL)"
+        - "Active overdue count prominently displayed"
+        - "Reference data staleness indicators"
+        - "Quick actions: upload data, view pending reviews, view submission history"
+      acceptance_criteria:
+        - "Dashboard loads in < 2 seconds for up to 50 AIFs"
+        - "Mobile-responsive layout"
+
+    - id: REQ-DSH-002
+      title: "Validation and quality report view"
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P1, P5, P8]
+      regulatory: [DQEF]
+      required_elements:
+        - "CAF errors: field label, code, description, ESMA error code, actual value, legal basis, NCA"
+        - "CAM flags: same as CAF plus resolution guidance; link to CAM register"
+        - "DQ warnings: check name, flagged value, DQEF rationale, acknowledgement field"
+        - "Field provenance indicator per field per REQ-POS-004 — icon with click-through to lineage view (REQ-LIN-001)"
+        - "Overall status per NCA: PASS / BLOCKED / REVIEW_REQUIRED"
+      acceptance_criteria:
+        - "Report printable and exportable as PDF"
+        - "Plain English error descriptions — no unexplained field codes"
+        - "Every field with a non-PASS validation result shows its provenance indicator and a link to the lineage view"
+
+
+  # -------------------------------------------------------------------------
+  # Notifications
+  # -------------------------------------------------------------------------
+  notifications:
+
+    - id: REQ-NOT-001
+      title: "Active notification system"
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P1, P2, P7]
+      regulatory: [DQEF]
+      description: >
+        Email and in-app alerts for deadline events (per REQ-OBL-002) and
+        status changes. Mandatory alerts (OVERDUE, REJECTED, CAF_FAILED,
+        RESPONSE_PARSE_ERROR) cannot be disabled. Unsubscribe not available
+        for regulatory deadline alerts.
+      requirements:
+        - "Notification delivery failure retried 3 times with exponential backoff"
+        - "Failed delivery logged as system event; in-app alert always shown"
+        - "All notifications logged with recipient list and timestamp"
+        - "For MANUAL and PENDING_CONFIRMATION submissions: a reminder notification is sent to TENANT_ADMIN after 3 business days if NCA reference number has not been entered; reminder escalates to EAGLE_ADMIN after 5 business days"
+
+
+  # -------------------------------------------------------------------------
+  # Data lifecycle — client
+  # -------------------------------------------------------------------------
+  data_lifecycle_client:
+
+    - id: REQ-DAT-001
+      title: "Application-managed master data store for static reporting entities"
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P4, P10]
+      regulatory: [AIFMD, CDR231, GDPR]
+      description: >
+        The application maintains a persistent, structured master data store for
+        all static entities referenced in Annex IV reporting. This data is owned
+        and managed within Eagle, distinct from external reference data refreshed
+        from public sources (REQ-REF-001) and from the report-level canonical
+        records produced during the submission pipeline. Master data is the
+        authoritative source for AIFM/AIF identities and for all code lists
+        used in validation and serialisation.
+      master_data_categories:
+        aifm_master:
+          entities: "AIFM legal name, LEI, jurisdiction, authorisation date, domicile, AIFMD regime, NCA registrations"
+          scope: "One record per AIFM sub-entity; linked to tenant"
+          managed_by: "TENANT_ADMIN; validated against GLEIF on entry"
+        aif_master:
+          entities: "AIF legal name, LEI, domicile, inception date, base currency, fund type, feeder/FoF/umbrella flags, NCA marketing flags, share class records"
+          scope: "One record per AIF; linked to parent AIFM"
+          managed_by: "TENANT_ADMIN"
+        nca_code_register:
+          entities: "NCA codes, NCA full names, member state, submission endpoint type, packaging profile reference"
+          scope: "Shared across all tenants; Eagle-managed"
+          managed_by: "EAGLE_ADMIN only"
+          update_source: "ESMA AIFMD register (REQ-REF-001) combined with Eagle-maintained operational metadata"
+        report_code_tables:
+          entities: "Reporting frequency codes (Q/H/Y/X1/X2), period type codes, filing type codes (INIT/AMND), AIFReportingCode values (45 codes including NPPR), cancellation codes"
+          scope: "Shared; Eagle-managed"
+          managed_by: "EAGLE_ADMIN only"
+          note: "These are static ESMA-defined code tables; updated only when ESMA revises the standard"
+        annex_iv_code_tables:
+          entities: "SubAssetType codes (Table 1), TurnoverSubAssetType codes (Table 2), strategy type codes, investor type codes, counterparty type codes, instrument type codes"
+          scope: "Shared; Eagle-managed"
+          managed_by: "EAGLE_ADMIN only"
+        lei_cache:
+          entities: "LEI number, legal name, jurisdiction, registration status, LEI expiry"
+          scope: "Populated from GLEIF Golden Copy per REQ-REF-001; available to all tenants"
+          note: "Queryable by tenants for LEI lookup at data entry time without external API call"
+      requirements:
+        - "Master data records are versioned; every change to a master data record creates a new version with timestamp, changed fields, and user identity"
+        - "Previous versions retained for the full 10-year data retention period"
+        - "AIFM and AIF master data changes that would affect pending or submitted reports trigger a notification to COMPLIANCE_REVIEWER"
+        - "NCA codes and report code tables are read-only for tenants; EAGLE_ADMIN only can modify"
+        - "All master data changes logged in audit trail regardless of who made the change"
+        - "Master data queryable via API for integration with client systems"
+      acceptance_criteria:
+        - "AIFM or AIF name change does not retroactively alter historical submission records — the name at the time of submission is preserved in the submission record"
+        - "NCA code register query returns consistent results; stale entries flagged per REQ-REF-001 staleness policy"
+
+    - id: REQ-DAT-002
+      title: "Historical dynamic data retention across reporting periods"
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P4, P7, P10]
+      regulatory: [AIFMD, CDR231, DORA, GDPR]
+      description: >
+        Position datasets and canonical report records are retained for all
+        completed reporting periods, not only the current period. Retention of
+        historical data enables three specific workflows:
+        (1) Amendment reporting — the original INIT position dataset and canonical
+            record are available as the basis for an AMND;
+        (2) Frequency change reporting — when a fund transitions from quarterly
+            to half-yearly or annual reporting, the historical quarterly position
+            datasets are available for consolidation into the new period;
+        (3) Audit and regulatory enquiry — NCA or auditor can verify that reported
+            figures were derived from the position data held at submission time.
+      retained_data_types:
+        position_datasets:
+          description: "All versions of position datasets per (AIF, reporting_period, NCA_registration)"
+          retention: "10 years from period end date"
+          note: "Each version is immutable after the review gate approval that references it"
+        canonical_records:
+          description: "All versions of canonical report records per (AIFM or AIF, reporting_period, NCA_registration)"
+          retention: "10 years from period end date"
+          includes: "Field provenance per REQ-POS-004; calculation engine version; reference data versions used"
+        ingested_raw_payloads:
+          description: "Hashes of raw API payloads and file upload content; not the raw data itself"
+          retention: "10 years — hash is sufficient for integrity verification; raw data deleted per REQ-SEC-003"
+      frequency_change_workflow:
+        scenario: "Fund transitions from quarterly (AuM >EUR 1bn) to annual (AuM <EUR 1bn) mid-year"
+        available_data: "All quarterly position datasets for the year are retained and accessible"
+        consolidation: "Eagle offers a consolidation view showing all quarterly canonical records for the period; client can use as source for the annual report or start fresh"
+        user_action: "DATA_PREPARER can select source period datasets for consolidation; derived calculations run on consolidated positions"
+      requirements:
+        - "Position datasets and canonical records are never automatically purged before 10-year retention period expires"
+        - "Historical data is queryable by period, NCA, and fund from both the UI and API"
+        - "Period data browsable in the submission history view per REQ-AUD-003"
+        - "Amendment workflow (REQ-AMD-001) always pre-populates from the original INIT canonical record; position dataset for the original period available for reference"
+        - "Frequency change consolidation view available when a fund's reporting frequency changes"
+      acceptance_criteria:
+        - "Historical position dataset for a period 3 years ago is accessible and can be used as source for an amendment"
+        - "Consolidation view correctly identifies all relevant historical period datasets when frequency changes"
+
+
+# =============================================================================
+# CROSS-CUTTING REQUIREMENTS  (14 applicable)
+# Definitions in eagle_requirements_overview.yaml — references only below.
+# =============================================================================
+
+cross_cutting_requirements_applied:
+
+  # -------------------------------------------------------------------------
+  # Security (REQ-SEC-*)         → eagle_requirements_overview.yaml §5.1
+  # -------------------------------------------------------------------------
+  - REQ-SEC-001  # Encryption in transit and at rest
+  - REQ-SEC-002  # Vulnerability management and security testing programme
+  - REQ-SEC-003  # Data retention and deletion
+
+  # -------------------------------------------------------------------------
+  # Resilience (REQ-RES-*)        → eagle_requirements_overview.yaml §5.2
+  # -------------------------------------------------------------------------
+  - REQ-RES-001  # Pipeline failure modes and fallback mechanisms
+
+  # -------------------------------------------------------------------------
+  # Scale (REQ-SCL-*)             → eagle_requirements_overview.yaml §5.3
+  # -------------------------------------------------------------------------
+  - REQ-SCL-001  # Priority queue architecture for pipeline execution
+  - REQ-SCL-002  # Per-client throughput SLA
+  - REQ-SCL-003  # Batch review gate — bulk approval for clean records
+
+  # -------------------------------------------------------------------------
+  # Performance (REQ-PER-*)       → eagle_requirements_overview.yaml §5.4
+  # -------------------------------------------------------------------------
+  - REQ-PER-001  # Performance targets
+
+  # -------------------------------------------------------------------------
+  # DORA operational (REQ-CPL-*)  → eagle_requirements_overview.yaml §5.6
+  # -------------------------------------------------------------------------
+  - REQ-CPL-002  # DORA Art.30 contractual information pack
+
+  # -------------------------------------------------------------------------
+  # GDPR (REQ-GDPR-*)             → eagle_requirements_overview.yaml §7
+  # -------------------------------------------------------------------------
+  - REQ-GDPR-001  # Data subject rights request workflow
+  - REQ-GDPR-002  # Data breach communication workflow
+  - REQ-GDPR-003  # Systematic data minimisation controls
+  - REQ-GDPR-004  # GDPR DPA existence check at tenant activation
+  - REQ-GDPR-005  # Anthropic sub-processor transfer control
+

@@ -1,0 +1,47 @@
+################################################################################
+# NCA-SPECIFIC OVERRIDES — NBS (SK)
+# Version: v1 — 2026-04-03
+# Base YAML: aifmd_validation_rules.yaml
+#
+# Source: Online research of NCA documentation and ESMA guidelines
+# National code: NBS-assigned registration code
+# Portal: NBS financial market supervision portal
+# File packaging: XML
+# Deadline: Standard 30 days; no cross-border distribution fees
+################################################################################
+nca_overrides:
+  nca: NBS
+  country: SK
+  base_yaml: aifmd_validation_rules.yaml
+  base_yaml_version: '1.0'
+  source_document:
+    title: AIFMD Annex IV Reporting Requirements — Národná banka Slovenska (NBS)
+    version: '1.0'
+    date: '2026-04-03'
+    publisher: Národná banka Slovenska (NBS)
+    url: https://nbs.sk
+  transmission:
+    portal: NBS financial market supervision portal
+    method: XML upload
+  file_format:
+    packaging: XML
+    national_code_info: NBS-assigned registration code
+  changelog:
+  - version: v1
+    date: '2026-04-03'
+    changes:
+    - Initial NBS NCA override file — based on web research of latest documentation
+  nca_rules:
+  - rule_id: NCA-NBS-SK-ReportingMemberState
+    base_rule_id: AIFM-1
+    field_id: '1'
+    field_name: Reporting Member State
+    xsd_element: <ReportingMemberState>
+    severity: CRITICAL
+    overrides_esma: true
+    status: active
+    nca_source_doc: Národná banka Slovenska (NBS) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: For reports submitted to NBS the value must always be SK. NBS charges no fees for EU AIFM cross-border
+      distribution notifications.
+    validation_rules: ReportingMemberState = "SK"

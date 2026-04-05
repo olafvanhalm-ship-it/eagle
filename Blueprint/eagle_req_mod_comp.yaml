@@ -1,0 +1,633 @@
+# =============================================================================
+# Project Eagle — Compliance Engine (MOD-COMP)
+# Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml
+# Cross-cutting requirements defined in: eagle_requirements_overview.yaml
+# Manual controls: eagle_manual_controls.yaml
+# =============================================================================
+
+metadata:
+  module: MOD-COMP
+  name: "Compliance Engine"
+  primary_users: [COMPLIANCE_REVIEWER, TENANT_ADMIN]
+  pipeline_layers: [L3_VALIDATION, L4_QUALITY]
+  module_req_count: 12  # +1: REQ-DQEF-001 added via DQEF Technical Document gap analysis (2025-03-26)
+  cross_req_count: 20
+  total_applicable: 32
+
+# =============================================================================
+# MODULE REQUIREMENTS  (11 requirements)
+# =============================================================================
+
+requirements:
+
+  # -------------------------------------------------------------------------
+  # Validation
+  # -------------------------------------------------------------------------
+  validation:
+
+    - id: REQ-VAL-001
+      title: "Deterministic validation against AIFMD rules"
+      layer: [L3_VALIDATION]
+      priority: MUST
+      phase: 1
+      principles: [P5, P8, P10]
+      regulatory: [AIFMD, CDR231, ESMA_GUIDE, DQEF, IT_TECH_R6]
+      description: >
+        Every canonical record is validated against the rule engine loaded from
+        aifmd_annex_iv_validation_rules_v0_3.yaml. Validation runs once per NCA
+        registration using the appropriate override profile. Each rule produces a
+        deterministic PASS / FAIL result. Rule engine is separated from application
+        code (Principle 6) and loaded at runtime.
+      validation_categories:
+        CAF:
+          label: "Critical Acceptance Failure"
+          effect: "Blocks submission. Cannot be submitted without override (REQ-OVR-001)."
+          handling: "Returned to DATA_PREPARER for correction, or TENANT_ADMIN may override with justification"
+        CAM:
+          label: "Critical Acceptance Message"
+          effect: "Accepted with flag. Resolution tracked in CAM register (REQ-AIFMD-002)."
+          handling: "Presented at review gate; COMPLIANCE_REVIEWER may override with justification"
+        DQ_WARNING:
+          label: "Data Quality Warning (DQEF statistical/plausibility checks)"
+          effect: "Never blocks submission. Requires human acknowledgement."
+          handling: "Flagged at review gate; reviewer must acknowledge each warning individually"
+      requirements:
+        - "Each rule result records rule_id, field_path, result, actual value, constraint, and ESMA error code"
+        - "Validation is stateless and repeatable; same input always produces same output"
+        - "Rule engine version recorded on every validation report"
+        - "Validation report is human-readable with field labels not just field codes"
+      acceptance_criteria:
+        - "CAF result prevents record from reaching review gate unless explicitly overridden"
+        - "Full validation report stored immutably in audit trail per validation run"
+
+    - id: REQ-VAL-002
+      title: "Cross-record consistency validation"
+      layer: [L3_VALIDATION]
+      priority: MUST
+      phase: 1
+      principles: [P5, P8]
+      regulatory: [AIFMD, DQEF]
+      cross_record_checks:
+        - "AuM sum: AIF-level NAV values consistent with AIFM-level AuM within tolerance"
+        - "LEI consistency: AIFMIdentifierNCA in all AIF records matches the AIFM record"
+        - "Reporting period: all AIF records in a batch have the same period type and year"
+        - "Fund count: number of AIF records matches the count declared in the AIFM record"
+        - "Filing type: all records in a batch use the same FilingType (INIT or AMND)"
+      acceptance_criteria:
+        - "Cross-record CAF results block the entire batch, not individual records"
+
+    - id: REQ-VAL-003
+      title: "DQEF quality layer checks"
+      layer: [L4_QUALITY]
+      priority: MUST
+      phase: 1
+      principles: [P5, P7, P8, P11]
+      regulatory: [DQEF]
+      dqef_reference: "ESMA50-1605533872-8344 AIFMD Technical Document (2025)"
+
+      # -----------------------------------------------------------------------
+      # DQEF flow type classification
+      # Every DQ check carries a flow_type that determines handling at review gate.
+      # Source: ESMA Technical Document sheet 2a_TYPE_FLOW.
+      # -----------------------------------------------------------------------
+      dqef_flow_types:
+        "01_STATS":
+          label: "Information"
+          handling: "Informational only — no NCA action required. Never blocks submission or requires reviewer acknowledgement."
+        "03_HARDCHECK":
+          label: "Impossible value"
+          eagle_category: CAF
+          handling: "Undisputable error — blocks submission. Mapped to CAF. NCA must correct before submission."
+        "04_SOFTCHECK":
+          label: "Implausible value"
+          eagle_category: DQ_WARNING
+          handling: "Anomalous value that may be valid. Requires reviewer acknowledgement. NCA reviews and provides false-positive feedback to ESMA where applicable."
+
+      # -----------------------------------------------------------------------
+      # DQEF risk-based thresholds
+      # An issue is only communicated to the NCA by ESMA if BOTH criteria are met.
+      # Eagle mirrors these thresholds to avoid generating excessive false positives
+      # in the DQ layer that would not be flagged under the ESMA framework.
+      # Source: ESMA Technical Document sheet 2c_RISK_BASED_APPROACH.
+      # -----------------------------------------------------------------------
+      dqef_risk_thresholds:
+        eu_population_pct: 2     # Issue must affect ≥2% of EU-level records
+        entity_contribution_pct: 1  # Reporting entity must contribute ≥1% to the issue
+        note: >
+          These thresholds do not apply to outlier-detection checks (AuM, NAV, leverage)
+          which have their own calibrated methodology. Source: DQEF §3.3, Technical
+          Document sheet 2c.
+        annual_review: >
+          Thresholds are reviewed annually as part of the ESMA Technical Document update
+          cycle. Head of Compliance owns the review trigger; CTO applies approved changes
+          to rule configuration within the same change management cycle (REQ-ISO-004).
+
+      # -----------------------------------------------------------------------
+      # ESMA error code mapping
+      # Each DQ check result records the ESMA DQEF warning code in addition to
+      # Eagle's internal rule_id. This enables direct cross-reference with ESMA
+      # feedback files received by the NCA and the DQEF feedback export (REQ-DQEF-001).
+      # Source: ESMA Technical Document sheet 5 - DICTIONARY_WARNINGS.
+      # -----------------------------------------------------------------------
+      esma_error_code_mapping:
+        requirement: >
+          Every DQ check result stores dqef_error_code in the format
+          AIFMD_DQT_XXXXXXX_WARNINGN as defined in the ESMA warning dictionary.
+          The mapping is version-controlled in configuration alongside the rule files.
+          When ESMA updates the warning dictionary, Head of Compliance triggers a
+          review; CTO applies updates within the annual rule-maintenance cycle.
+        examples:
+          DQ_LEI_COMPLETENESS_GLEIF:   "AIFMR_DQT_4040000_WARNING2"
+          DQ_LEI_FUND_GLEIF:           "AIFMS_DQT_4040300_WARNING1"
+          DQ_LEVERAGE_CONSISTENCY:     "AIFMS_DQT_4060500_WARNING1"
+          DQ_NAV_PLAUSIBILITY:         "AIFMS_DQT_4060300_WARNING1"
+          DQ_FINANCING_PCT:            "AIFMS_DQT_3050000_WARNING2"
+
+      # -----------------------------------------------------------------------
+      # ENTITY SCOPE — NPPR inclusion
+      # The 2025 ESMA Technical Document extends several checks to cover
+      # Non-EU AIFMs operating under National Private Placement Regimes (NPPR).
+      # Eagle checks must apply to AIF_NPPR and AIFM_NPPR entity scopes
+      # for clients with NPPR registrations.
+      # Source: ESMA Technical Document sheets 4040200, 4040300, 4040325,
+      #         3040350, 4060500, 4202000, 4203000, 4204000 (ADDED NPPR).
+      # -----------------------------------------------------------------------
+      entity_scope:
+        supported_scopes: [AIF_AUTH, AIF_REGI, AIF_NPPR, AIFM_AUTH, AIFM_REGI, AIFM_NPPR]
+        nppr_note: >
+          Checks marked with nppr: true apply to NPPR-registered entities.
+          NCA override profiles must specify whether a client registration is
+          AIF_AUTH/AIFM_AUTH (standard) or AIF_NPPR/AIFM_NPPR (NPPR).
+          Absence of NPPR flag defaults to standard scope.
+
+      # -----------------------------------------------------------------------
+      # Phase 1 — implemented checks (semi-annual DQEF cycle, HY1 and HY2)
+      # -----------------------------------------------------------------------
+      implemented_checks:
+
+        # Timeliness — note: DQ_TIMELINESS_T001 measures AIFM→NCA submission lag,
+        # not the DQEF cycle start (which is T+45 days after quarter end, semi-annual).
+        # These are distinct concepts. The DQEF cycle timeline is defined in
+        # ESMA Technical Document sheet 4_TIMELINE and is informational for Eagle;
+        # it determines when ESMA sends results, not when Eagle validates.
+        DQ_TIMELINESS_T001:
+          label: "Submission lag — AIFM to NCA"
+          description: "Submission lag exceeds 30 days (45 for FoF) after period end"
+          esma_test: "AIFMS_DQT_1020300"
+          flow_type: "01_STATS"
+          dqef_error_code: "AIFMS_DQT_1020300_WARNING1"
+          entity_scope: [AIF_AUTH, AIF_REGI]
+          nppr: false
+
+        DQ_TIMELINESS_T002:
+          label: "Late amendment"
+          description: "AMND submitted more than 90 days after original INIT"
+          esma_test: null  # Eagle internal; aligned with DQEF DQ-T-002
+          flow_type: "04_SOFTCHECK"
+          entity_scope: [AIF_AUTH, AIF_REGI]
+          nppr: false
+
+        DQ_LEI_COMPLETENESS:
+          label: "Missing LEI — GLEIF validation"
+          description: "LEI absent or present but not found in GLEIF register cache"
+          esma_test: "AIFMR_DQT_4040000 / AIFMS_DQT_4040200 / AIFMS_DQT_4040300"
+          flow_type: "04_SOFTCHECK"
+          dqef_error_code: "AIFMR_DQT_4040000_WARNING1 / WARNING2"
+          entity_scope: [AIF_AUTH, AIF_REGI, AIF_NPPR, AIFM_AUTH, AIFM_REGI, AIFM_NPPR]
+          nppr: true
+
+        DQ_LEI_CONSISTENCY:
+          label: "Inconsistent fund/manager LEI"
+          description: "LEI of the fund equals LEI of the manager — impossible by definition"
+          esma_test: "AIFMD_DQT_4040325"
+          flow_type: "04_SOFTCHECK"
+          dqef_error_code: "AIFMD_DQT_4040325_WARNING1"
+          entity_scope: [AIF_AUTH, AIF_REGI, AIF_NPPR]
+          nppr: true
+
+        DQ_REPORTING_CODE:
+          label: "Reporting code consistency"
+          description: "AIF reporting code inconsistent with AIFM reporting code"
+          esma_test: "AIFMS_DQT_3110000"
+          flow_type: "03_HARDCHECK"
+          dqef_error_code: "AIFMS_DQT_3110000_WARNING3"
+          entity_scope: [AIF_AUTH, AIF_REGI, AIFM_AUTH, AIFM_REGI, AIF_NPPR, AIFM_NPPR]
+          nppr: true
+
+        DQ_FINANCING_PCT:
+          label: "Financing percentages do not sum to 100%"
+          description: "Sum of financing amount percentages by day brackets ≠ 100% (tolerance <99% or >101% = CAF)"
+          esma_test: "AIFMS_DQT_3050000"
+          flow_type: "03_HARDCHECK"
+          dqef_error_code: "AIFMS_DQT_3050000_WARNING2"
+          entity_scope: [AIF_AUTH, AIF_REGI]
+          nppr: false
+
+        DQ_AUM_OUTLIER:
+          label: "AuM outlier"
+          description: "Sum of main instrument values (net long/short) exceeds reported AuM by >50%"
+          esma_test: "AIFMS_DQT_4060000"
+          flow_type: "04_SOFTCHECK"
+          dqef_error_code: "AIFMS_DQT_4060000_WARNING1"
+          entity_scope: [AIF_AUTH, AIF_REGI]
+          nppr: false
+          risk_threshold_exempt: true  # Outlier detection uses own calibrated methodology
+
+        DQ_NAV_PLAUSIBILITY:
+          label: "NAV suspicious value"
+          description: "NAV per share outside expected range for fund type or anomalous vs. previous period"
+          esma_test: "AIFMS_DQT_4060300"
+          flow_type: "04_SOFTCHECK"
+          dqef_error_code: "AIFMS_DQT_4060300_WARNING1"
+          entity_scope: [AIF_AUTH, AIF_REGI]
+          nppr: false
+          risk_threshold_exempt: true
+
+        DQ_NAV_NEGATIVE_OR_ZERO:
+          label: "NAV negative or zero"
+          description: "Reported NAV is negative or equal to zero — almost always an error"
+          esma_test: "AIFMS_DQT_4203000"
+          flow_type: "04_SOFTCHECK"
+          dqef_error_code: "AIFMS_DQT_4203000_WARNING1"
+          entity_scope: [AIF_AUTH, AIF_REGI, AIF_NPPR]
+          nppr: true
+
+        DQ_LEVERAGE_CONSISTENCY:
+          label: "Leverage vs. AuM/NAV inconsistency"
+          description: >
+            Difference between reported Gross/Commitment leverage and AuM/NAV ratio
+            exceeds threshold. Includes cash/cash-equivalent exposures in Gross Method
+            per 2025 ESMA update.
+          esma_test: "AIFMS_DQT_4060500"
+          flow_type: "04_SOFTCHECK"
+          dqef_error_code: "AIFMS_DQT_4060500_WARNING1"
+          entity_scope: [AIF_AUTH, AIF_REGI, AIF_NPPR]
+          nppr: true
+          risk_threshold_exempt: true
+
+        DQ_INVESTOR_CONCENTRATION:
+          label: "Investor concentration vs. investor group type inconsistency"
+          description: >
+            Reported investor concentration percentages inconsistent with investor
+            group type breakdown (retail/professional). Unknown/none >20% triggers flag.
+          esma_test: "AIFMS_DQT_3100000"
+          flow_type: "04_SOFTCHECK"
+          dqef_error_code: "AIFMS_DQT_3100000_WARNING1"
+          entity_scope: [AIF_AUTH, AIF_REGI]
+          nppr: false
+
+        DQ_EXCHANGE_RATE:
+          label: "Exchange rate implausible or missing"
+          description: >
+            Exchange rate is 0, null, 1 (where ECB deviation >1%), inverted, or
+            outlier (>1% absolute deviation from ECB euro reference rate).
+            WARNING1-4 map to increasing severity; WARNING5 = inverted rate.
+          esma_test: "AIFMS_DQT_3030000"
+          flow_type: "03_HARDCHECK"
+          dqef_error_codes:
+            WARNING1: "Exchange rate = 0"
+            WARNING2: "Exchange rate = 1 and deviation from ECB >1%"
+            WARNING3: "Exchange rate = null"
+            WARNING4: "Exchange rate outlier (>1% from ECB)"
+            WARNING5: "Inverted exchange rate reported"
+          external_reference: "ECB euro reference rates — https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/"
+          entity_scope: [AIF_AUTH, AIF_REGI]
+          nppr: false
+
+        DQ_LIQUIDITY_FUND_TYPE:
+          label: "Portfolio liquidity inconsistent with fund type"
+          description: "Liquidity by day brackets inconsistent with declared fund type (real estate, private equity)"
+          esma_test: "AIFMS_DQT_1060100"
+          flow_type: "01_STATS"
+          dqef_error_code: "AIFMS_DQT_1060100_WARNING1"
+          entity_scope: [AIF_AUTH, AIF_REGI]
+          nppr: false
+
+        DQ_LIQUIDITY_COMPLETENESS:
+          label: "Portfolio/investor liquidity — one side missing"
+          description: "If either portfolio liquidity or investor liquidity is reported, the other side must be provided too"
+          esma_test: "AIFMS_DQT_4170000"
+          flow_type: "04_SOFTCHECK"
+          dqef_error_code: "AIFMS_DQT_4170000_WARNING1"
+          entity_scope: [AIF_AUTH, AIF_REGI]
+          nppr: false
+
+        DQ_NO_REPORTING_FLAG:
+          label: "No-reporting flag inconsistency"
+          description: >
+            No-reporting flag inconsistent with fund/manager status or constitution date;
+            or no-reporting flag on fund combined with last-reporting flag on manager.
+          esma_test: "AIFMS_DQT_4120000"
+          flow_type: "04_SOFTCHECK"
+          dqef_error_code: "AIFMS_DQT_4120000_WARNING1"
+          entity_scope: [AIF_AUTH, AIF_REGI, AIFM_AUTH, AIFM_REGI]
+          nppr: false
+
+        DQ_PRIME_BROKER_LEI:
+          label: "Missing LEI — top 3 prime brokers"
+          description: "LEI absent for one or more of the top 3 reported prime brokers"
+          esma_test: "AIFMS_DQT_4202000"
+          flow_type: "04_SOFTCHECK"
+          dqef_error_code: "AIFMS_DQT_4202000_WARNING1"
+          entity_scope: [AIF_AUTH, AIF_REGI, AIF_NPPR]
+          nppr: true
+
+        DQ_COUNTERPARTY_LEI:
+          label: "Missing LEI — top 5 counterparties"
+          description: "LEI absent for one or more top 5 counterparties where counterparty is indicated"
+          esma_test: "AIFMS_DQT_4204000"
+          flow_type: "04_SOFTCHECK"
+          dqef_error_code: "AIFMS_DQT_4204000_WARNING1"
+          entity_scope: [AIF_AUTH, AIF_REGI, AIF_NPPR]
+          nppr: true
+
+        DQ_REDEMPTION_FREQUENCY:
+          label: "Missing redemption frequency (item 194)"
+          description: "If withdrawal/redemption rights are in place, item 194 (frequency of investor redemptions) must be populated"
+          esma_test: "AIFMS_DQT_4206000"
+          flow_type: "04_SOFTCHECK"
+          dqef_error_code: "AIFMS_DQT_4206000_WARNING1"
+          entity_scope: [AIF_AUTH]
+          nppr: false
+
+      # -----------------------------------------------------------------------
+      # Phase 2 — additional checks (post-launch, requires dedicated data feeds)
+      # -----------------------------------------------------------------------
+      phase_2_checks:
+        DQ_CS01_DV01_SUSPICIOUS:
+          label: "CS01/DV01 suspicious values"
+          description: "Reported CS01 or DV01 outside plausible range"
+          esma_test: "AIFMS_DQT_4181000"
+          flow_type: "04_SOFTCHECK"
+          blocker: "Requires CS01/DV01 reference range data feed"
+
+        DQ_NET_DELTA_SUSPICIOUS:
+          label: "Net equity/FX/commodity delta suspicious"
+          description: "Net delta values outside plausible range using principal exposure cross-check"
+          esma_test: "AIFMS_DQT_4191000"
+          flow_type: "04_SOFTCHECK"
+          blocker: "Requires principal exposure dataset"
+
+        DQ_VAR_SUSPICIOUS:
+          label: "Reported VaR suspicious"
+          description: "Value-at-Risk outside plausible range for fund type and AuM"
+          esma_test: "AIFMS_DQT_4201000"
+          flow_type: "04_SOFTCHECK"
+          blocker: "Requires VaR peer distribution reference data"
+
+        DQ_LEI_EMIR_CROSS:
+          label: "AIF in EMIR but no LEI in AIFMD"
+          description: "Fund reported in EMIR database has no LEI in AIFMD system"
+          esma_test: "AIFMS_DQT_3150000"
+          flow_type: "03_HARDCHECK"
+          blocker: "Requires EMIR data feed integration"
+
+      acceptance_criteria:
+        - "Reviewer must acknowledge each DQ_WARNING flag individually — bulk-dismiss not permitted"
+        - "01_STATS flow type checks are informational; they produce no review-gate item"
+        - "03_HARDCHECK flow type checks are mapped to CAF category"
+        - "Each DQ check result records dqef_error_code alongside Eagle internal rule_id"
+        - "NPPR entity scope applied when client NCA registration is flagged as NPPR type"
+        - "Exchange rate check (DQ_EXCHANGE_RATE) validates against ECB reference rate cache refreshed daily"
+        - "Acknowledgement with explanation stored immutably in audit trail"
+        - "Annual review of risk thresholds and ESMA warning dictionary completed before each HY1 DQEF cycle"
+
+
+  # -------------------------------------------------------------------------
+  # Validation override
+  # -------------------------------------------------------------------------
+  validation_override:
+
+    - id: REQ-OVR-001
+      title: "Validation override with documented justification"
+      layer: [L3_VALIDATION, L4_QUALITY, L5_REVIEW]
+      priority: MUST
+      phase: 1
+      principles: [P2, P8, P10]
+      regulatory: [AIFMD, DORA, AI_ACT]
+      description: >
+        Any validation check (CAF, CAM, DQ) may be overridden with a documented
+        justification. Compliance responsibility rests entirely with the client.
+        Override never modifies the canonical record; the invalid value is submitted
+        as-is with the client's documented decision.
+        Override is valid for one submission only and does not carry over to re-submissions.
+      override_by_category:
+        CAF:
+          required_role: "TENANT_ADMIN only"
+          justification: "Mandatory free-text minimum 100 characters"
+          countersignature: "Second TENANT_ADMIN required if available; absence logged as warning"
+          eagle_admin_alert: "Automatic notification to EAGLE_ADMIN on every CAF override"
+        CAM:
+          required_role: "COMPLIANCE_REVIEWER or TENANT_ADMIN"
+          justification: "Mandatory free-text minimum 50 characters"
+        DQ_WARNING:
+          required_role: "COMPLIANCE_REVIEWER or TENANT_ADMIN"
+          justification: "Mandatory free-text minimum 50 characters"
+      requirements:
+        - "Override UI presents full flag detail before justification field"
+        - "Override bound to specific rule_id, field_path, and actual value at override time"
+        - "Review gate shows all overridden flags in a dedicated section — cannot be hidden"
+        - "NCA XML generated from unmodified canonical record — Eagle never alters values"
+        - "Monthly override report generated for EAGLE_ADMIN to identify systematic data quality patterns"
+      acceptance_criteria:
+        - "CAF override without justification text is rejected"
+        - "CAF override without countersignature where second TENANT_ADMIN exists is blocked"
+        - "Override audit record is immutable and cannot be deleted or modified"
+
+
+  # -------------------------------------------------------------------------
+  # Amendment workflow
+  # -------------------------------------------------------------------------
+  amendment_workflow:
+
+    - id: REQ-AMD-001
+      title: "Client-initiated amendment workflow"
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P2, P7, P8]
+      regulatory: [AIFMD, DQEF]
+      workflow:
+        1: "COMPLIANCE_REVIEWER or TENANT_ADMIN initiates amendment on an ACCEPTED submission"
+        2: "Eagle creates AMND draft pre-populated from original INIT data"
+        3: "DATA_PREPARER corrects erroneous fields"
+        4: "Full validation pipeline (L3 + L4) runs on corrected record"
+        5: "COMPLIANCE_REVIEWER completes review gate for the AMND record"
+        6: "AMND submitted to NCA via configured delivery channel"
+        7: "AMND linked to original INIT in submission history"
+      acceptance_criteria:
+        - "Original INIT record is immutable; only AMND is created"
+        - "DQEF DQ-T-002 flag applied if AMND is more than 90 days after original INIT"
+
+
+  # -------------------------------------------------------------------------
+  # AIFMD workflow
+  # -------------------------------------------------------------------------
+  aifmd_workflow:
+
+    - id: REQ-AIFMD-001
+      title: "Ad-hoc reporting trigger and workflow for Art.24(4)"
+      layer: [L9_ORCHESTRATION]
+      priority: SHOULD
+      phase: 1
+      principles: [P2, P8]
+      regulatory: [AIFMD, CDR231]
+      description: >
+        Eagle monitors trigger conditions for Art.24(4) ad-hoc reporting
+        (illiquid asset proportion, leverage increase >10%) during L3 validation.
+        Detected triggers notify COMPLIANCE_REVIEWER of the potential obligation.
+        Ad-hoc workflow uses the same pipeline but with X1/X2 period codes.
+      acceptance_criteria:
+        - "Trigger conditions configurable with regulatory reference; ad-hoc workflow tested before go-live"
+
+    - id: REQ-AIFMD-002
+      title: "CAM flag resolution tracking"
+      layer: [L9_ORCHESTRATION]
+      priority: MUST
+      phase: 1
+      principles: [P4, P8]
+      regulatory: [DQEF, AIFMD]
+      description: >
+        Each CAM flag on an accepted submission creates a tracked item in a
+        CAM Resolution Register with statuses OPEN, IN_PROGRESS, RESOLVED.
+        Unresolved items older than 60 days trigger reminder notifications.
+        Items automatically closed when a subsequent submission passes without
+        the same flag.
+      acceptance_criteria:
+        - "CAM register exportable as JSON and PDF for NCA enquiry response"
+
+    - id: REQ-AIFMD-003
+      title: "NCA response parsing and status reconciliation"
+      layer: [L7_SUBMISSION]
+      priority: MUST
+      phase: 1
+      principles: [P2, P7, P8]
+      regulatory: [AIFMD, IT_TECH_R6]
+      description: >
+        NCA response XML is parsed automatically. ACCEPTED status and NCA reference
+        number extracted and stored. REJECTED status maps error codes back to
+        canonical record fields with human-readable DQEF descriptions.
+        Unparseable responses set RESPONSE_PARSE_ERROR status and alert EAGLE_ADMIN.
+      requirements:
+        - "NCA error code to DQEF description mapping table version-controlled in configuration"
+      acceptance_criteria:
+        - "Parsing tested against AFM and CSSF response formats before go-live"
+
+    - id: REQ-AIFMD-004
+      title: "Umbrella fund and share class identification"
+      layer: [L9_ORCHESTRATION]
+      priority: SHOULD
+      phase: 1
+      principles: [P4, P8]
+      regulatory: [AIFMD, CDR231]
+      description: >
+        AIF profile supports umbrella_flag. Where set, one or more share classes
+        can be registered (share class identifier, ISIN, NAV, currency).
+        ShareClassIdentification fields populated in canonical record per
+        validation rules.
+      acceptance_criteria:
+        - "Umbrella fund with 3 share classes produces valid AIF record with correct ShareClassIdentification sub-elements"
+
+    - id: REQ-AIFMD-005
+      title: "NCA enquiry response support"
+      layer: [L9_ORCHESTRATION]
+      priority: COULD
+      phase: 1
+      principles: [P1, P8]
+      regulatory: [AIFMD]
+      description: >
+        COMPLIANCE_REVIEWER can mark a submission as NCA_ENQUIRY_IN_PROGRESS and
+        generate a response pack: validation report, audit trail extract, and
+        canonical record as a downloadable bundle.
+      acceptance_criteria:
+        - "Response pack generated within 5 minutes for a single submission"
+
+
+  # -------------------------------------------------------------------------
+  # AIFMD go-live qualification gate
+  # -------------------------------------------------------------------------
+  aifmd_go_live_qualification_gate:
+
+  - id: REQ-AIFMD-006
+    title: "Per-NCA go-live qualification test against NCA test environment"
+    layer: [L7_SUBMISSION]
+    priority: MUST
+    phase: 1
+    principles: [P7, P8, P10]
+    regulatory: [AIFMD, IT_TECH_R6, DORA]
+    description: >
+      Before Eagle delivers a first live submission to any NCA via DIRECT_API or ROBOT_PORTAL,
+      a qualification test must be completed against that NCA's test/UAT environment. Closes the
+      gap between REQ-REL-004 (synthetic staging data) and live NCA-specific endpoint behaviour.
+    when_required:
+      - "Before first live submission from any Eagle client to a given NCA via DIRECT_API or ROBOT_PORTAL"
+      - "When delivery channel for existing NCA registration changes"
+      - "After a MAJOR incident involving NCA submission failure for that NCA"
+    nca_test_env_unavailable:
+      handling: >
+        Where NCA provides no test environment, CTO documents this and sets go_live_cleared = true
+        with justification. Exemption recorded and visible to auditors.
+    requirements:
+      - "No first live submission to an NCA + channel without PASS or NCA_TEST_ENV_UNAVAILABLE test record"
+      - "Qualification test records stored in nca_qualification_tests table; retained 5 years"
+      - "CTO or Head of Engineering sign-off required before go_live_cleared = true"
+    acceptance_criteria:
+      - "First live AFM DIRECT_API submission preceded by PASS qualification test record for AFM + DIRECT_API"
+      - "ISAE 3402 auditor accepts qualification test records as pre-go-live NCA submission testing evidence"
+
+
+# =============================================================================
+# CROSS-CUTTING REQUIREMENTS  (20 applicable)
+# Definitions in eagle_requirements_overview.yaml — references only below.
+# =============================================================================
+
+cross_cutting_requirements_applied:
+
+  # -------------------------------------------------------------------------
+  # Security (REQ-SEC-*)         → eagle_requirements_overview.yaml §5.1
+  # -------------------------------------------------------------------------
+  - REQ-SEC-001  # Encryption in transit and at rest
+  - REQ-SEC-002  # Vulnerability management and security testing programme
+  - REQ-SEC-003  # Data retention and deletion
+
+  # -------------------------------------------------------------------------
+  # Scale (REQ-SCL-*)             → eagle_requirements_overview.yaml §5.3
+  # -------------------------------------------------------------------------
+  - REQ-SCL-001  # Priority queue architecture for pipeline execution
+  - REQ-SCL-002  # Per-client throughput SLA
+  - REQ-SCL-003  # Batch review gate — bulk approval for clean records
+
+  # -------------------------------------------------------------------------
+  # Performance (REQ-PER-*)       → eagle_requirements_overview.yaml §5.4
+  # -------------------------------------------------------------------------
+  - REQ-PER-001  # Performance targets
+
+  # -------------------------------------------------------------------------
+  # Modularity (REQ-MOD-*)        → eagle_requirements_overview.yaml §5.5
+  # -------------------------------------------------------------------------
+  - REQ-MOD-001  # Rules, overrides and reference data separated from application code
+  - REQ-MOD-002  # AI model replaceability
+
+  # -------------------------------------------------------------------------
+  # ISO 27001 (REQ-ISO-*)         → eagle_requirements_overview.yaml §6
+  # -------------------------------------------------------------------------
+  - REQ-ISO-004  # Formal change management for application, rules and configuration
+  - REQ-ISO-007  # Environment separation and production data protection
+
+  # -------------------------------------------------------------------------
+  # EU AI Act (REQ-AIACT-*)       → eagle_requirements_overview.yaml §8
+  # -------------------------------------------------------------------------
+  - REQ-AIACT-001  # AI input data quality controls
+  - REQ-AIACT-002  # AI classification safeguard — formal in-application control
+  - REQ-AIACT-003  # AI serious incident reporting to Anthropic
+  - REQ-AIACT-004  # Prompt injection prevention for unstructured ingestion
+  - REQ-AIACT-005  # Post-market monitoring plan — formal documented artefact per Art.26(5)
+  - REQ-AIACT-006  # AI transparency notice to users — in-app and contractual per Art.13
+
+  # -------------------------------------------------------------------------
+  # DORA reqs (REQ-DORA-*)        → eagle_requirements_overview.yaml §9
+  # -------------------------------------------------------------------------
+  - REQ-DORA-001  # ICT incident authority notification workflow
+  - REQ-DORA-002  # ICT incident lessons-learned feedback loop
+  - REQ-DORA-003  # Client data export and exit support
+

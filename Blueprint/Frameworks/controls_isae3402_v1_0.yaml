@@ -1,0 +1,472 @@
+# =============================================================================
+# Framework Controls: ISAE 3402
+# Assurance Reports on Controls at a Service Organisation
+# (International Standard on Assurance Engagements 3402)
+# Version:   1.0
+# Date:      2026-03-23
+# Source:    IAASB ISAE 3402 (aligned with SSAE 18 / SOC 2 Trust Services Criteria)
+# Scope:     Service organisations that provide services to user entities
+#            where those services are likely to be relevant to user entities'
+#            internal control over financial reporting (Type I / Type II).
+# Note:      This document is drafted independently of any internal system
+#            documentation and serves as the authoritative regulatory baseline
+#            for gap comparison purposes.
+# =============================================================================
+
+metadata:
+  framework:   "ISAE 3402 — Assurance Reports on Controls at a Service Organisation"
+  standard:    "International Standard on Assurance Engagements 3402"
+  issuer:      "International Auditing and Assurance Standards Board (IAASB)"
+  version:     "1.0"
+  scope_note: >
+    ISAE 3402 applies to service organisations providing services used by
+    user entities in their financial reporting or operational processes.
+    Type I: point-in-time — description of controls and their design.
+    Type II: period — design AND operating effectiveness over a period
+    (minimum 6 months; typically 12 months).
+    This document defines the control objectives, control activities and
+    evidence requirements expected in an ISAE 3402 Type II audit context.
+
+# =============================================================================
+# PART 1 — REPORT STRUCTURE AND DELIVERABLES
+# =============================================================================
+
+report_structure:
+
+  - id: ISAE-RS-001
+    title: "System description"
+    requirement: mandatory
+    content_requirements:
+      - "Types of services provided"
+      - "Components of the system: infrastructure, software, people, procedures, data"
+      - "Boundaries of the system and what is in/out of scope"
+      - "How the system captures, processes and reports information"
+      - "Commitments made to user entities in service level agreements and contracts"
+      - "System availability and performance commitments"
+      - "Related systems and third-party components relied upon"
+      - "Applicable trust services criteria addressed"
+    controls:
+      - "System description reviewed and approved by service organisation management"
+      - "System description updated at minimum annually and before each audit period"
+      - "Description accurately reflects the system as operated during the reporting period"
+
+  - id: ISAE-RS-002
+    title: "Management assertion"
+    requirement: mandatory
+    content_requirements:
+      - "Description fairly presents the service organisation's system"
+      - "Controls related to the control objectives stated in the description were suitably designed throughout the period (Type II)"
+      - "Controls operated effectively throughout the period (Type II)"
+    controls:
+      - "Management assertion signed by appropriate senior management (CEO / CTO level)"
+      - "Assertion dated as of the report date"
+
+  - id: ISAE-RS-003
+    title: "Complementary User Entity Controls (CUECs)"
+    requirement: mandatory
+    description: >
+      Controls that are necessary to achieve stated control objectives but are
+      the responsibility of the user entity, not the service organisation.
+      The service organisation must identify and document all CUECs.
+    controls:
+      - "All CUECs identified and documented in the system description"
+      - "CUECs communicated to user entities at onboarding"
+      - "CUECs reviewed and updated annually"
+      - "User entity acknowledgement of CUECs recorded at contract execution"
+    cuec_examples:
+      - "User entity responsible for managing its own user access and permissions within the platform"
+      - "User entity responsible for reviewing and approving submission outputs before regulatory filing"
+      - "User entity responsible for accuracy of source data provided to the service"
+      - "User entity responsible for applying its own change management controls to configurations"
+
+  - id: ISAE-RS-004
+    title: "Subservice organisations"
+    requirement: if_applicable
+    description: >
+      When the service organisation uses subservice organisations whose services
+      are relevant to the service organisation's controls, these must be addressed.
+    methods:
+      carve_out: "Subservice organisation carved out; CUECs extended to user entity"
+      inclusive: "Subservice organisation included in scope; controls and assertion cover subservice organisation"
+    controls:
+      - "Subservice organisations identified"
+      - "Method (carve-out or inclusive) determined and applied consistently"
+      - "Where carve-out: complementary subservice organisation controls documented"
+      - "Monitoring controls over subservice organisations operating effectively"
+
+# =============================================================================
+# PART 2 — TRUST SERVICES CRITERIA
+# Based on AICPA TSC 2017 (aligned with ISAE 3402 control objectives)
+# =============================================================================
+
+trust_services_criteria:
+
+  security_cc:  # Common Criteria (CC) — Security
+
+    - id: ISAE-CC1
+      category: "CC1 — Control Environment"
+      controls:
+        - id: ISAE-CC1.1
+          title: "COSO principle 1 — Demonstrates commitment to integrity and ethical values"
+          evidence_required:
+            - "Code of conduct or ethics policy approved by senior management"
+            - "Annual training completion records covering ethics and information security"
+            - "Disciplinary process documented and enforced"
+        - id: ISAE-CC1.2
+          title: "COSO principle 2 — Board oversight of internal controls"
+          evidence_required:
+            - "Board or management level oversight of information security"
+            - "Regular management review meetings with documented outcomes"
+        - id: ISAE-CC1.3
+          title: "COSO principle 3 — Organisational structure, authorities, responsibilities"
+          evidence_required:
+            - "Organisational chart current and maintained"
+            - "Security roles and responsibilities defined and assigned"
+            - "Job descriptions include information security responsibilities"
+        - id: ISAE-CC1.4
+          title: "COSO principle 4 — Commitment to competence"
+          evidence_required:
+            - "Hiring and selection processes documented"
+            - "Training and development programme for security competencies"
+            - "Performance reviews include security responsibilities"
+        - id: ISAE-CC1.5
+          title: "COSO principle 5 — Enforces accountability"
+          evidence_required:
+            - "Performance metrics for security controls defined"
+            - "Accountability mechanisms documented and operating"
+
+    - id: ISAE-CC2
+      category: "CC2 — Communication and Information"
+      controls:
+        - id: ISAE-CC2.1
+          title: "Uses relevant information"
+          evidence_required:
+            - "Information quality standards for processing defined"
+            - "Data accuracy and completeness checks documented"
+        - id: ISAE-CC2.2
+          title: "Communicates internally"
+          evidence_required:
+            - "Internal security policies communicated to staff"
+            - "Incident escalation procedures communicated"
+        - id: ISAE-CC2.3
+          title: "Communicates externally"
+          evidence_required:
+            - "Commitments to user entities documented (SLAs, system description)"
+            - "External communication procedures for incidents documented"
+
+    - id: ISAE-CC3
+      category: "CC3 — Risk Assessment"
+      controls:
+        - id: ISAE-CC3.1
+          title: "Specifies objectives"
+          evidence_required:
+            - "Service availability and security objectives documented"
+        - id: ISAE-CC3.2
+          title: "Identifies and analyses risk"
+          evidence_required:
+            - "Risk assessment conducted at minimum annually"
+            - "Risk register maintained with risk owners and ratings"
+            - "Risk assessment methodology documented"
+        - id: ISAE-CC3.3
+          title: "Assesses fraud risk"
+          evidence_required:
+            - "Fraud risk assessment documented"
+            - "Controls addressing identified fraud risks implemented"
+        - id: ISAE-CC3.4
+          title: "Identifies and analyses significant changes"
+          evidence_required:
+            - "Change management process assesses security impact"
+            - "Risk assessment updated for material changes"
+
+    - id: ISAE-CC4
+      category: "CC4 — Monitoring Activities"
+      controls:
+        - id: ISAE-CC4.1
+          title: "Conducts ongoing and/or separate evaluations"
+          evidence_required:
+            - "Continuous monitoring controls operating and evidenced"
+            - "Periodic independent testing of controls (internal audit / pen test)"
+        - id: ISAE-CC4.2
+          title: "Evaluates and communicates deficiencies"
+          evidence_required:
+            - "Control deficiency tracking and escalation process documented"
+            - "Management remediation of deficiencies tracked"
+
+    - id: ISAE-CC5
+      category: "CC5 — Control Activities"
+      controls:
+        - id: ISAE-CC5.1
+          title: "Selects and develops control activities"
+          evidence_required:
+            - "Controls selected to mitigate identified risks to acceptable level"
+            - "Control design documented in control matrix"
+        - id: ISAE-CC5.2
+          title: "Selects and develops general technology controls"
+          evidence_required:
+            - "Technology controls over access, change management, and operations documented"
+        - id: ISAE-CC5.3
+          title: "Deploys through policies and procedures"
+          evidence_required:
+            - "Operating procedures documented for all controls"
+            - "Policies approved and communicated"
+
+    - id: ISAE-CC6
+      category: "CC6 — Logical and Physical Access Controls"
+      controls:
+        - id: ISAE-CC6.1
+          title: "Implements logical access controls"
+          evidence_required:
+            - "Access provisioning and de-provisioning procedures documented"
+            - "Access requests and approvals logged"
+            - "Quarterly or semi-annual access reviews evidenced with sign-off"
+            - "MFA enforced for privileged and remote access"
+        - id: ISAE-CC6.2
+          title: "Authenticates prior to granting access"
+          evidence_required:
+            - "Authentication requirements documented per access level"
+            - "Password and MFA policies enforced technically"
+        - id: ISAE-CC6.3
+          title: "Considers access requirements"
+          evidence_required:
+            - "Least privilege principle applied and evidenced"
+            - "Privileged access subject to enhanced controls"
+        - id: ISAE-CC6.4
+          title: "Restricts physical access"
+          evidence_required:
+            - "Physical access controls to systems and data centre documented"
+            - "Cloud provider physical security covered by cloud provider's own certification"
+        - id: ISAE-CC6.5
+          title: "Removes access when no longer required"
+          evidence_required:
+            - "Leavers access revocation within defined SLA (e.g. same day)"
+            - "Leavers checklist completed and retained"
+        - id: ISAE-CC6.6
+          title: "Addresses threats from outside the system boundaries"
+          evidence_required:
+            - "Perimeter controls: WAF, firewall rules, network segmentation documented"
+            - "Intrusion detection/prevention controls operating"
+        - id: ISAE-CC6.7
+          title: "Restricts transmission, movement and removal of information"
+          evidence_required:
+            - "Data transmission controls documented (encryption, DLP)"
+            - "Data portability and transfer procedures controlled"
+        - id: ISAE-CC6.8
+          title: "Prevents/detects unauthorised or malicious software"
+          evidence_required:
+            - "Malware protection controls deployed and monitored"
+            - "SAST/DAST in development pipeline"
+
+    - id: ISAE-CC7
+      category: "CC7 — System Operations"
+      controls:
+        - id: ISAE-CC7.1
+          title: "Uses detection and monitoring procedures"
+          evidence_required:
+            - "Security event monitoring operational with defined alerting thresholds"
+            - "Log retention policy and implementation evidenced"
+        - id: ISAE-CC7.2
+          title: "Monitors for security events"
+          evidence_required:
+            - "SIEM or equivalent tool operational"
+            - "Alert response and escalation procedures documented and tested"
+        - id: ISAE-CC7.3
+          title: "Evaluates security events to identify security incidents"
+          evidence_required:
+            - "Incident classification process documented"
+            - "Classification decisions logged per incident"
+        - id: ISAE-CC7.4
+          title: "Responds to identified security incidents"
+          evidence_required:
+            - "Incident response plan documented and tested"
+            - "Post-incident reviews conducted and documented"
+        - id: ISAE-CC7.5
+          title: "Identifies, develops and implements activities to recover"
+          evidence_required:
+            - "Recovery procedures documented and tested"
+            - "BCP/DRP tested at minimum annually with test results retained"
+
+    - id: ISAE-CC8
+      category: "CC8 — Change Management"
+      controls:
+        - id: ISAE-CC8.1
+          title: "Authorises, designs, develops, acquires, implements and maintains changes"
+          evidence_required:
+            - "Change management policy and procedure documented"
+            - "Change requests logged with: requester, approver, testing evidence, date"
+            - "Emergency change process documented"
+            - "Production deployments require approval; evidence retained"
+            - "Rollback procedures documented"
+
+    - id: ISAE-CC9
+      category: "CC9 — Risk Mitigation"
+      controls:
+        - id: ISAE-CC9.1
+          title: "Identifies, selects and develops risk mitigation activities"
+          evidence_required:
+            - "Risk treatment plan maintained"
+            - "Controls mapped to risks in risk register"
+        - id: ISAE-CC9.2
+          title: "Assesses and manages risks from vendors and business partners"
+          evidence_required:
+            - "Vendor due diligence process documented"
+            - "Third-party risk register maintained"
+            - "Key vendor security assessments conducted"
+
+  availability_a:
+
+    - id: ISAE-A1
+      category: "A1 — Availability"
+      controls:
+        - id: ISAE-A1.1
+          title: "Addresses availability commitments and system requirements"
+          evidence_required:
+            - "Availability SLAs defined and documented"
+            - "Uptime monitoring operational; metrics retained"
+        - id: ISAE-A1.2
+          title: "Provides notification of unavailability"
+          evidence_required:
+            - "Client notification procedures for planned and unplanned downtime"
+            - "Status page or equivalent client communication mechanism"
+        - id: ISAE-A1.3
+          title: "Maintains infrastructure, data and software"
+          evidence_required:
+            - "BCP/DRP documented and tested; results retained"
+            - "Backup testing results retained"
+            - "RTO and RPO defined and evidenced against"
+
+  processing_integrity_pi:
+
+    - id: ISAE-PI1
+      category: "PI1 — Processing Integrity"
+      controls:
+        - id: ISAE-PI1.1
+          title: "Obtains and processes inputs completely, accurately, timely"
+          evidence_required:
+            - "Input validation controls documented and operating"
+            - "Error handling and rejection logging evidenced"
+        - id: ISAE-PI1.2
+          title: "Processes inputs into outputs completely, accurately, timely"
+          evidence_required:
+            - "Processing controls and reconciliation procedures documented"
+            - "Exception handling and escalation evidenced"
+        - id: ISAE-PI1.3
+          title: "Stores and maintains system inputs, processing and outputs"
+          evidence_required:
+            - "Audit trail covering all inputs, transformations and outputs"
+            - "Immutability controls on audit records evidenced"
+        - id: ISAE-PI1.4
+          title: "Provides outputs to authorised parties"
+          evidence_required:
+            - "Output distribution controls documented"
+            - "Recipient authorisation verified before output delivery"
+        - id: ISAE-PI1.5
+          title: "Handles output errors appropriately"
+          evidence_required:
+            - "Output error detection and correction procedures documented"
+
+  confidentiality_c:
+
+    - id: ISAE-C1
+      category: "C1 — Confidentiality"
+      controls:
+        - id: ISAE-C1.1
+          title: "Identifies and maintains confidential information"
+          evidence_required:
+            - "Data classification scheme implemented"
+            - "Confidential data labelled and protected"
+        - id: ISAE-C1.2
+          title: "Disposes of confidential information"
+          evidence_required:
+            - "Data deletion and secure disposal procedures documented and operating"
+            - "Deletion audit records retained"
+
+# =============================================================================
+# PART 3 — AUDIT EVIDENCE AND OPERATING EFFECTIVENESS (Type II)
+# =============================================================================
+
+audit_evidence_requirements:
+
+  - id: ISAE-EV-001
+    title: "Control evidence collection"
+    description: >
+      For Type II, the auditor tests whether controls operated effectively
+      throughout the entire report period (typically 12 months). Evidence
+      must demonstrate consistent operation — not just design.
+    evidence_principles:
+      - "Evidence collected throughout the period — not assembled at audit time"
+      - "Evidence is objective and verifiable: logs, system records, tickets, approvals"
+      - "Evidence retained with date stamps; tamper protection preferred"
+      - "Sample sizes for testing based on frequency and risk"
+    controls:
+      - "Audit trail for all control-relevant events: immutable, timestamped, retained minimum 3 years"
+      - "Access reviews conducted and evidence retained for each review cycle"
+      - "Change management approvals retained per change record"
+      - "BCP/DRP test reports retained"
+      - "Vulnerability scan and penetration test reports retained"
+      - "Vendor due diligence assessments retained"
+      - "Training completion records retained per employee"
+
+  - id: ISAE-EV-002
+    title: "Control matrix / evidence view"
+    description: >
+      A control matrix maps: control objective → control activity → evidence
+      type → evidence location → owner → test frequency. This is the primary
+      tool used by auditors to plan and execute testing.
+    controls:
+      - "Control matrix maintained and kept current"
+      - "Each control has a named owner responsible for evidence"
+      - "Evidence locations documented and accessible to auditors"
+      - "Control matrix reviewed before each audit cycle"
+
+  - id: ISAE-EV-003
+    title: "Significant change notification"
+    description: >
+      Material changes to the service, infrastructure or controls during the
+      report period must be disclosed and documented.
+    controls:
+      - "Change log maintained covering: system changes, infrastructure changes, key personnel changes, sub-processor changes"
+      - "Material changes flagged to auditor during period"
+      - "Impact assessment for significant changes on control environment documented"
+
+  - id: ISAE-EV-004
+    title: "Exceptions and deviations"
+    description: >
+      Control failures or exceptions during the period must be documented,
+      assessed for materiality, and remediated. Auditors will identify
+      exceptions and assess their impact on the overall opinion.
+    controls:
+      - "Exception log maintained"
+      - "Each exception assessed for materiality and root cause documented"
+      - "Remediation actions tracked with completion dates"
+      - "Systemic control failures escalated to management"
+
+# =============================================================================
+# PART 4 — MANAGEMENT AND GOVERNANCE
+# =============================================================================
+
+management_governance:
+
+  - id: ISAE-MG-001
+    title: "Auditor engagement and scope"
+    controls:
+      - "Independent service auditor engaged with relevant experience"
+      - "Audit scope agreed covering applicable trust services criteria"
+      - "Audit period defined (minimum 6 months; 12 months recommended)"
+      - "Prior audit findings addressed before new period commences"
+
+  - id: ISAE-MG-002
+    title: "Type I pathway (first certification)"
+    controls:
+      - "System description complete and accurate"
+      - "Controls suitably designed to meet control objectives"
+      - "Management assertion signed"
+      - "CUECs documented and distributed"
+
+  - id: ISAE-MG-003
+    title: "Type II pathway (operating effectiveness)"
+    controls:
+      - "All Type I requirements met"
+      - "Controls operated effectively throughout the report period"
+      - "Evidence collection programme operational from start of period"
+      - "No unresolved material control failures"
+      - "Remediation of prior period exceptions completed"

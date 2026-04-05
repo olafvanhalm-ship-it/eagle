@@ -1,0 +1,46 @@
+################################################################################
+# NCA-SPECIFIC OVERRIDES — ATVP (SI)
+# Version: v1 — 2026-04-03
+# Base YAML: aifmd_validation_rules.yaml
+#
+# Source: Online research of NCA documentation and ESMA guidelines
+# National code: ATVP-assigned registration code; LEI mandatory for MiFID trading
+# Portal: ATVP reporting portal
+# File packaging: XML
+# Deadline: Standard 30 days after reporting period end
+################################################################################
+nca_overrides:
+  nca: ATVP
+  country: SI
+  base_yaml: aifmd_validation_rules.yaml
+  base_yaml_version: '1.0'
+  source_document:
+    title: AIFMD Annex IV Reporting Requirements — Agencija za trg vrednostnih papirjev (ATVP)
+    version: '1.0'
+    date: '2026-04-03'
+    publisher: Agencija za trg vrednostnih papirjev (ATVP)
+    url: https://www.a-tvp.si
+  transmission:
+    portal: ATVP reporting portal
+    method: XML upload
+  file_format:
+    packaging: XML
+    national_code_info: ATVP-assigned registration code; LEI mandatory for MiFID trading
+  changelog:
+  - version: v1
+    date: '2026-04-03'
+    changes:
+    - Initial ATVP NCA override file — based on web research of latest documentation
+  nca_rules:
+  - rule_id: NCA-ATVP-SI-ReportingMemberState
+    base_rule_id: AIFM-1
+    field_id: '1'
+    field_name: Reporting Member State
+    xsd_element: <ReportingMemberState>
+    severity: CRITICAL
+    overrides_esma: true
+    status: active
+    nca_source_doc: Agencija za trg vrednostnih papirjev (ATVP) reporting requirements
+    nca_doc_date: '2026-04-03'
+    technical_guidance: For reports submitted to ATVP the value must always be SI.
+    validation_rules: ReportingMemberState = "SI"

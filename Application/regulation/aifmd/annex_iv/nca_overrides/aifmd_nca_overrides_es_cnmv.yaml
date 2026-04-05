@@ -1,0 +1,222 @@
+################################################################################
+# NCA-SPECIFIC OVERRIDES — CNMV (Spain)
+# Version: v1 — 2026-04-03
+# Base YAML: aifmd_validation_rules.yaml (v1.0)
+#
+# Source: CNMV regulatory framework (Law 22/2014, Circular 1/2025),
+#         CIFRADOC submission portal, ESMA IT Technical Guidance Rev 6.
+#
+# Note: CNMV follows ESMA harmonized standards closely. Limited public
+#       documentation on Spain-specific overrides. Direct CNMV contact
+#       recommended for detailed technical specifications.
+################################################################################
+
+nca_overrides:
+  nca: CNMV
+  country: ES
+  base_yaml: aifmd_validation_rules.yaml
+  base_yaml_version: '1.0'
+  source_document:
+    title: CNMV AIFMD Reporting Requirements (Law 22/2014 + Circular 1/2025)
+    version: Circular 1/2025 (5 March 2025)
+    date: '2025-03-05'
+    publisher: Comisión Nacional del Mercado de Valores (CNMV)
+    url: https://www.cnmv.es/portal/gpage?id=LegESMA&lang=en
+  changelog:
+  - version: v1
+    date: '2026-04-03'
+    changes:
+    - Initial CNMV/Spain override file based on web research
+    - 'Covers: ReportingMemberState, CIFRADOC portal, ZIP packaging, deadlines'
+    - 'Note: limited public documentation — CNMV follows ESMA harmonized standards'
+    - Direct CNMV contact recommended for national code format and detailed validation rules
+
+  nca_rules:
+
+  # ── Section: Header — ReportingMemberState ─────────────────────────────────
+
+  - rule_id: NCA-CNMV-ReportingMemberState
+    base_rule_id: AIFM-1
+    field_id: '1'
+    field_name: Reporting Member State
+    xsd_element: <ReportingMemberState>
+    xml_type: CountryCodeType
+    format: 2 [A-Z]+
+    data_type: A
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: AIFM - Header file
+    report_type: AIF+AIFM
+    severity: CRITICAL
+    rule_source: CNMV AIFMD Reporting
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes: []
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CNMV regulatory framework
+    nca_doc_date: '2025-03-05'
+    base_rule_path:
+      aifm_report: aifm_report.envelope.ReportingMemberState
+      aif_report: aif_report.envelope.ReportingMemberState
+    technical_guidance: >-
+      For reports submitted to the CNMV the value must always be "ES".
+    eagle_action: ''
+    validation_rules: >-
+      ReportingMemberState = "ES"
+
+  # ── Section: File packaging — ZIP required ─────────────────────────────────
+
+  - rule_id: NCA-CNMV-FilePackaging
+    base_rule_id: ''
+    field_id: ''
+    field_name: File packaging format
+    xsd_element: N/A (file-level)
+    xml_type: N/A
+    format: XML in ZIP
+    data_type: N/A
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: File - Packaging
+    report_type: AIF+AIFM
+    severity: HIGH
+    rule_source: CNMV AIFMD Reporting
+    esma_doc: ''
+    nca_error_codes: []
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CNMV CIFRADOC documentation
+    nca_doc_date: '2025-03-05'
+    base_rule_path: {}
+    technical_guidance: >-
+      XML files must be transmitted in .ZIP format using the same filename with .xml replaced by .zip,
+      per ESMA standard. All text fields in the XML must be completed in English.
+    eagle_action: >-
+      Adapter must compress each XML into ZIP. Ensure all text fields are in English.
+    validation_rules:
+    - XML files must be wrapped in ZIP format
+    - Filename extension: .zip (replacing .xml)
+    - All text fields must be in English
+
+  # ── Section: CIFRADOC registration ─────────────────────────────────────────
+
+  - rule_id: NCA-CNMV-CIFRADOCRegistration
+    base_rule_id: ''
+    field_id: ''
+    field_name: CIFRADOC portal registration requirement
+    xsd_element: N/A (process rule)
+    xml_type: N/A
+    format: N/A
+    data_type: N/A
+    m_c_o_f: M
+    repetition: N/A
+    mandatory: true
+    conditional: false
+    section: Submission - Registration
+    report_type: AIF+AIFM
+    severity: HIGH
+    rule_source: CNMV AIFMD Reporting
+    esma_doc: ''
+    nca_error_codes: []
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CNMV CIFRADOC documentation
+    nca_doc_date: '2025-03-05'
+    base_rule_path: {}
+    technical_guidance: >-
+      Foreign entities must register for CIFRADOC accreditation and obtain a Spanish Tax Identification Code
+      (CIF or NIF) before they can submit reports. Electronic submission uses registered legal person
+      representative certificates via the CNMV Virtual Office (Sede Electrónica).
+    eagle_action: >-
+      Verify CIFRADOC registration and CIF/NIF availability before first submission. Guide foreign AIFMs
+      through registration if needed.
+    validation_rules:
+    - CIFRADOC accreditation required for electronic submission
+    - Foreign entities must obtain Spanish CIF or NIF
+    - Submission via registered legal person representative certificates
+
+  # ── Section: Submission deadline ───────────────────────────────────────────
+
+  - rule_id: NCA-CNMV-SubmissionDeadline
+    base_rule_id: ''
+    field_id: ''
+    field_name: Submission deadline
+    xsd_element: N/A (process rule)
+    xml_type: N/A
+    format: N/A
+    data_type: N/A
+    m_c_o_f: M
+    repetition: N/A
+    mandatory: true
+    conditional: false
+    section: Submission - Deadlines
+    report_type: AIF+AIFM
+    severity: HIGH
+    rule_source: CNMV AIFMD Reporting
+    esma_doc: ''
+    nca_error_codes: []
+    overrides_esma: false
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CNMV regulatory framework
+    nca_doc_date: '2025-03-05'
+    base_rule_path: {}
+    technical_guidance: >-
+      Standard EU deadline of 30 calendar days from end of reporting period. Fund-of-funds receive
+      additional 15-day extension (45 days total). CNMV follows Regulation 231/2013 deadlines.
+    eagle_action: ''
+    validation_rules:
+    - Standard deadline: 30 calendar days from period end
+    - Fund-of-funds deadline: 45 calendar days from period end
+
+  transmission:
+    note: >-
+      Reports are submitted electronically via the CNMV Virtual Office (Sede Electrónica) using CIFRADOC.
+    overrides_esma: true
+    channels:
+      cifradoc:
+        name: CIFRADOC / CNMV Sede Electrónica
+        description: >-
+          Electronic submission via CNMV Virtual Office using registered legal person representative
+          certificates. Foreign entities require CIFRADOC accreditation and Spanish CIF/NIF.
+        url: https://sede.cnmv.gob.es/SedeCNMV/SedeElectronica.aspx?lang=en
+  file_format:
+    encoding: UTF-8
+    container: ZIP (XML wrapped in ZIP)
+    xml_format:
+    - Must conform to ESMA XSD schema version 1.2 (Rev 6)
+    - All text fields in English
+    - One XML per AIFM report, one XML summarizing all AIF reports
+  correction_rules:
+    submission_deadlines:
+      schedule:
+      - reporting_date: '31-03'
+        due_date: '30-04'
+      - reporting_date: '30-06'
+        due_date: '31-07'
+      - reporting_date: '30-09'
+        due_date: '31-10'
+      - reporting_date: '31-12'
+        due_date: '31-01'
+      fund_of_funds_extension:
+        description: Additional 15 days for fund-of-funds.
+        extension_days: 15
+  eagle_implementation:
+    pre_submission_checks:
+    - 'Verify ReportingMemberState = "ES"'
+    - Confirm CIFRADOC registration and CIF/NIF
+    - Ensure XML is wrapped in ZIP
+    - Validate all text fields are in English
+    - Validate against ESMA XSD v1.2 Rev 6
+    contact:
+      cnmv_sede: https://sede.cnmv.gob.es/SedeCNMV/SedeElectronica.aspx?lang=en
+      cnmv_esma: https://www.cnmv.es/portal/gpage?id=LegESMA&lang=en
+    update_trigger: >-
+      Monitor https://www.cnmv.es for updates. Latest circular: 1/2025 (5 March 2025). Direct CNMV
+      contact recommended for detailed national code format and validation specifications.

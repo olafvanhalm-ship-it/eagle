@@ -1,0 +1,1497 @@
+################################################################################
+# NCA-SPECIFIC OVERRIDES — CSSF (Luxembourg)
+# Version: v6 — 2026-03-30
+# Base YAML: aifmd_validation_rules.yaml (v2.0)
+#
+# Schema: nca_rules entries use identical field layout as aif_rules/aifm_rules
+# in the base YAML, plus NCA-specific fields (nca_error_codes, status,
+# deactivated_version, nca_source_doc, eagle_action, base_rule_path).
+################################################################################
+
+nca_overrides:
+  nca: CSSF
+  country: LU
+  base_yaml: aifmd_validation_rules.yaml
+  base_yaml_version: '2.0'
+  source_document:
+    title: AIFM Reporting — Technical Guidance
+    version: '1.7'
+    date: '2024-07-01'
+    publisher: Commission de Surveillance du Secteur Financier (CSSF)
+    url: https://www.cssf.lu
+  changelog:
+  - version: v1
+    changes:
+    - Initial CSSF v1.7 rules
+  - version: v2
+    changes:
+    - Added deactivated_controls section
+  - version: v3
+    changes:
+    - Updated base_yaml_version to 2.0
+  - version: v4
+    date: '2026-03-26'
+    changes:
+    - Alle field_overrides en deactivated_controls genormaliseerd naar base rule schema
+    - 'Nieuw: nca_rules lijst met identieke veldstructuur als aif_rules/aifm_rules in base YAML'
+    - 'Toegevoegd: rule_id, base_rule_id, field_id, field_name, xsd_element, xml_type,'
+    - '  format, data_type, m_c_o_f, repetition, mandatory, conditional, section,'
+    - '  report_type, severity, rule_source, esma_doc per NCA-regel'
+    - 'NCA-specifieke toevoegingen: nca_error_codes, overrides_esma, status,'
+    - '  deactivated_version, nca_source_doc, nca_doc_date, base_rule_path, eagle_action'
+    - Infrastructure secties (transmission, file_format, return_files,
+    - '  correction_rules, eagle_implementation) ongewijzigd bewaard'
+  - version: v5
+    date: '2026-03-30'
+    changes:
+    - Gap analyse op basis van CSSF AIFM Reporting Technical Guidance v1.7 (PDF)
+    - 'Toegevoegd: 6 legitieme NCA-afwijkingen only (principe: alleen echte CSSF-afwijkingen van ESMA)'
+    - 'Nieuw deactivated_at_nca: NCA-CSSF-DEACT-CAF-108, NCA-CSSF-DEACT-CSSF-043'
+    - 'Nieuw active override (overrides_esma=true): NCA-CSSF-CAF-204 (tolerantieband vervangt CSSF-043)'
+    - 'Nieuw active override (overrides_esma=true): NCA-CSSF-CAF-216, NCA-CSSF-CAF-217'
+    - 'Nieuw active override (overrides_esma=true): NCA-CSSF-CSSF-042 (CSSF warning-only; ESMA blokkeert)'
+    - 'Gecorrigeerd: 20 generieke ESMA base rules verwijderd (horen in aifmd_validation_rules.yaml)'
+    - Total nca_rules 31 -> 37
+  - version: v6
+    date: '2026-03-30'
+    changes:
+    - 'Inhoudelijke vergelijking: 7 regels overrides_esma false -> true na content-check'
+    - 'Gecorrigeerd: NCA-CSSF-AIFMContentType (LU allowed_values aanwezig, base leeg)'
+    - 'Gecorrigeerd: NCA-CSSF-AIFMJurisdiction (severity warning vs CRITICAL in base)'
+    - 'Gecorrigeerd: NCA-CSSF-AIFMReportingCode_consistency, AIFReportingCode_consistency'
+    - 'Gecorrigeerd: NCA-CSSF-AUMCurrencyConsistency_AIFM, ReportingPeriodCombinations_AIFM'
+    - 'Gecorrigeerd: NCA-CSSF-LEI_derivatives_mandatory'
+    - 'Gecorrigeerd: NCA-CSSF-DEACT-CAF-108 base_rule_id AIF-138 -> AIF-138-desc'
+    - Domeinwaarde-duplicaten gecontroleerd (geen gevonden)'
+  nca_rules:
+
+  - rule_id: NCA-CSSF-ReportingMemberState
+    base_rule_id: AIFM-24
+    field_id: '24'
+    field_name: Old AIFM national identifier - Reporting Member State
+    xsd_element: <ReportingMemberState>
+    xml_type: CountryCodeType
+    format: 2 [A-Z]+
+    data_type: A
+    m_c_o_f: O
+    repetition: '[0..1]'
+    mandatory: false
+    conditional: false
+    section: AIFM - Identifiers
+    report_type: AIF+AIFM
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - FIL-009
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path:
+      aifm_report: aifm_report.envelope.ReportingMemberState
+      aif_report: aif_report.envelope.ReportingMemberState
+    technical_guidance: >-
+      For reports submitted to the CSSF the value must always be the constant "LU". Any other value is rejected.
+    eagle_action: ''
+    validation_rules: >-
+      ReportingMemberState = "LU"
+
+  - rule_id: NCA-CSSF-AIFMNationalCode
+    base_rule_id: AIFM-25
+    field_id: '25'
+    field_name: Old AIFM national identifier - National code
+    xsd_element: <AIFMNationalCode>
+    xml_type: AIFMNationalCodeType
+    format: ANNNNNNNN  (A + 8-digit zero-padded number)
+    data_type: Z
+    m_c_o_f: C
+    repetition: '[0..1]'
+    mandatory: false
+    conditional: true
+    section: AIFM - Identifiers
+    report_type: AIF+AIFM
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - ERR-001
+    - CSSF-001
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path:
+      aifm_report: aifm_report.identification.AIFMNationalCode
+      aif_report: aif_report.identification.AIFMNationalCode
+    technical_guidance: >-
+      CSSF assigns AIFM identifiers in the format ANNNNNNNN: constant letter ''A'' followed by the numeric CSSF identification number zero-padded to
+      exactly 8 digits.
+    eagle_action: ''
+    validation_rules:
+    - Must match pattern A[0-9]{8}
+    - Must exist in the CSSF AIFM/AIF identifier list published at https://www.cssf.lu/en/document/identifiers-of-aifms/
+    - Value in XML must be identical to AIFM code segment of the filename
+    example: A00000001
+    lookup_resource: >-
+      CSSF AIFM/AIF identifier list: https://www.cssf.lu/en/document/identifiers-of-aifms/
+
+  - rule_id: NCA-CSSF-AIFNationalCode
+    base_rule_id: AIF-44
+    field_id: '44'
+    field_name: Master AIF national identifier - National code
+    xsd_element: <AIFNationalCode>
+    xml_type: AIFNationalCodeType
+    format: '[OKV][0-9]{8}_[0-9]{8}'
+    data_type: Z
+    m_c_o_f: C
+    repetition: '[0..n]'
+    mandatory: false
+    conditional: true
+    section: Master feeder structure
+    report_type: AIF
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - ERR-004
+    - ERR-008
+    - CSSF-015
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.identification.AIFNationalCode
+    technical_guidance: >-
+      CSSF assigns AIF identifiers in the format FMMMMMMMM_CCCCCCCC where F is replaced by 'O', 'K' or 'V' per entity type (see below).
+    eagle_action: ''
+    validation_rules:
+    - Must match pattern [OKV][0-9]{8}_[0-9]{8}
+    - Must exist in the CSSF AIFM/AIF identifier list
+    - AIFM and AIF must appear on the same line of the identifier list (linked)
+    - Value in XML field must equal value in the AIF segment of the filename
+    - Sub-fund (CCCCCCCC) must exist in CSSF register — CSSF-015
+    examples:
+    - O00012345_00003333  (Part II / SIF fund with compartment)
+    - K00009876_00000000  (SICAR with no compartments)
+    - V00001111_00000001  (unregulated vehicle, sub-fund 1)
+    allowed_entity_type_values:
+      O: Part II fund or Specialised Investment Fund (SIF)
+      K: Société d'investissement en capital à risque (SICAR)
+      V: Another vehicle not regulated by the CSSF
+    lookup_resource: >-
+      CSSF AIFM/AIF identifier list: https://www.cssf.lu/en/document/identifiers-of-aifms/
+
+  - rule_id: NCA-CSSF-ShareClassNationalCode
+    base_rule_id: AIF-34
+    field_id: '34'
+    field_name: Share class national code
+    xsd_element: <ShareClassNationalCode>
+    xml_type: ShareClassNationalCodeType
+    format: '4 [0-9]{4}'
+    format_description: '4-digit zero-padded share class identifier'
+    data_type: Z
+    m_c_o_f: C
+    repetition: '[0..n]'
+    mandatory: false
+    conditional: true
+    section: Share class identification codes
+    report_type: AIF
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes: []
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.principal_info.ShareClassIdentification.sub_fields.ShareClassNationalCode
+    technical_guidance: >-
+      CSSF assigns share class codes as 4-digit numbers zero-padded: "PPPP". This field is forbidden when ShareClassFlag = false and optional
+      otherwise.
+    eagle_action: ''
+    validation_rules: ''
+    example: '0001'
+
+  - rule_id: NCA-CSSF-AIFMContentType
+    base_rule_id: AIFM-5
+    field_id: '5'
+    field_name: AIFM content type
+    xsd_element: <AIFMContentType>
+    xml_type: AIFMContentTypeType
+    format: '1'
+    data_type: N
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: AIFM - Header section
+    report_type: AIFM
+    severity: CRITICAL
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CSSF-003
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aifm_report.record_header.AIFMContentType
+    technical_guidance: >-
+      CSSF clarifies the meaning of each code in the Luxembourg context. Code values are identical to the base YAML; only the descriptions reflect the
+      LU supervision status.
+    eagle_action: ''
+    validation_rules: >-
+      AIFMContentType must correspond to the AIFM''s supervision status in the CSSF register.
+    allowed_values:
+      '1':
+        esma_code: 1 (Art. 24(1) for all AIFs managed)
+        cssf_label: >-
+          Luxembourg domiciled authorised AIFM. Reporting obligations under Article 24(1) of the AIFMD.
+      '2':
+        esma_code: 2 (Art. 3(3)(d) for all AIFs managed)
+        cssf_label: >-
+          Luxembourg domiciled registered AIFM. Reporting obligations under Article 3(3)(d) of the AIFMD.
+      '3':
+        esma_code: 3 (Art. 24(1) for all AIFs marketed)
+        cssf_label: >-
+          Non-EU AIFM marketing AIFs under Article 42 of the AIFMD. Reporting obligations under Article 24(1) of the AIFMD.
+
+  - rule_id: NCA-CSSF-AIFMReportingCode_consistency
+    base_rule_id: ''
+    field_id: CROSS-FIELD
+    field_name: ''
+    xsd_element: ''
+    xml_type: ''
+    format: ''
+    data_type: ''
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: ''
+    report_type: AIFM
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CSSF-032
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aifm_report.identification.AIFMReportingCode
+    technical_guidance: >-
+      CSSF enforces that the reporting code matches the AIFM''s registered supervision status (which maps to AIFMContentType, see 3.5 above).
+    eagle_action: ''
+    validation_rules:
+    - 'Registered AIFM (AIFMContentType = 2): AIFMReportingCode must be 1'
+    - 'Authorised AIFM (AIFMContentType = 1): AIFMReportingCode must be 2–5 (inclusive)'
+    - 'Non-EU AIFM Art. 42 (AIFMContentType = 3): AIFMReportingCode must be 6–9 (inclusive)'
+
+  - rule_id: NCA-CSSF-AIFReportingCode_consistency
+    base_rule_id: ''
+    field_id: CROSS-FIELD
+    field_name: ''
+    xsd_element: ''
+    xml_type: ''
+    format: ''
+    data_type: ''
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: ''
+    report_type: AIF
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CSSF-034
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.identification.AIFReportingCode
+    technical_guidance: >-
+      CSSF enforces that the AIF-level reporting code matches the AIFM''s supervision status. Codes 1–45 are all now defined in the base YAML v0.3.
+    eagle_action: ''
+    validation_rules:
+    - 'Registered AIFM: AIFReportingCode must be 1'
+    - 'Authorised AIFM: AIFReportingCode must be 2–34 (inclusive)'
+    - 'Non-EU AIFM Art. 42 (PPR): AIFReportingCode must be 35–45 (inclusive)'
+
+  - rule_id: NCA-CSSF-AIFMJurisdiction
+    base_rule_id: AIFM-17
+    field_id: '17'
+    field_name: AIFM jurisdiction
+    xsd_element: <AIFMJurisdiction>
+    xml_type: CountryCodeType
+    format: 2 [A-Z]+
+    data_type: A
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: AIFM - Header section
+    report_type: AIFM
+    severity: warning
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CSSF-011
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aifm_report.identification.AIFMJurisdiction
+    technical_guidance: >-
+      CSSF generates a WARNING (not a rejection) if AIFMJurisdiction does not match the jurisdiction held in the CSSF database. The sender must
+      confirm the correct jurisdiction by e-mail to aifm_reporting@cssf.lu. Luxembourg-domiciled AIFMs must report "LU"; non-EU AIFMs must report the
+      correct ISO 3166-1 country code.
+    eagle_action: ''
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-AUMCurrencyConsistency_AIFM
+    base_rule_id: ''
+    field_id: CROSS-FIELD
+    field_name: ''
+    xsd_element: ''
+    xml_type: ''
+    format: ''
+    data_type: ''
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: ''
+    report_type: AIFM
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CSSF-031
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path:
+      aum_base_currency: aifm_report.complete_description.AUMAmountInBaseCurrency
+      aum_euro: aifm_report.complete_description.AUMAmountInEuro
+      base_currency: aifm_report.complete_description.BaseCurrency
+    technical_guidance: >-
+      When BaseCurrency is EUR, AUMAmountInBaseCurrency must equal AUMAmountInEuro exactly.
+    eagle_action: ''
+    validation_rules: >-
+      IF BaseCurrency = "EUR" THEN AUMAmountInBaseCurrency = AUMAmountInEuro
+
+  - rule_id: NCA-CSSF-ReportingPeriodCombinations_AIFM
+    base_rule_id: ''
+    field_id: CROSS-FIELD
+    field_name: ''
+    xsd_element: ''
+    xml_type: ''
+    format: ''
+    data_type: ''
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: ''
+    report_type: AIFM
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CSSF-005
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aifm_report.record_header.ReportingPeriodType
+    technical_guidance: >-
+      For a given AIFM and calendar year, CSSF enforces that submitted reporting periods do not overlap and form one of the accepted patterns.
+    eagle_action: ''
+    validation_rules: ''
+    accepted_period_patterns:
+    - - Q1
+      - Q2
+      - Q3
+      - Q4
+    - - Q1
+      - Q2
+      - H2
+    - - Q1
+      - X2
+    - - H1
+      - H2
+    - - H1
+      - Q3
+      - Q4
+    - - Y1
+    - - X1
+      - Q4
+
+  - rule_id: NCA-CSSF-FXEURRate_AIF
+    base_rule_id: ''
+    field_id: CROSS-FIELD
+    field_name: ''
+    xsd_element: ''
+    xml_type: ''
+    format: ''
+    data_type: ''
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: ''
+    report_type: AIF
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CSSF-035
+    - CSSF-037
+    - CSSF-036
+    - CSSF-038
+    - CSSF-039
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.principal_info.AIFBaseCurrencyDescription.sub_fields.FXEURRate
+    technical_guidance: >-
+      CSSF performs four separate checks on the EUR exchange rate reported in AIF-level submissions.
+    eagle_action: ''
+    validation_rules:
+    - FXEURRate must not be 0 — CSSF-035
+    - FXEURRate must not be null/empty — CSSF-037
+    - 'If FXEURRate = 1 AND deviation from ECB > 1% in absolute terms: error — CSSF-036'
+    - FXEURRate must not deviate more than 1% from ECB rate — CSSF-038
+    - FXEURRate must not be the inverse of the ECB rate — CSSF-039
+    note: >-
+      ECB reference rates are published daily when the TARGET system is open. Use the ECB rate on or nearest to the ReportingPeriodEndDate.
+
+  - rule_id: NCA-CSSF-LEI_derivatives_mandatory
+    base_rule_id: ''
+    field_id: CROSS-FIELD
+    field_name: ''
+    xsd_element: ''
+    xml_type: ''
+    format: ''
+    data_type: ''
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: ''
+    report_type: AIF
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CSSF-040
+    - CSSF-041
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path:
+      lei_field: aif_report.principal_info.AIFIdentifierLEI
+      etd_trigger_field: aif_report.individual_info.LeverageArticle24_2
+      note: >-
+        ExchangedTradedDerivativesExposureValue (Item-287) and OTCDerivativesAmount (Item-288) are described in the validation_rules of
+        LeverageArticle24_2.
+    technical_guidance: >-
+      CSSF enforces LEI as mandatory when the AIF trades derivatives.
+    eagle_action: ''
+    validation_rules:
+    - 'If ExchangedTradedDerivativesExposureValue (Item-287) is filled OR OTCDerivativesAmount (Item-288) is filled: AIFIdentifierLEI
+      is mandatory — CSSF-040'
+    - 'If the fund is trading under MiFID: AIFIdentifierLEI is mandatory — CSSF-041'
+
+  - rule_id: NCA-CSSF-AUMAndNAV_not_zero
+    base_rule_id: ''
+    field_id: CROSS-FIELD
+    field_name: ''
+    xsd_element: ''
+    xml_type: ''
+    format: ''
+    data_type: ''
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: ''
+    report_type: AIF
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CSSF-047
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path:
+      aum_field: aif_report.principal_info.AIFBaseCurrencyDescription.sub_fields.AUMAmountInBaseCurrency
+      nav_field: aif_report.principal_info.AIFNetAssetValue
+    technical_guidance: >-
+      Neither AUMAmountInBaseCurrency nor AIFNetAssetValue may be 0.
+    eagle_action: ''
+    validation_rules: >-
+      Neither AUMAmountInBaseCurrency nor AIFNetAssetValue may be 0.
+
+  - rule_id: NCA-CSSF-DEACT-CAM-016
+    base_rule_id: AIFM-CAM-016
+    field_id: CROSS-FIELD
+    field_name: AuM base currency vs AuM Euro consistency
+    xsd_element: <TotalAuMAmountInEuro> / <TotalAuMAmountBaseCurrency>
+    xml_type: xs:decimal
+    format: cross-field
+    data_type: N
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: AIFM - Assets Under Management
+    report_type: AIFM
+    severity: LOW
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAM-016
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aifm_report.complete_description.AUMAmountInEuro
+    technical_guidance: >-
+      TotalAuMAmountInBaseCurrency vs TotalAuMAmountInEuro cross-rate check (AIFM level). If BaseCurrency ≠ EUR, TotalAuMAmountInEuro must equal
+      TotalAuMAmountInBaseCurrency × EURFXRate.
+    eagle_action: >-
+      Log internally; do not block submission. Consider running as a DQ quality-layer warning.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CAF-002
+    base_rule_id: AIF-5
+    field_id: '5'
+    field_name: AIF content type
+    xsd_element: <AIFContentType>
+    xml_type: AIFContentTypeType
+    format: '1'
+    data_type: N
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: AIF - Header Section
+    report_type: AIF
+    severity: CRITICAL
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-002
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.record_header.AIFContentType
+    technical_guidance: >-
+      AIF content type validation — checks that the AIFCompleteDescription blocks populated correspond to the AIFContentType code.
+    eagle_action: Log internally; do not block submission.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CAF-007
+    base_rule_id: AIF-16
+    field_id: '16'
+    field_name: AIFM National Code
+    xsd_element: <AIFMNationalCode>
+    xml_type: AIFMNationalCodeType
+    format: 30 (max) 1 (min)
+    data_type: Z
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: AIF - Header Section
+    report_type: AIF
+    severity: CRITICAL
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-007
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.identification.AIFMNationalCode
+    technical_guidance: >-
+      AIFM national code existence in the AIFM reference table (AIF file).
+    eagle_action: Log internally.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CAM-006
+    base_rule_id: AIFM-18
+    field_id: '18'
+    field_name: AIFM National Code
+    xsd_element: <AIFMNationalCode>
+    xml_type: AIFMNationalCodeType
+    format: 30 (max) 1 (min)
+    data_type: Z
+    m_c_o_f: M
+    repetition: '[1..1]'
+    mandatory: true
+    conditional: false
+    section: AIFM - Header section
+    report_type: AIFM
+    severity: warning_only
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAM-006
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aifm_report.identification.AIFMNationalCode
+    technical_guidance: >-
+      Warning check: AIFM national code existence in the ESMA Register.
+    eagle_action: Log internally.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CAF-092
+    base_rule_id: AIF-131
+    field_id: '131'
+    field_name: Dominant influence company name
+    xsd_element: <EntityName>
+    xml_type: StringRestricted300Type
+    format: 300 (max)
+    data_type: Z
+    m_c_o_f: C
+    repetition: '[0..n]'
+    mandatory: false
+    conditional: true
+    section: Dominant Influence [see Article 1 of Directive 83/349/EEC]
+    report_type: AIF
+    severity: MEDIUM
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-092
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.DominantInfluenceCompanies
+    technical_guidance: >-
+      Company name in CompanyDominantInfluence is mandatory for Private Equity AIF predominant type.
+    eagle_action: Log internally.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CAF-094
+    base_rule_id: AIF-132
+    field_id: '132'
+    field_name: Dominant influence company LEI code
+    xsd_element: <EntityIdentificationLEI>
+    xml_type: LEICodeType
+    format: 20 ([0-9a-zA-Z]{18}[0-9]{2})
+    data_type: A
+    m_c_o_f: C
+    repetition: '[0..n]'
+    mandatory: false
+    conditional: true
+    section: Dominant Influence [see Article 1 of Directive 83/349/EEC]
+    report_type: AIF
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-094
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.DominantInfluenceCompanies
+    technical_guidance: >-
+      LEI code consistency with Private Equity AIF predominant type.
+    eagle_action: Log internally.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CAF-096
+    base_rule_id: AIF-134
+    field_id: '134'
+    field_name: Transaction type
+    xsd_element: <TransactionType>
+    xml_type: TransactionTypeType
+    format: '4'
+    data_type: A
+    m_c_o_f: C
+    repetition: '[0..n]'
+    mandatory: false
+    conditional: true
+    section: Dominant Influence [see Article 1 of Directive 83/349/EEC]
+    report_type: AIF
+    severity: MEDIUM
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-096
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.DominantInfluenceCompanies
+    technical_guidance: >-
+      Transaction type mandatory for Private Equity AIF predominant type.
+    eagle_action: Log internally.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CAF-098
+    base_rule_id: AIF-136
+    field_id: '136'
+    field_name: '% Voting rights'
+    xsd_element: <VotingRightsRate>
+    xml_type: UnsignedPercentType
+    format: 6 (3.2) totalDigits 5 fractionDigits 2 minInclusive 0 maxInclusive 100
+    data_type: N
+    m_c_o_f: C
+    repetition: '[0..n]'
+    mandatory: false
+    conditional: true
+    section: Dominant Influence [see Article 1 of Directive 83/349/EEC]
+    report_type: AIF
+    severity: MEDIUM
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-098
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.DominantInfluenceCompanies
+    technical_guidance: >-
+      Voting rights rate mandatory for Private Equity AIF predominant type.
+    eagle_action: Log internally.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CAF-206
+    base_rule_id: AIF-185
+    field_id: '185'
+    field_name: Unencumbered cash amount
+    xsd_element: <UnencumberedCash>
+    xml_type: UnsignedInteger15pType
+    format: 15 totalDigits 15 fractionDigits 0 minInclusive 0
+    data_type: N
+    m_c_o_f: M
+    repetition: '[0..1]'
+    mandatory: true
+    conditional: false
+    section: Portfolio Liquidity Profile
+    report_type: AIF
+    severity: CRITICAL
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-206
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.LiquidityRiskProfile
+    technical_guidance: >-
+      UnencumberedCash is mandatory for AIFs with 24(2) reporting obligation (AIFReportingCode in the 24(2) set).
+    eagle_action: >-
+      Log internally; collect the value from client if available. Do not block submission.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CAF-207
+    base_rule_id: AIF-193
+    field_id: '193'
+    field_name: Withdrawal redemption rights flag
+    xsd_element: <ProvideWithdrawalRightsFlag>
+    xml_type: BooleanType
+    format: '1'
+    data_type: B
+    m_c_o_f: M
+    repetition: '[0..1]'
+    mandatory: true
+    conditional: false
+    section: Investor redemptions
+    report_type: AIF
+    severity: CRITICAL
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-207
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.LiquidityRiskProfile
+    technical_guidance: >-
+      ProvideWithdrawalRightsFlag is mandatory under 24(2) reporting obligations.
+    eagle_action: Log internally.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CAF-208
+    base_rule_id: AIF-283
+    field_id: '283'
+    field_name: Unsecured borrowing amount
+    xsd_element: <UnsecuredBorrowingAmount>
+    xml_type: UnsignedInteger15pType
+    format: 15 totalDigits 15 fractionDigits 0 minInclusive 0
+    data_type: N
+    m_c_o_f: M
+    repetition: '[0..1]'
+    mandatory: true
+    conditional: false
+    section: 'Value of borrowings of cash or securities represented by:'
+    report_type: AIF
+    severity: CRITICAL
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-208
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.LeverageArticle24_2
+    technical_guidance: >-
+      UnsecuredBorrowingAmount is mandatory under 24(2) and 24(4) obligations.
+    eagle_action: Log internally.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CAF-209
+    base_rule_id: AIF-284
+    field_id: '284'
+    field_name: Collaterised/secured cash borrowing prime broker amount
+    xsd_element: <SecuredBorrowingPrimeBrokerageAmount>
+    xml_type: UnsignedInteger15pType
+    format: 15 totalDigits 15 fractionDigits 0 minInclusive 0
+    data_type: N
+    m_c_o_f: M
+    repetition: '[0..1]'
+    mandatory: true
+    conditional: false
+    section: 'Value of borrowings of cash or securities represented by:'
+    report_type: AIF
+    severity: CRITICAL
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-209
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.LeverageArticle24_2
+    technical_guidance: >-
+      SecuredBorrowingPrimeBrokerageAmount is mandatory under 24(2) and 24(4).
+    eagle_action: Log internally.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CAF-210
+    base_rule_id: AIF-285
+    field_id: '285'
+    field_name: Collaterised/secured cash borrowing reverse repo amount
+    xsd_element: <SecuredBorrowingReverseRepoAmount>
+    xml_type: UnsignedInteger15pType
+    format: 15 totalDigits 15 fractionDigits 0 minInclusive 0
+    data_type: N
+    m_c_o_f: M
+    repetition: '[0..1]'
+    mandatory: true
+    conditional: false
+    section: 'Value of borrowings of cash or securities represented by:'
+    report_type: AIF
+    severity: CRITICAL
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-210
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.LeverageArticle24_2
+    technical_guidance: >-
+      SecuredBorrowingReverseRepoAmount is mandatory under 24(2) and 24(4).
+    eagle_action: Log internally.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CAF-211
+    base_rule_id: AIF-286
+    field_id: '286'
+    field_name: Collaterised/secured cash borrowing other amount
+    xsd_element: <SecuredBorrowingOtherAmount>
+    xml_type: UnsignedInteger15pType
+    format: 15 totalDigits 15 fractionDigits 0 minInclusive 0
+    data_type: N
+    m_c_o_f: M
+    repetition: '[0..1]'
+    mandatory: true
+    conditional: false
+    section: 'Value of borrowings of cash or securities represented by:'
+    report_type: AIF
+    severity: CRITICAL
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-211
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.LeverageArticle24_2
+    technical_guidance: >-
+      SecuredBorrowingOtherAmount is mandatory under 24(2) and 24(4).
+    eagle_action: Log internally.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CAF-212
+    base_rule_id: AIF-289
+    field_id: '289'
+    field_name: Short position borrowed securities value
+    xsd_element: <ShortPositionBorrowedSecuritiesValue>
+    xml_type: UnsignedInteger15pType
+    format: 15 totalDigits 15 fractionDigits 0 minInclusive 0
+    data_type: N
+    m_c_o_f: O
+    repetition: '[0..1]'
+    mandatory: false
+    conditional: false
+    section: Value of borrowing embedded in financial instruments
+    report_type: AIF
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-212
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.LeverageArticle24_2
+    technical_guidance: >-
+      ShortPositionBorrowedSecuritiesValue is mandatory under 24(2) and 24(4).
+    eagle_action: Log internally.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CAF-213
+    base_rule_id: AIF-122
+    field_id: '122'
+    field_name: Gross value of individual exposure
+    xsd_element: <GrossValue>
+    xml_type: UnsignedInteger15pType
+    format: 15 totalDigits 15 fractionDigits 0 minInclusive 0
+    data_type: N
+    m_c_o_f: C
+    repetition: '[0..n]'
+    mandatory: false
+    conditional: true
+    section: Individual Exposures in which it is trading and the main categories of assets in which the AIF invested as at
+      the reporting date
+    report_type: AIF
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-213
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.IndividualExposure
+    technical_guidance: >-
+      GrossValue in individual exposure mandatory for DER_FEX_INVT, DER_FEX_HEDG, DER_IRD_INTR sub-asset types when corresponding 10-principal-
+      exposures AggregatedValueRate > 0 under 24(2).
+    eagle_action: Log internally.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CAF-214
+    base_rule_id: AIF-123
+    field_id: '123'
+    field_name: Long value of individual exposure
+    xsd_element: <LongValue>
+    xml_type: UnsignedInteger15pType
+    format: 15 totalDigits 15 fractionDigits 0 minInclusive 0
+    data_type: N
+    m_c_o_f: C
+    repetition: '[0..n]'
+    mandatory: false
+    conditional: true
+    section: Individual Exposures in which it is trading and the main categories of assets in which the AIF invested as at
+      the reporting date
+    report_type: AIF
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-214
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.IndividualExposure
+    technical_guidance: >-
+      LongValue in individual exposure mandatory for applicable sub-asset types with PositionType = Long under 24(2).
+    eagle_action: Log internally.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CAF-215
+    base_rule_id: AIF-124
+    field_id: '124'
+    field_name: Short value of individual exposure
+    xsd_element: <ShortValue>
+    xml_type: UnsignedInteger15pType
+    format: 15 totalDigits 15 fractionDigits 0 minInclusive 0
+    data_type: N
+    m_c_o_f: C
+    repetition: '[0..n]'
+    mandatory: false
+    conditional: true
+    section: Individual Exposures in which it is trading and the main categories of assets in which the AIF invested as at
+      the reporting date
+    report_type: AIF
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-215
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.IndividualExposure
+    technical_guidance: >-
+      ShortValue in individual exposure mandatory for applicable sub-asset types with PositionType = Short under 24(2).
+    eagle_action: Log internally.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CAF-108
+    base_rule_id: AIF-138-desc
+    field_id: '138'
+    field_name: Risk measure description
+    xsd_element: <RiskMeasureDescription>
+    xml_type: StringRestricted255Type
+    format: 255 (max)
+    data_type: Z
+    m_c_o_f: C
+    repetition: '[0..1]'
+    mandatory: false
+    conditional: true
+    section: Market Risk Profile
+    report_type: AIF
+    severity: MEDIUM
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-108
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.MarketRiskProfile.MarketRiskMeasures.RiskMeasureDescription
+    technical_guidance: >-
+      RiskMeasureDescription is mandatory when RiskMeasureValue equals 0. Deactivated at CSSF; still active at ESMA.
+    eagle_action: Log internally; do not block submission.
+    validation_rules: ''
+
+  - rule_id: NCA-CSSF-DEACT-CSSF-043
+    base_rule_id: AIF-financing-sum
+    field_id: CROSS-FIELD
+    field_name: Sum of financing percentages (superseded control)
+    xsd_element: <TotalFinancingInDays0To1Rate>
+    xml_type: UnsignedPercentType
+    format: cross-field
+    data_type: N
+    m_c_o_f: C
+    repetition: '[0..1]'
+    mandatory: false
+    conditional: true
+    section: Financing Liquidity Profile
+    report_type: AIF
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CSSF-043
+    overrides_esma: true
+    status: deactivated_at_nca
+    deactivated_version: v1.6
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.LiquidityRiskProfile.FinancingLiquidityProfile
+    technical_guidance: >-
+      CSSF-043 checked that the sum of financing percentages was strictly <99% or >101%. This control was replaced by CAF-204
+      (which accepts a tolerance band of 99-101%). Deactivated at CSSF; superseded_by CAF-204.
+    eagle_action: >-
+      Use CAF-204 (NCA-CSSF-CAF-204) for financing percentage sum validation. CSSF-043 is no longer triggered.
+    validation_rules: ''
+    superseded_by: CAF-204
+
+  - rule_id: NCA-CSSF-CSSF-042
+    base_rule_id: AIF-financing-sum-tolerance
+    field_id: CROSS-FIELD
+    field_name: Sum of financing percentages within 99-101% tolerance (CSSF warning-only override)
+    xsd_element: <TotalFinancingInDays0To1Rate>
+    xml_type: UnsignedPercentType
+    format: cross-field
+    data_type: N
+    m_c_o_f: C
+    repetition: '[0..1]'
+    mandatory: false
+    conditional: true
+    section: Financing Liquidity Profile
+    report_type: AIF
+    severity: warning
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CSSF-042
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.LiquidityRiskProfile.FinancingLiquidityProfile
+    technical_guidance: >-
+      CSSF-042 is raised as a WARNING (non-blocking) when the sum of financing percentages differs from 100% but
+      falls within the 99-101% tolerance band. ESMA would treat this as a blocking error. CSSF softens to warning-only.
+    eagle_action: Flag as DQ warning; notify client.
+    validation_rules: >-
+      IF sum(TotalFinancingInDays*Rate) != 100 AND 99 <= sum <= 101 THEN warning CSSF-042
+
+  - rule_id: NCA-CSSF-CAF-204
+    base_rule_id: AIF-financing-sum-99-101
+    field_id: CROSS-FIELD
+    field_name: Sum of financing percentages must be between 99 and 101%
+    xsd_element: <TotalFinancingInDays0To1Rate>
+    xml_type: UnsignedPercentType
+    format: cross-field
+    data_type: N
+    m_c_o_f: C
+    repetition: '[0..1]'
+    mandatory: false
+    conditional: true
+    section: Financing Liquidity Profile
+    report_type: AIF
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-204
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.LiquidityRiskProfile.FinancingLiquidityProfile
+    technical_guidance: >-
+      Replaces CSSF-043. If TotalFinancingInDays0To1Rate is not empty, the sum of all TotalFinancingInDaysXToYRate fields
+      must equal 100% or fall within the tolerance band 99-101%. Values outside this band trigger CAF-204.
+    eagle_action: Flag as DQ warning; notify client to correct financing breakdown.
+    validation_rules:
+    - IF TotalFinancingInDays0To1Rate is present THEN sum(all TotalFinancingInDays*Rate) must be between 99 and 101
+    - Values outside the 99-101 band trigger error CAF-204
+    supersedes: CSSF-043
+
+  - rule_id: NCA-CSSF-CAF-216
+    base_rule_id: AIF-RiskMeasureType-mandatory-24-2
+    field_id: '138'
+    field_name: RiskMeasureType NET_EQTY_DELTA/NET_CS01/NET_DV01 mandatory under 24(2)
+    xsd_element: <RiskMeasureType>
+    xml_type: RiskMeasureTypeType
+    format: code
+    data_type: A
+    m_c_o_f: C
+    repetition: '[1..n]'
+    mandatory: false
+    conditional: true
+    section: Market Risk Profile
+    report_type: AIF
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-216
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.MarketRiskProfile.MarketRiskMeasures.RiskMeasureType
+    technical_guidance: >-
+      For AIFs with Article 24(2) reporting obligations, all three risk measure types NET_EQTY_DELTA, NET_CS01 and NET_DV01
+      must be reported. Note: the original CAF-216 (deactivated at CSSF) was replaced by a new CAF-216 and new CAF-217 in
+      guidance v1.4. Both new controls are active.
+    eagle_action: >-
+      For AIFs with AIFReportingCode in the 24(2) set, verify presence of all three mandatory risk measure types before submission.
+    validation_rules:
+    - IF AIFReportingCode implies 24(2) obligation THEN NET_EQTY_DELTA must be present in RiskMeasureType blocks
+    - IF AIFReportingCode implies 24(2) obligation THEN NET_CS01 must be present in RiskMeasureType blocks
+    - IF AIFReportingCode implies 24(2) obligation THEN NET_DV01 must be present in RiskMeasureType blocks
+    note: >-
+      Old CAF-216/217/218/219 were replaced in guidance v1.4. The new CAF-216 (this rule) and new CAF-217 (NCA-CSSF-CAF-217)
+      are both marked as deactivated at CSSF per v1.7 Annex 2 (grey rows). Eagle should log internally only.
+
+  - rule_id: NCA-CSSF-CAF-217
+    base_rule_id: AIF-SubAssetType-individual-mandatory-24-2
+    field_id: '121'
+    field_name: SubAssetType in individual exposure mandatory for 24(2) reported asset types
+    xsd_element: <SubAssetType>
+    xml_type: SubAssetTypeType
+    format: code
+    data_type: A
+    m_c_o_f: C
+    repetition: '[1..n]'
+    mandatory: false
+    conditional: true
+    section: Individual Exposures
+    report_type: AIF
+    severity: HIGH
+    rule_source: CSSF AIFM Reporting Technical Guidance v1.7
+    esma_doc: ESMA/2013/1358 Rev.6
+    nca_error_codes:
+    - CAF-217
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CSSF AIFM Reporting Technical Guidance v1.7
+    nca_doc_date: '2024-07-01'
+    base_rule_path: aif_report.individual_info.IndividualExposure.AssetTypeExposures.SubAssetType
+    technical_guidance: >-
+      For AIFs under 24(2) reporting obligations, SubAssetType in the individual exposure block must be reported for all
+      asset types (excluding NTA_NTA_NOTA) that appear in the 10 principal exposures (field 96) with AggregatedValueRate > 0.
+    eagle_action: >-
+      Cross-check individual exposure SubAssetType entries against principal exposure SubAssetType entries with rate > 0.
+    validation_rules: >-
+      IF AIFReportingCode implies 24(2) AND SubAssetType in 10-principal-exposures with AggregatedValueRate > 0
+      THEN same SubAssetType must appear in individual exposure blocks
+
+  transmission:
+    note: >-
+      As of version 1.7 (1 July 2024) the old external transmission channels (SWIFT, direct SFTP, etc.) are permanently deactivated. Only the two
+      channels below are accepted. Eagle must exclusively use one of these.
+    overrides_esma: true
+    channels:
+      api_s3:
+        name: Application Programming Interface (S3 bucket)
+        description: >-
+          Reports are uploaded to a dedicated S3 bucket named "Reporting AIFM" created by the sender''s IT Expert on the eDesk IT management console.
+          The bucket type is only available after sender registration (see sender_registration below).
+        technical_guide_url: >-
+          https://www.cssf.lu/en/Document/methods-of-transmitting-reports-via-s3-application-programming-interface-technical-guidance/
+        auth_control:
+          cssf_error_code: AUTH-50
+          description: >-
+            The bucket participant must match the filename sender field. Mismatch results in immediate rejection.
+          status: active
+      edesk:
+        name: EDesk web portal
+        description: >-
+          Manual submission via the EDesk portal. Provides dashboard for submission and feedback consultation. Follows the same file naming convention
+          as the API channel.
+        url: https://edesk.apps.cssf.lu/aifm/edesk-aifm/
+        note: >-
+          Available only to entities registered as sender for at least one AIFM.
+    sender_registration:
+      required: true
+      description: >-
+        Before the first API submission, the sender must register the link between sender and AIFM with CSSF by e-mail to edesk@cssf.lu. Required
+        information: sender name + CSSF ID, AIFM name + CSSF ID (A-xxxx), full name / phone / e-mail of a contact person. For double-licensed
+        entities: include the CSSF ID used to create the bucket.
+      overrides_esma: true
+  file_format:
+    encoding: UTF-8
+    container: ZIP
+    zip_rules:
+    - Exactly one XML file per ZIP — error ERR-009 if multiple XML files found
+    - ZIP must not be password-protected (security is handled by the channel)
+    - ZIP filename must be identical to the enclosed XML filename (extension differs)
+    - Duplicate filename (same naming convention + timestamp) will be refused — ERR-003
+    xml_format:
+    - Must conform to the current ESMA XSD version (v1.2) — error FOR-001 if invalid
+    - All text fields must be filled in English — CSSF policy
+    naming_convention_aifm_report:
+      description: >-
+        Naming convention for AIFM manager-level (MAN) files.
+      format: >-
+        TYRDIR-EIIIIIIII-ANNNNNNNN-F00000000-00000000-MAN-YYYYMMDDHHMMSS[-CORRELATIONID].ext
+      fields:
+        TYR:
+          value: AIF
+          description: Reporting type — constant
+        DIR:
+          allowed_values:
+            REP: Report — sent to CSSF
+            FBR: Feedback on Reception — acknowledgement from CSSF
+            FDB: Feedback — CSSF result after content analysis
+            FBH: ESMA Feedback — CSSF result after ESMA refusal
+        E:
+          description: Entity type of sender/technical agent — single char (B, P, I, S, K, 1, …)
+        IIIIIIII:
+          description: 8-digit CSSF identification number of the sender (zero-padded)
+        A:
+          value: A
+          description: Entity type of the AIFM — constant 'A'
+        NNNNNNNN:
+          description: 8-digit CSSF identification number of the AIFM (zero-padded)
+        F:
+          value: F
+          description: Entity type of the AIF — constant 'F' for AIFM report
+        MMMMMMMM:
+          value: '00000000'
+          description: AIF number — constant '00000000' in an AIFM-level file
+        CCCCCCCC:
+          value: '00000000'
+          description: Compartment number — constant '00000000' in an AIFM-level file
+        MAN:
+          value: MAN
+          description: File type — constant 'MAN' for AIF Manager report
+        YYYYMMDDHHMMSS:
+          description: >-
+            File creation date-time (14 digits). Used to determine processing order and ensure uniqueness.
+        CORRELATIONID:
+          description: >-
+            UUID (RFC 4122) — present only in feedback files (DIR = FBR, FDB, FBH).
+        ext:
+          allowed_values:
+            .zip or .ZIP: For REP files (enclosing the XML)
+            .xml: For FBR feedback files
+            .zip: For FDB and FBH feedback files
+      example: >-
+        AIFREP-P12345678-A00000001-F00000000-00000000-MAN-20140129145000.zip
+    naming_convention_aif_report:
+      description: >-
+        Naming convention for AIF fund-level (AIF) files.
+      format: >-
+        TYRDIR-EIIIIIIII-ANNNNNNNN-FMMMMMMMM-CCCCCCCC-AIF-YYYYMMDDHHMMSS[-CORRELATIONID].ext
+      fields:
+        F:
+          description: >-
+            AIF entity type — CSSF-specific sub-classification replacing the generic ''F''.
+          allowed_values:
+            O: Part II fund or Specialised Investment Fund (SIF)
+            K: SICAR (Société d'investissement en capital à risque)
+            V: Other vehicle not regulated by CSSF
+          overrides_esma: true
+          base_rule_path: nca_overrides.field_overrides.AIFNationalCode
+          note: >-
+            The ESMA XSD accepts a generic entity type code; CSSF further specifies the sub-type via the first character of the AIF identifier in the
+            filename.
+        MMMMMMMM:
+          description: 8-digit CSSF identification number of the AIF (zero-padded)
+        CCCCCCCC:
+          description: >-
+            8-digit compartment/sub-fund number (zero-padded). Use ''00000000'' if the fund has no compartments.
+        AIF:
+          value: AIF
+          description: File type — constant 'AIF' for AIF-level report
+      example: >-
+        AIFREP-P12345678-A00000111-V00002222-00003333-AIF-20140129145000.zip
+  return_files:
+    note: >-
+      CSSF generates three distinct return file types. Eagle must parse all three and route them to the appropriate internal workflow.
+    source: CSSF AIFM Reporting — Technical Guidance v1.7 (Section 3)
+    AIFFBR:
+      xml_schema: FileAcknowledge
+      trigger: Immediately upon receipt of a submission
+      description: >-
+        Standard acknowledgement of receipt. Confirms the file was received but does not indicate acceptance of content.
+      eagle_action: >-
+        Store timestamp; update submission status to ''acknowledged''. No client action required unless no FBR received within 24 hours.
+    AIFFDB:
+      format: ZIP
+      trigger: After CSSF automated and manual content analysis
+      description: >-
+        Detailed content feedback. Generated in two cases: (a) all CSSF automated and manual tests pass — acceptance; or (b) at least one test fails —
+        rejection with error codes and messages.
+      eagle_action: >-
+        Parse error codes from the inner FDB files. Map each error code to the field_overrides or deactivated_controls sections above using the
+        base_rule_path fields for full traceability back to v0.3. For rejections: trigger client notification and correction workflow. For acceptance:
+        update submission status to ''accepted_by_cssf''.
+    AIFFBH:
+      format: ZIP
+      trigger: Only when ESMA refusal occurs after initial CSSF acceptance
+      description: >-
+        ESMA-level feedback. Generated by CSSF when ESMA analysis of the forwarded report returns error messages.
+      eagle_action: >-
+        Treat as a post-acceptance rejection. Notify client immediately. Check whether the triggered errors correspond to a deactivated_control at
+        CSSF — if so, the client must correct and resubmit despite the original CSSF acceptance.
+  correction_rules:
+    amendment_rule:
+      description: >-
+        When correcting a previously accepted report (FilingType = AMND), the complete data record must be resubmitted — partial updates are not
+        permitted.
+      base_rule_path: aifm_report.record_header.FilingType
+      overrides_esma: false
+      cssf_error_code: CAM-001 / CAF-001
+      validation_rule: >-
+        If a report has been received without errors for a given combination of AIFMNationalCode (or AIFNationalCode) + ReportingPeriodType +
+        ReportingPeriodYear, any subsequent filing must use FilingType = AMND. A duplicate INIT is rejected.
+    filename_uniqueness:
+      description: >-
+        A file with a duplicate filename will be refused. For corrections, the creation timestamp in the filename must differ from the original.
+      base_rule_path: aifm_report.envelope.CreationDateAndTime
+      cssf_error_code: ERR-003
+      validation_rule: >-
+        CreationDateAndTime in filename must be unique per AIFM national code.
+  eagle_implementation:
+    pre_submission_checks:
+    - Verify ReportingMemberState = 'LU'
+    - Validate AIFMNationalCode pattern A[0-9]{8} and existence in CSSF register
+    - Validate AIFNationalCode pattern [OKV][0-9]{8}_[0-9]{8} and existence in CSSF register
+    - Confirm sender is registered with CSSF for this AIFM before first submission
+    - Enforce single XML per ZIP; no password protection
+    - Apply filename naming convention exactly — CreationDateAndTime must be unique
+    - Run FX rate checks CSSF-035 to CSSF-039 before submission
+    deactivated_control_handling:
+      description: >-
+        Run all deactivated CSSF controls internally as quality-layer warnings. Log results. Do not block submission. If ESMA triggers one via AIFFBH,
+        treat as high-priority correction.
+      traceability: >-
+        Use base_rule_path in each deactivated_controls entry to find the corresponding validation_rules in aifmd_validation_rules.yaml.
+    return_file_processing:
+      description: >-
+        Eagle must subscribe to all CSSF return file prefixes (AIFFBR, AIFFDB, AIFFBH) on the S3 bucket or EDesk and process them automatically.
+    update_trigger: >-
+      Monitor https://www.cssf.lu for new versions of the AIFM Reporting
+      Technical Guidance. This section must be reviewed whenever CSSF
+      publishes a new version. Current captured version: 1.7 (July 2024).
+    owner: Head of Compliance & Risk

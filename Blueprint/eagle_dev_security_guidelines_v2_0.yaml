@@ -1,0 +1,1459 @@
+# =============================================================================
+# PROJECT EAGLE — DEVELOPER SECURITY GUIDELINES
+# =============================================================================
+#
+# Purpose:
+#   This document defines the security rules, standards, and practices that
+#   every engineer — permanent or contractor — must follow when working on
+#   the Eagle platform. Rules are mandatory from the first day of access.
+#   They are not aspirational — they are enforceable. Deviations require a
+#   written exception approved by the CTO and documented in the risk register.
+#
+# Relationship to other documents:
+#   - eagle_techstack_baseline_v2_1.yaml       — architectural decisions these rules implement
+#   - eagle_requirements_overview.yaml         — REQ-SEC, REQ-ISO, REQ-USR requirements
+#   - project_eagle_compliance_risk.md         — Three Lines of Defence model
+#   - EL-006 (ISO 27001 6.7 Teleworking)       — device and remote access policy
+#   - EL-007 (ISO 27001 8.8)                   — vulnerability disclosure policy
+#   - NIST SP 800-218 (SSDF v1.1)              — secure software development framework basis
+#   - OWASP Top 10:2025                        — owasp.org/Top10/2025/
+#
+# Principles anchored here: P9 (Security by design), P8 (Compliance-proof),
+#   P10 (Founder-independent), P16 (Location-independent)
+#
+# Reviewed by: Chuck Brooks, Brooks Consulting International /
+#              Georgetown University Cyber Risk Management Program
+# =============================================================================
+
+metadata:
+  title:          "Project Eagle — Developer Security Guidelines"
+  version:        "2.0"
+  date:           "2026-03-23"
+  owner:          "CTO / CPO"
+  audience:       >-
+    All engineers — permanent and contractor — with access to any Eagle environment
+  status:         "Active — mandatory from first day of access"
+  review_cadence: >-
+    Reviewed and updated at minimum annually, or after any MAJOR security incident or pentest finding
+  frameworks:
+    - "NIST SP 800-218 SSDF v1.1"
+    - "OWASP Top 10:2025"
+    - "ISO 27001:2022"
+    - "DORA (EU 2022/2554)"
+    - "EU AI Act (non-high-risk classification)"
+    - "GDPR"
+
+# =============================================================================
+# 1.  NON-NEGOTIABLE RULES (RED LINES)
+#     These rules cannot be waived, worked around, or approved as exceptions.
+#     Violation is a disciplinary matter and may trigger a security incident.
+# =============================================================================
+
+red_lines:
+
+  RL-001:
+    title: "No credentials outside 1Password or AWS Secrets Manager"
+    rule: >-
+      Company credentials — API keys, passwords, tokens, certificates, NCA portal
+      credentials, database connection strings — must be stored exclusively in
+      1Password (team vault) or AWS Secrets Manager. They must never be stored in:
+      browser password managers, plaintext files, .env files committed to version
+      control, Slack messages, Google Docs, spreadsheets, email, or any other location.
+    applies_to: "All engineers"
+    enforcement:
+      - "GitHub GHAS secret scanning with push protection — blocks push on any detected secret pattern"
+      - "G5 CI/CD gate blocks any build with a detected secret"
+      - "CTO conducts a quarterly 1Password audit: verifies all active team members have MFA enabled and no personal vault cross-contamination"
+      - "Any credential found outside 1Password or Secrets Manager is treated as a MAJOR security incident (Section 5)"
+    references: [REQ-SEC-001, REQ-ISO-013, EL-006]
+
+  RL-002:
+    title: "No direct access to production infrastructure — SSM only"
+    rule: >-
+      SSH, RDP, or any direct port-based access to production systems is prohibited.
+      All production access is via AWS Systems Manager Session Manager. No security
+      group rule permits inbound port 22 or 3389 in production. Emergency access
+      follows the break-glass procedure documented in the CTO role document.
+    applies_to: "All engineers"
+    enforcement:
+      - "Checkov CKV_AWS_25 blocks any Terraform change opening port 22 inbound in production (G8)"
+      - "AWS Config rule restricted-ssh alerts on any security group change opening port 22"
+      - "IAM policies deny ec2:AuthorizeSecurityGroupIngress for port 22 in production accounts"
+      - "Fargate tasks have no inbound security group rules; ECS Exec via SSM is the only shell access path"
+    references: [REQ-ISO-010, REQ-REL-001, IS-004]
+
+  RL-003:
+    title: "No real client data in non-production environments"
+    rule: >-
+      Real client data — AIF data, NAV figures, AIFM identity data, NCA submission
+      content — must never be copied, exported, or used in development, test, or
+      staging environments. All non-production testing uses synthetic data generated
+      by the Eagle synthetic data generator. This includes Claude API prompt content
+      during development.
+    applies_to: "All engineers"
+    enforcement:
+      - "RDS staging instance has no replication link from production — no automated sync path exists"
+      - "Production S3 bucket IAM policies deny access from non-production IAM roles"
+      - "Any violation is treated as a GDPR data breach and triggers Section 5 incident response"
+    references: [REQ-ISO-008, REQ-GDPR-001, DH-001, DH-003]
+
+  RL-004:
+    title: "No manual changes to production infrastructure"
+    rule: >-
+      All changes to production infrastructure must flow through the GitHub Actions
+      CI/CD pipeline with automated gates (SAST, tests, Terraform plan). Production
+      Terraform apply requires manual approval in the pipeline. No manual AWS Console
+      changes in production.
+    applies_to: "All engineers"
+    enforcement:
+      - "Branch protection on main: no direct push; PR + 1 reviewer required"
+      - "OIDC-based AWS deployment: no long-lived CI/CD credentials"
+      - "AWS IAM policies deny Console-based resource modification in production"
+      - "Terraform state locked in S3/DynamoDB; drift detection alerts daily"
+    references: [REQ-REL-001, REQ-REL-008, REQ-ISO-004]
+
+  RL-005:
+    title: "AI components must not bypass the deterministic validation gate"
+    rule: >-
+      AI model outputs (Claude API responses) must always pass through the deterministic
+      validation engine (L3) before any output enters a submission package. AI must
+      never write directly to the canonical data model or produce submission-ready
+      outputs without validation gate sign-off. This is an EU AI Act non-high-risk
+      classification requirement.
+    applies_to: "All engineers working on the pipeline"
+    enforcement:
+      - "Pipeline architecture enforces L2 → L3 ordering; no bypass path exists in code"
+      - "AI component register reviewed by Head of Compliance & Risk quarterly"
+      - "Any proposed change to AI boundary triggers REQ-ISO-004 significant change review"
+    references: [REQ-AIACT-002, P5, P8]
+
+  RL-006:
+    title: "MFA mandatory on all accounts with access to Eagle systems"
+    rule: >-
+      TOTP-based MFA (not SMS) must be active on all accounts that can access Eagle
+      production or staging systems. This includes: AWS IAM Identity Center, GitHub,
+      1Password, Google Workspace, Cognito EAGLE_ADMIN, Cloudflare, and any tool with
+      access to production credentials or infrastructure. Browser-stored authentication
+      bypassing MFA is not permitted.
+    applies_to: "All engineers"
+    enforcement:
+      - "Google Workspace enforces MFA for all users; enforced at login"
+      - "GitHub SSO via Google Workspace — inherits MFA requirement"
+      - "AWS IAM Identity Center requires MFA for console and CLI access"
+      - "1Password Teams enforces TOTP MFA on all accounts"
+      - "Cognito advanced security features: lockout after 5 failures"
+    references: [REQ-USR-002, REQ-ISO-013, EL-006]
+
+# =============================================================================
+# 2.  SECURE CODING STANDARDS
+# =============================================================================
+
+secure_coding:
+
+  SC-001:
+    title: "Input validation — all external inputs validated at ingestion"
+    owasp_reference: "A05:2025 — Injection"
+    priority: MUST
+    description: >-
+      All data received from external sources (client file uploads, SFTP inbound,
+      API requests, AI model responses) must be validated at the point of entry
+      before processing. Validation must be strict: reject unexpected fields, enforce
+      type constraints, enforce size limits. Never trust AI-generated content as
+      structurally valid without schema validation.
+    implementation:
+      - "Use Pydantic v2 models for all API request/response validation"
+      - "Use lxml XSD validation for all ESMA XML inputs and outputs"
+      - "File upload size limits enforced at ALB level (configurable per REQ-MOD-001)"
+      - "AI model responses validated against the canonical data model schema before acceptance"
+      - "Reject all requests with unexpected content types at FastAPI middleware level"
+    references: [REQ-SEC-001, REQ-VAL-001, P5]
+
+  SC-002:
+    title: "SQL injection prevention — parameterised queries only"
+    owasp_reference: "A05:2025 — Injection"
+    priority: MUST
+    description: >-
+      All database interactions must use SQLAlchemy ORM or parameterised queries.
+      Raw string interpolation into SQL is prohibited. PostgreSQL RLS provides
+      defence-in-depth but does not replace input sanitisation.
+    implementation:
+      - "Use SQLAlchemy ORM exclusively — no raw SQL string construction"
+      - "If raw SQL is required (migration scripts), use SQLAlchemy text() with bound parameters"
+      - "CodeQL SAST flags SQL injection patterns — build fails on HIGH/CRITICAL findings"
+      - "All SQL in migration scripts reviewed by a second engineer before merge"
+    references: [REQ-TEN-001, REQ-SEC-001]
+
+  SC-003:
+    title: "Authentication and session management"
+    owasp_reference: "A07:2025 — Authentication Failures"
+    priority: MUST
+    description: >-
+      All authentication is delegated to Amazon Cognito. Engineers must not implement
+      custom authentication logic. Session tokens must be validated server-side on
+      every request. JWT tokens must be verified using the Cognito public key — never
+      trust unverified tokens.
+    implementation:
+      - "FastAPI dependency: verify_cognito_token() called on every protected endpoint"
+      - "Token expiry: 1-hour access token; 30-day refresh token (Cognito default)"
+      - "Cognito user pool: SRP protocol; no USER_PASSWORD_AUTH flow permitted"
+      - "EAGLE_ADMIN role requires step-up authentication for sensitive operations"
+      - "No session state stored server-side — all claims derived from JWT on each request"
+    references: [REQ-USR-002, REQ-TEN-001, RL-006]
+
+  SC-004:
+    title: "Secrets hygiene in code and configuration"
+    owasp_reference: "A02:2025 — Security Misconfiguration"
+    priority: MUST
+    description: >-
+      No secrets, credentials, or tokens may appear in source code, configuration
+      files, environment variable declarations, Dockerfiles, or GitHub Actions
+      workflow YAML. All runtime secrets are injected from AWS Secrets Manager
+      into ECS task definitions via secretsFrom.
+    implementation:
+      - "RL-001 is the absolute prohibition; this standard defines the implementation pattern"
+      - "ECS task definition: secrets injected via secretsFrom referencing Secrets Manager ARNs"
+      - "Local development: .env files with dummy/synthetic values only — never committed (.gitignore)"
+      - "GitHub Actions secrets: OIDC for AWS; no static access keys stored as repository secrets"
+      - "GHAS secret scanning push protection active on all repositories"
+    references: [RL-001, REQ-SEC-001, REQ-ISO-013]
+
+  SC-005:
+    title: "Dependency management — pinned versions and vulnerability scanning"
+    owasp_reference: "A03:2025 — Software Supply Chain Failures"
+    priority: MUST
+    description: >-
+      All dependencies must be pinned to exact versions. Unpinned dependencies
+      introduce supply chain risk: a compromised package at a newer version could
+      be automatically adopted. Dependabot provides automated PR-based updates;
+      engineers must not manually introduce unpinned dependencies.
+    implementation:
+      - "Python: requirements.txt with exact pins (==); no >= or ~= without CTO approval"
+      - "Node.js: package-lock.json committed and verified in CI"
+      - "Dependabot configured for automated patch-level PRs on all Eagle repositories"
+      - "pip-audit runs in CI (G6) on every build; CRITICAL CVEs block the build"
+      - "No dependencies sourced from git URLs, local paths, or unofficial package indexes"
+    references: [REQ-REL-008, SC-012, SRI-002]
+
+  SC-006:
+    title: "Structured logging — never log sensitive data"
+    owasp_reference: "A09:2025 — Security Logging and Alerting Failures"
+    priority: MUST
+    description: >-
+      All Eagle services log to CloudWatch using structured JSON. Logging is
+      mandatory for all state transitions in the submission pipeline. The
+      following data must never appear in any log line at any level.
+    never_log:
+      - "JWT tokens or bearer tokens (any form — full or partial)"
+      - "Passwords or credential values"
+      - "NCA portal credentials or session tokens"
+      - "Client AIF data or NAV figures (raw values)"
+      - "AIFM or AIF identifiers in combination with submission content"
+      - "GDPR-regulated personal data (names, email addresses, identification numbers)"
+      - "Claude API prompts in plain text — log SHA-256 hash only"
+      - "AWS Secrets Manager secret values"
+    implementation:
+      - "Use structlog for all Python services — configured with processors that redact known sensitive key names"
+      - "Log level for production: INFO; DEBUG permitted in staging only"
+      - "All pipeline state transitions produce a structured audit event (REQ-AUD-001)"
+      - "CloudWatch Logs subscription filter alerts on regex patterns matching JWT format"
+    references: [REQ-AUD-001, REQ-GDPR-001, REQ-ISO-009]
+
+  SC-007:
+    title: "Cryptography — approved algorithms only"
+    owasp_reference: "A04:2025 — Cryptographic Failures"
+    priority: MUST
+    description: >-
+      Only approved, current cryptographic algorithms may be used. Weak or deprecated
+      algorithms are prohibited regardless of context. TLS configuration follows
+      AWS ELBSecurityPolicy-TLS13-1-2-2021-06 or equivalent current policy.
+    approved:
+      hashing: ["SHA-256", "SHA-384", "SHA-512", "SHA-3"]
+      symmetric: ["AES-256-GCM", "AES-256-CBC (with authenticated encryption)"]
+      asymmetric: ["RSA-2048 minimum", "RSA-4096 preferred", "ECDSA P-256", "ECDSA P-384"]
+      tls: "TLS 1.2 minimum; TLS 1.3 preferred; TLS 1.0 and 1.1 disabled"
+    prohibited:
+      - "MD5 — prohibited for any purpose including non-security checksums"
+      - "SHA-1 — prohibited"
+      - "DES, 3DES, RC4 — prohibited"
+      - "RSA keys below 2048 bits — prohibited"
+      - "Self-signed certificates in production — prohibited"
+    enforcement:
+      - "CodeQL configured to flag hashlib.md5() and hashlib.sha1() as HIGH findings (G4)"
+      - "AWS ELB security policy enforced via Terraform; Checkov validates cipher suite configuration"
+      - "KMS key rotation enabled on all Eagle KMS keys (annual minimum)"
+    references: [REQ-SEC-001, REQ-ISO-010, IS-001]
+
+  SC-008:
+    title: "Error handling — no internal detail in API responses"
+    owasp_reference: "A02:2025 — Security Misconfiguration"
+    priority: MUST
+    description: >-
+      All API error responses must return generic messages to callers. Internal error
+      detail — stack traces, database query text, system paths, internal IDs, or
+      exception messages — must never be returned to external callers. Full error
+      detail is logged internally and correlated by a request ID.
+    implementation:
+      - "FastAPI exception handlers return structured JSON: {error_code, message, request_id}"
+      - "Generic messages: '400 Bad Request', '401 Unauthorized', '403 Forbidden', '500 Internal Server Error'"
+      - "Request ID (UUID) included in every response header (X-Request-Id) and in the internal log"
+      - "Python exception handlers log full traceback at ERROR level internally before returning generic response"
+      - "No unhandled exceptions reach the ASGI layer — global exception handler catches all"
+    references: [REQ-SEC-001, SC-013]
+
+  SC-009:
+    title: "Secure code review — tiered checklist"
+    ssdf_reference: "RV.1"
+    priority: MUST
+    description: >-
+      Every pull request to main requires at minimum one reviewer. For changes
+      that touch security-sensitive areas, a structured security review checklist
+      is mandatory. The PR author self-assesses before requesting review; the
+      reviewer verifies independently.
+    reviewer_checklist:
+      authentication_and_authorisation:
+        - "Every new endpoint enforces Cognito JWT verification — no unprotected routes"
+        - "Role checks (EAGLE_ADMIN, COMPLIANCE_REVIEWER, etc.) applied at the correct layer"
+        - "No direct object references without tenancy check (RLS provides DB layer; application layer must also verify)"
+      input_validation:
+        - "All external inputs validated with Pydantic or lxml XSD before use (SC-001)"
+        - "File type and size limits enforced for any new upload surface"
+        - "No user-controlled data passed to subprocess, eval, or os.system calls"
+      secrets_and_configuration:
+        - "No hardcoded credentials, tokens, or connection strings (SC-004 / RL-001)"
+        - "No new environment variable holding a secret — all secrets via AWS Secrets Manager"
+        - "No sensitive data in URL parameters, log statements, or error responses"
+      error_handling_and_logging:
+        - "Generic error responses returned to callers — no stack traces, system paths, or internal IDs (SC-008)"
+        - "New log lines follow the never_log list in SC-006 — no JWT, passwords, PII, or AIF data"
+        - "All new pipeline state transitions produce a structured audit log entry (REQ-AUD-001)"
+      ai_boundary:
+        - "Any new Claude API call passes its output through L3 deterministic validation before use (RL-005)"
+        - "No new direct write path from AI output to canonical data model"
+        - "Prompt content logged as SHA-256 hash only — never plain text (SC-006)"
+      dependency_and_supply_chain:
+        - "No new dependencies added without pinned version in requirements.txt or package-lock.json (SC-005)"
+        - "New dependency reviewed for known CVEs before merge (pip-audit or Dependabot)"
+        - "No packages sourced from git URLs, local paths, or unofficial registries"
+    escalation: >-
+      If a reviewer identifies a potential security issue that cannot be resolved within
+      the PR, the PR is BLOCKED and the issue is raised to the CTO within 24 hours as
+      a potential security finding (Section 6 internal_discovery_process).
+    references: [SC-001, SC-002, SC-003, SC-004, SC-005, SC-006, SC-008, RL-001, RL-005, REQ-AUD-001]
+
+  SC-010:
+    title: "HTTP security headers and secure defaults"
+    ssdf_reference: "PW.9"
+    priority: MUST
+    description: >-
+      All HTTP responses served through the Eagle ALB and any API Gateway surface must
+      include the security headers below. These headers are set at the FastAPI middleware
+      layer and verified by OWASP ZAP (G10) before every production release. The absence
+      of any MUST header is a G10 blocking finding.
+    headers_must:
+      Strict-Transport-Security: "max-age=63072000; includeSubDomains; preload"
+      Content-Security-Policy: "default-src 'self'; frame-ancestors 'none'"
+      X-Content-Type-Options: "nosniff"
+      X-Frame-Options: "DENY"
+      Referrer-Policy: "strict-origin-when-cross-origin"
+      Permissions-Policy: "geolocation=(), microphone=(), camera=()"
+    headers_must_not:
+      - "Server header must be suppressed or set to a generic value — no version disclosure"
+      - "X-Powered-By must be absent"
+    implementation:
+      - "FastAPI middleware: SecurityHeadersMiddleware applied to all routes"
+      - "ALB response modification rules as a second layer for headers not set by FastAPI"
+      - "OWASP ZAP passive scan checks all headers on every staging deploy (G10)"
+    references: [REQ-SEC-001, IS-001]
+
+  SC-011:
+    title: "SSRF prevention — OutboundURLValidator"
+    ssdf_reference: "PW.7"
+    owasp_reference: "A01:2025 — Broken Access Control (SSRF)"
+    priority: MUST
+    description: >-
+      Eagle makes outbound HTTP calls to the Claude API and NCA portals. Any code path
+      that constructs an outbound URL from user-supplied or AI-supplied input is an SSRF
+      risk. The OutboundURLValidator must be applied to all outbound URL construction.
+    implementation:
+      - "OutboundURLValidator class: validates protocol (https only), hostname against allowlist, and blocks RFC 1918 ranges, 169.254.x.x (link-local), and 127.x.x.x (loopback)"
+      - "Allowlist: api.anthropic.com, NCA portal hostnames (maintained in Secrets Manager)"
+      - "Any URL not on the allowlist raises an OutboundURLForbiddenError — not silently dropped"
+      - "IS-007 provides the network-layer backstop (egress security group rules)"
+      - "CodeQL custom query flags any urllib/httpx/requests call without OutboundURLValidator wrapping"
+    references: [IS-007, REQ-SEC-001, SC-001]
+
+  SC-012:
+    title: "GitHub Actions — SHA-pinned third-party actions"
+    ssdf_reference: "PW.4 / RV.3"
+    owasp_reference: "A03:2025 — Software Supply Chain Failures"
+    priority: MUST
+    description: >-
+      GitHub Actions workflows that reference third-party actions using tag or branch
+      references (e.g. @v5, @main) are vulnerable to supply chain compromise: if the
+      upstream repository is compromised, a new commit can alter the action's behaviour
+      without the workflow YAML changing. All third-party action references must be
+      SHA-pinned.
+    implementation:
+      - "All third-party actions pinned to full commit SHA (e.g. actions/setup-python@<sha>)"
+      - "Checkov CKV_GHA_3 (unpinned GitHub Actions) enforced as a blocking policy in G8"
+      - "Dependabot configured to monitor and open PRs for SHA-pin updates"
+      - "One-time remediation PR to update all existing workflow files on v2.0 activation"
+      - "First-party actions (github/codeql-action, AWS official actions) follow the same rule"
+    references: [SC-005, SRI-001, cicd_gate_G8]
+
+  SC-013:
+    title: "Exception handling — no swallowed exceptions in critical paths"
+    ssdf_reference: "PW.6"
+    owasp_reference: "A10:2025 — Mishandling of Exceptional Conditions"
+    priority: MUST
+    description: >-
+      A10:2025 is a new OWASP category. Swallowed or mishandled exceptions in the
+      submission pipeline can silently corrupt output or cause regulatory deadline
+      failures. This standard defines three layers of exception handling obligation.
+    python_rules:
+      - "No bare except: clauses — always catch specific exception types"
+      - "No except: pass or except Exception: pass in any pipeline-critical code path (L2, L3, L4, L6, L7)"
+      - "All caught exceptions in the pipeline must be logged at ERROR level with full context before re-raising or returning an error state"
+      - "Resource exhaustion: all database queries must have explicit timeouts (SQLAlchemy execution_options(timeout=N))"
+      - "AI responses: enforce explicit max_tokens limit; reject responses exceeding defined size threshold before in-memory processing"
+    temporal_workflow_rules:
+      - "All Temporal workflow activities must define explicit retry_policy with max_attempts"
+      - "non_retryable_error_types must list all exceptions that should not be retried (e.g. ValidationError, SchemaError)"
+      - "Workflow timeout defined on all long-running workflows — no indefinite blocking"
+    claude_api_error_handling:
+      APITimeoutError: "Retry with exponential backoff (max 3 attempts); log timeout duration; surface as SUBMISSION_FAILED with RETRY_ELIGIBLE flag"
+      RateLimitError: "Backoff per Retry-After header; alert CTO if sustained > 5 minutes"
+      APIConnectionError: "Retry up to 3 times; if persistent, trigger BCP scenario 3 (Section 16)"
+      APIStatusError: "Log status code and response body hash; do not retry 4xx; retry 5xx with backoff"
+    references: [REQ-REL-001, REQ-SEC-001, SC-008, RL-005]
+
+  SC-014:
+    title: "Prompt injection prevention"
+    ssdf_reference: "PW.7"
+    owasp_reference: "A05:2025 — Injection (prompt injection variant)"
+    priority: MUST
+    description: >-
+      Client-uploaded documents are the primary attack vector for prompt injection in
+      Eagle's pipeline. An adversary could embed text in an AIFMD document designed
+      to manipulate the L2 AI extraction step. SC-014 defines the defence-in-depth
+      approach.
+    implementation:
+      - "Document pre-processing: strip all text outside expected field boundaries before sending to Claude API"
+      - >-
+        Structured output only: Claude API calls use structured output mode (JSON schema) —
+        freeform text generation is not used in the extraction pipeline
+      - "Output validation: L3 deterministic validation (RL-005) catches any extraction anomaly regardless of injection success"
+      - "Prompt architecture: system prompt and user content are clearly separated; no user-supplied content is interpolated into the system prompt"
+      - >-
+        Suspicious content detection: documents containing instruction-like text patterns
+        (e.g. 'ignore previous instructions') are flagged for human review before L2 processing
+      - "Pentest scope includes prompt injection via document upload (Section 18)"
+    references: [RL-005, SC-001, REQ-AIACT-001, REQ-AIACT-002]
+
+# =============================================================================
+# 3.  INFRASTRUCTURE SECURITY
+# =============================================================================
+
+infrastructure_security:
+
+  IS-001:
+    title: "Least privilege IAM — no wildcard permissions in production"
+    ssdf_reference: "PO.5"
+    priority: MUST
+    description: >-
+      All AWS IAM roles must follow least privilege. Wildcard resource statements
+      (Resource: "*") are prohibited in production IAM policies except where AWS
+      mandates them (e.g. IAM:GetAccountSummary). All IAM changes require CTO approval.
+    implementation:
+      - "ECS task roles: scoped to specific ARNs — S3 bucket, Secrets Manager path, KMS key"
+      - "No AWS-managed policies with broad permissions (e.g. AmazonS3FullAccess) in production"
+      - "IAM Access Analyzer runs continuously; findings reviewed in monthly security review"
+      - "IAM policy changes in Terraform reviewed by CTO before apply (G11 approval gate)"
+      - "Quarterly IAM access review: all active roles and users audited; unused permissions removed"
+    references: [REQ-ISO-013, REQ-TEN-001, EL-006]
+
+  IS-002:
+    title: "Network segmentation — VPC and subnet isolation"
+    ssdf_reference: "PW.9"
+    priority: MUST
+    description: >-
+      Eagle's AWS infrastructure uses VPC isolation with public and private subnets.
+      ECS tasks run in private subnets with no direct internet access. Public-facing
+      traffic routes through the ALB in the public subnet only.
+    implementation:
+      - "ECS tasks: private subnet, no public IP assigned"
+      - "ALB: public subnet, internet-facing, HTTPS only (port 443)"
+      - "RDS: private subnet, no public accessibility"
+      - "VPC endpoints: S3, Secrets Manager, ECR, CloudWatch, KMS, DynamoDB — no internet egress for AWS services"
+      - "Security groups: default-deny inbound; only ALB → ECS task traffic permitted on application port"
+    references: [REQ-ISO-010, IS-007]
+
+  IS-003:
+    title: "Encryption at rest — all storage encrypted with KMS"
+    ssdf_reference: "PW.9"
+    priority: MUST
+    description: >-
+      All Eagle data at rest is encrypted using AWS KMS customer-managed keys (CMKs).
+      Default AWS-managed keys are not permitted for Eagle data stores.
+    implementation:
+      - "RDS PostgreSQL: encrypted with KMS CMK (eagle-rds-key)"
+      - "S3 buckets: SSE-KMS with bucket policy denying PutObject without x-amz-server-side-encryption"
+      - "EBS volumes: encrypted (if used for temporary storage)"
+      - "Secrets Manager: encrypted by default with KMS"
+      - "KMS key rotation: annual automatic rotation enabled on all CMKs"
+      - "Checkov CKV_AWS_28, CKV_AWS_19 enforce encryption in G8"
+    references: [REQ-SEC-001, REQ-GDPR-001, REQ-ISO-010]
+
+  IS-004:
+    title: "CloudTrail and audit logging — all API activity captured"
+    ssdf_reference: "PO.3"
+    priority: MUST
+    description: >-
+      AWS CloudTrail must be enabled in all Eagle AWS accounts for all regions.
+      CloudTrail logs must be stored in an immutable S3 bucket with object lock
+      enabled. Log integrity validation must be enabled.
+    implementation:
+      - "CloudTrail: multi-region trail, all management and data events captured"
+      - "S3 bucket: eagle-cloudtrail-logs, object lock (COMPLIANCE mode, 7-year retention)"
+      - "Log file validation enabled — SHA-256 digest files generated every hour"
+      - "CloudWatch Logs integration: CloudTrail logs streamed for alerting on high-risk API calls"
+      - "Alerts configured for: ConsoleLogin without MFA, CreateUser, DeleteTrail, StopLogging, root account usage"
+    references: [REQ-AUD-001, REQ-DORA-001, REQ-ISO-009]
+
+  IS-005:
+    title: "Vulnerability management — patching cadence"
+    ssdf_reference: "RV.2"
+    priority: MUST
+    description: >-
+      Eagle uses managed services (Fargate, RDS) wherever possible to reduce the
+      OS-level patching surface. For container images and application dependencies,
+      a defined patching cadence applies.
+    cadence:
+      CRITICAL_CVE: "Remediation plan within 5 business days; deployed fix within 14 days"
+      HIGH_CVE: "Remediation plan within 10 business days; deployed fix within 30 days"
+      container_base_images: "Rebuilt and redeployed monthly minimum (Dependabot PR triggers rebuild)"
+      OS_packages_in_image: "Trivy scan (G7) catches OS-level CVEs; CRITICAL blocks the build"
+    implementation:
+      - "Fargate: AWS manages underlying host OS — no engineer action required"
+      - "RDS: minor version auto-upgrade enabled; major version upgrades follow change management (REQ-ISO-004)"
+      - "Container images: built from python:3.12-slim-bookworm pinned to digest; rebuilt on Dependabot PR"
+    references: [REQ-SEC-002, cicd_gate_G6, cicd_gate_G7]
+
+  IS-006:
+    title: "Container hardening — Fargate task security defaults"
+    ssdf_reference: "PW.9"
+    owasp_reference: "A02:2025 — Security Misconfiguration"
+    priority: MUST
+    description: >-
+      All Eagle ECS Fargate task definitions must apply the hardening settings below.
+      These settings reduce the blast radius of a container compromise and are enforced
+      by Checkov policies in G8.
+    required_settings:
+      - "readonlyRootFilesystem: true — container filesystem is read-only"
+      - "privileged: false — no privileged container execution"
+      - "user: '1000:1000' — run as non-root user"
+      - "linuxParameters.capabilities.drop: ['ALL'] — drop all Linux capabilities"
+      - "No hostNetwork mode — always use awsvpc with private subnet"
+      - "logConfiguration driver: awslogs — all stdout/stderr captured to CloudWatch"
+    checkov_policies:
+      - "CKV_DOCKER_2: ensure non-root user"
+      - "CKV_DOCKER_7: ensure HEALTHCHECK instruction"
+      - "CKV_AWS_336: ECS task definition readonlyRootFilesystem"
+      - "CKV_AWS_97: ECS task definition no privileged containers"
+    references: [REQ-ISO-010, REQ-SEC-001, SC-004, SC-005, IS-004, RL-001, cicd_gate_G7, cicd_gate_G8]
+
+  IS-007:
+    title: "Egress allowlist — SSRF network-layer backstop"
+    ssdf_reference: "PW.9"
+    owasp_reference: "A01:2025 — Broken Access Control (SSRF)"
+    priority: MUST
+    description: >-
+      Defence-in-depth for SSRF: SC-011 is the primary application-layer control.
+      IS-007 is the network-layer backstop. Egress to the Anthropic Claude API is
+      controlled by TLS hostname validation (api.anthropic.com) and the
+      OutboundURLValidator in SC-011. All other outbound destinations use explicit
+      CIDR restrictions.
+    security_group_egress_rules:
+      permitted:
+        - >-
+          TCP 443 to AWS service prefixes via VPC endpoints (S3, Secrets Manager, ECR,
+          CloudWatch, KMS, DynamoDB) — no internet egress for these services
+        - >-
+          TCP 443 to 0.0.0.0/0 for the Anthropic Claude API destination ONLY — compensating
+          control is SC-011 OutboundURLValidator hostname allowlist + TLS certificate verification
+        - "TCP 443 to NCA portal IP ranges — maintain in Terraform variable nca_portal_cidrs; verify at each NCA portal certificate renewal"
+        - "TCP 22 egress from dedicated SFTP ECS task role only — to pre-approved client IP list in Secrets Manager sftp-client-endpoints"
+      prohibited:
+        - "No 0.0.0.0/0 egress on any port except the Anthropic-specific documented exception above"
+        - "No egress to 169.254.0.0/16 (link-local / instance metadata) — explicit DENY rule required"
+        - "No egress to RFC 1918 ranges except VPC-internal CIDR"
+    implementation:
+      - "Checkov CKV_AWS_25 (no unrestricted egress) enforced as a blocking policy (G8)"
+      - "VPC Flow Logs capture connection attempts to disallowed destinations — CloudWatch alert on RFC 1918 or link-local egress from ECS task ENIs"
+    references: [IS-004, SC-011, REQ-ISO-010, cicd_gate_G8]
+
+  IS-008:
+    title: "Privileged access monitoring — insider threat detective controls"
+    ssdf_reference: "PO.5"
+    owasp_reference: "A01:2025 — Broken Access Control (privilege abuse)"
+    priority: MUST
+    description: >-
+      Preventive controls (MFA, IAM least privilege, SSM-only access) are necessary
+      but not sufficient. This control adds detective monitoring for the highest-risk
+      access patterns and defines separation of duties for the most sensitive combined
+      capability.
+    cloudwatch_alerts:
+      - "Root account login (any): CRITICAL alert to CTO — immediate investigation required"
+      - "IAM policy with Resource:* attached to any role: HIGH alert within 5 minutes"
+      - "Secrets Manager GetSecretValue for NCA credential secret outside business hours (21:00–07:00 CET): HIGH alert"
+      - "CloudTrail StopLogging or DeleteTrail: CRITICAL alert — treat as active incident"
+      - "ECS Exec session initiated in production: MEDIUM alert with session transcript to CloudWatch"
+    separation_of_duties:
+      description: >-
+        The engineer who holds NCA portal credentials (Secrets Manager access to the
+        nca-portal-credentials secret) must not also hold production deployment approval
+        authority in the same business week. This prevents a single compromised identity
+        from both exfiltrating credentials and deploying malicious code undetected.
+      implementation:
+        - "NCA credential access: scoped IAM role, restricted to the SFTP/submission ECS task role"
+        - "Production deployment approval (G11): held by CTO or Head of Engineering"
+        - "G11 approver check: approver must not have accessed NCA portal credentials in the same business week (CloudTrail audit)"
+    quarterly_access_review:
+      - "CTO audits all active GitHub repository collaborators — removes departed or inactive contributors"
+      - "AWS IAM Identity Center: all active permission set assignments reviewed; unused removed"
+      - "1Password: team vault membership audited; unused accounts suspended"
+      - "Results documented in the engineering onboarding log as an access review record"
+    references: [IS-001, REQ-ISO-013, REQ-AUD-001, EL-006, cicd_gate_G11]
+
+# =============================================================================
+# 4.  CI/CD AND RELEASE SECURITY GATES
+# =============================================================================
+
+cicd_security_gates:
+
+  description: >-
+    The CI/CD pipeline enforces the following security gates in order. A build that
+    fails any gate is blocked from progressing to the next stage. Gates are not
+    advisory — they are hard blocks.
+
+  gate_order:
+    G1:
+      name: "Lint and style"
+      tool: "ruff (Python), eslint (TypeScript)"
+      blocks_on: "Any linting error"
+
+    G2:
+      name: "Unit tests with coverage"
+      tool: "pytest with coverage.py"
+      blocks_on: "<90% coverage on L2/L3/L4/L6/L7; <80% on all other production code (REQ-ENG-001)"
+
+    G3:
+      name: "Integration tests"
+      tool: "pytest with Docker Compose (ephemeral RDS/Redis)"
+      blocks_on: "Any test failure"
+
+    G4:
+      name: "SAST — static application security testing"
+      tool: "CodeQL (GitHub GHAS)"
+      blocks_on: "Any HIGH or CRITICAL finding (REQ-SEC-002); includes prohibited algorithm use (SC-007)"
+
+    G5:
+      name: "Secret scanning"
+      tool: "GitHub GHAS secret scanning with push protection"
+      blocks_on: "Any detected secret pattern in diff (RL-001)"
+
+    G6:
+      name: "Dependency vulnerability scan"
+      tool: "Dependabot (automated PRs) + pip-audit in CI"
+      blocks_on: "Any CRITICAL vulnerability in pinned dependencies"
+
+    G7:
+      name: "Container image scan and SBOM generation"
+      tool: "Trivy"
+      blocks_on: "Any CRITICAL CVE in container image layers; SBOM generation failure"
+      sbom: >-
+        Trivy --format cyclonedx output generates an SBOM for every production image.
+        SBOM stored as a GitHub Actions artefact (5-year retention, REQ-REL-008) and
+        uploaded to S3 eagle-sbom-archive bucket (SSE-KMS, image digest as key suffix).
+
+    G8:
+      name: "IaC security scan"
+      tool: "Checkov"
+      blocks_on: >-
+        Any CRITICAL Terraform or Dockerfile policy violation (incl. port 22 open,
+        missing encryption, non-approved base images, unrestricted egress, non-root
+        container, unpinned GitHub Actions per CKV_GHA_3)
+
+    G9:
+      name: "ARM64 container build, sign, and push to ECR"
+      tool: "GitHub Actions + ECR + cosign (Sigstore)"
+      blocks_on: "Build failure; signing failure"
+      signing: >-
+        Every container image is signed with cosign using an ECDSA P-256 key stored in
+        AWS Secrets Manager (cosign-private-key) immediately after the Trivy scan passes.
+        Public key published as cosign.pub in the repository root. Fargate deployment
+        validates image signature before task definition is applied. Failed signature
+        verification triggers a MAJOR incident classification (Section 5).
+
+    G10:
+      name: "Staging deploy and DAST"
+      tool: "Terraform apply to staging + OWASP ZAP"
+      blocks_on: "Any HIGH or CRITICAL DAST finding before production promotion; absence of any MUST security header (SC-010)"
+      owasp_ruleset: >-
+        ZAP active scan ruleset mapped to OWASP Top 10:2025. Minimum active rules per release:
+        A01:2025 — Access control tests, SSRF active scan (SC-011);
+        A02:2025 — Security header assertions (SC-010), default credential checks;
+        A04:2025 — TLS/cipher suite verification (SC-007);
+        A05:2025 — SQL injection, command injection, XSS active rules;
+        A07:2025 — Authentication bypass, session token entropy;
+        A10:2025 — Error handling: verify no stack traces, unhandled 500s return generic response.
+        ZAP configuration stored in .github/zap-rules/ and version-controlled.
+
+    G11:
+      name: "Production deploy (manual approval)"
+      tool: "Terraform apply to production"
+      blocks_on: "No manual approval from CTO or Head of Engineering within 24h"
+      separation_of_duties: "Approver must not have accessed NCA portal credentials in the same business week (IS-008)"
+
+  notes:
+    - "All gate results stored as GitHub Actions artifacts with 5-year retention (REQ-REL-008)"
+    - "Emergency / hotfix deployments use a fast-track path but still run G4, G5, G7, G8 minimum"
+    - "Validation rule changes (ESMA rules, NCA overrides) always trigger the full regression suite regardless of change size"
+    - "GitHub Actions third-party action references must be SHA-pinned (SC-012); Checkov CKV_GHA_3 enforced in G8"
+
+# =============================================================================
+# 5.  INCIDENT RESPONSE — ENGINEER OBLIGATIONS
+# =============================================================================
+
+incident_response:
+
+  description: >-
+    DORA requires incident detection within 5 minutes and MAJOR incident
+    characterisation within 4 hours. Engineers are the first line of technical
+    detection. These are the minimum engineer obligations. The full incident
+    management framework is in project_eagle_cto_cpo.md.
+
+  severity_definitions:
+    MAJOR: >-
+      Any of: confirmed data breach or suspected exfiltration of client data;
+      NCA submission deadline missed due to system failure; production system
+      completely unavailable > 1 hour; confirmed malware or supply chain compromise;
+      failed cosign image signature verification (G9)
+    SIGNIFICANT: >-
+      Any of: production degradation affecting > 1 client; security gate blocked
+      by CRITICAL finding that could not be fast-tracked; confirmed vulnerability
+      in a production component with known exploit; DORA-reportable operational incident
+    MINOR: >-
+      Isolated errors affecting a single client submission; test environment failures;
+      non-exploitable security findings from DAST or SAST
+
+  engineer_obligations:
+    detection:
+      - "Monitor CloudWatch alarms assigned to your service area during on-call rotation"
+      - "Treat any anomalous pipeline behaviour as a potential security incident until confirmed otherwise"
+      - "Any suspected security event must be escalated to CTO within 15 minutes of identification"
+    classification:
+      - "Use the severity definitions above to classify the incident"
+      - "When in doubt: escalate to MAJOR — over-classification is safer than under-classification"
+    response:
+      MAJOR:
+        - "Alert CTO immediately (phone/Signal — not Slack)"
+        - "Do not attempt to contain without CTO direction — containment actions can destroy forensic evidence"
+        - "Preserve logs: disable log rotation, take snapshot of relevant CloudWatch log groups"
+        - "Do not communicate externally about the incident — all external communication via COO/CEO"
+      SIGNIFICANT:
+        - "Alert CTO within 1 hour"
+        - "Begin containment within your authority (e.g. disable a specific API route, pause a queue)"
+        - "Document timeline in the incident log (Google Drive — incident-response/active/)"
+      MINOR:
+        - "Fix and document in the standard post-incident note"
+        - "Log in the engineering exception register"
+    post_incident:
+      - "Post-incident review (PIR) required for all MAJOR and SIGNIFICANT incidents"
+      - "PIR produced within 5 business days: timeline, root cause, contributing factors, remediation actions"
+      - "PIR stored as immutable artefact (REQ-AUD-001) and reviewed in next monthly security review"
+      - "DORA reportable incidents: Head of Compliance & Risk assesses notification obligation within 4 hours"
+
+  references: [REQ-DORA-001, REQ-CPL-001, REQ-AUD-001, IS-004, SRI-001]
+
+# =============================================================================
+# 6.  VULNERABILITY DISCLOSURE
+# =============================================================================
+
+vulnerability_disclosure:
+
+  internal_discovery_process:
+    description: >-
+      Any engineer who discovers a potential vulnerability in Eagle's code,
+      infrastructure, or dependencies must follow this process.
+    steps:
+      - "Do not commit a fix directly to main without CTO notification — the act of fixing may alert an attacker monitoring the repository"
+      - "Report to CTO in writing (1Password Secure Note or encrypted email) within 24 hours of discovery"
+      - "Include: affected component, reproduction steps, potential impact, your assessment of severity"
+      - "CTO acknowledges within 4 hours and assigns SIGNIFICANT or MAJOR classification"
+      - "Fix developed in a private branch; reviewed by CTO before merge"
+      - "Disclosure to affected clients coordinated by COO after fix is deployed"
+
+  external_disclosure_policy:
+    description: >-
+      Eagle accepts vulnerability reports from external researchers. This policy
+      is published at [Eagle security page — URL TBD at product launch].
+    scope_in:
+      - "Eagle client-facing portal (authentication, submission, data access)"
+      - "Eagle API endpoints (documented public API)"
+      - "Eagle's handling of AIFMD data (data isolation, tenancy boundary)"
+    scope_out:
+      - "Social engineering or phishing attacks against Eagle staff"
+      - "Third-party services Eagle depends on (report directly to Anthropic, AWS, etc.)"
+      - "Denial-of-service attacks against Eagle infrastructure"
+    response_commitments:
+      acknowledgement: "Within 5 business days of valid report"
+      status_update: "Within 14 days: classification and remediation timeline"
+      resolution: "CRITICAL: 30 days; HIGH: 60 days; MEDIUM: 90 days"
+      disclosure: "Coordinated disclosure after fix — minimum 90 days for researcher to publish"
+    safe_harbour: >-
+      Eagle will not pursue legal action against researchers acting in good faith,
+      provided they do not exfiltrate data, disrupt service, or disclose before
+      the coordinated disclosure deadline.
+
+  references: [EL-007, REQ-SEC-002, REQ-DORA-001]
+
+# =============================================================================
+# 7.  DEVICE AND REMOTE WORKING SECURITY (EL-006)
+# =============================================================================
+
+device_and_remote_security:
+
+  description: >-
+    Eagle operates as a virtual office (P16). All engineers work remotely by default.
+    These rules implement the ISO 27001 6.7 teleworking policy (EL-006) for engineers.
+
+  device_requirements:
+    - "CrowdStrike Falcon Go agent must be active on all devices used to access Eagle systems — company-owned or BYOD"
+    - "Device enrolled in Google Workspace MDM before access to any Eagle account is granted"
+    - "Full-disk encryption enabled (FileVault on macOS, BitLocker on Windows)"
+    - "Screen lock set to maximum 5 minutes inactivity"
+    - "Operating system and browser kept up to date — OS patches applied within 7 days of release"
+
+  network_requirements:
+    - "Avoid public Wi-Fi for production access — use mobile hotspot or home network if needed"
+    - "If public Wi-Fi is unavoidable: use HTTPS-only sites; do not access AWS Console or production systems"
+    - "Home network: WPA3 or WPA2 encryption required; default router credentials must be changed"
+    - "No production access from shared or untrusted devices"
+
+  clean_desk_screen:
+    - "Lock screen when stepping away from device — even at home"
+    - "No submission data, NCA credentials, or client data printed or left visible on screen in shared spaces"
+    - "Screen sharing in video calls: close all tabs and applications with sensitive data before sharing"
+
+  offboarding:
+    - "CTO revokes Google Workspace access on last day — this cascades to GitHub (SSO), 1Password, and Slack"
+    - "AWS IAM Identity Center access revoked same day"
+    - "Engineer confirms device wipe or removal of 1Password teams membership on departure"
+
+  references: [EL-006, RL-001, RL-006, IS-001]
+
+# =============================================================================
+# 8.  DATA HANDLING RULES FOR ENGINEERS
+# =============================================================================
+
+data_handling:
+
+  DH-001:
+    title: "Synthetic data only in non-production environments"
+    rule: "Never copy, export, or use real client data in dev, test, or staging — see RL-003"
+    references: [RL-003, REQ-ISO-008]
+
+  DH-002:
+    title: "No local storage of client data"
+    rule: >-
+      Client data must not be downloaded to local machines for debugging or analysis.
+      If data inspection is required, use CloudWatch Logs Insights or RDS Query Editor
+      via the AWS Console — both leave an audit trail. Request CTO approval for any exception.
+    references: [REQ-GDPR-001, REQ-AUD-001]
+
+  DH-003:
+    title: "AI prompt hygiene — no real data in prompts during development"
+    rule: >-
+      During development and testing, Claude API calls must use synthetic data only.
+      Never include real client AIF data, real NAV figures, real AIFM names, or real
+      NCA credentials in development prompts. Use the synthetic data generator to
+      create realistic but fictional test cases.
+    references: [RL-003, REQ-AIACT-001, REQ-ISO-008]
+
+  DH-004:
+    title: "Retention and deletion — do not extend data lifetimes"
+    rule: >-
+      Do not modify or bypass the automated deletion jobs (REQ-SEC-003). If a deletion
+      job fails, it must be fixed and re-run — not silenced. Do not create additional
+      copies of client data outside the defined retention model without explicit
+      CTO + Head of Compliance & Risk approval.
+    references: [REQ-SEC-003, REQ-GDPR-001]
+
+# =============================================================================
+# 9.  ONBOARDING CHECKLIST — NEW ENGINEERS
+# =============================================================================
+
+onboarding_checklist:
+
+  description: >-
+    Every new engineer (permanent or contractor) must complete this checklist before
+    being granted access to any Eagle environment. CTO signs off completion.
+    Checklist stored as a record in the engineering onboarding log (Google Drive — restricted).
+
+  steps:
+    identity_and_access:
+      - "Google Workspace account created by CTO; TOTP MFA enrolled and verified"
+      - "GitHub account linked to Google Workspace SSO; repository access granted"
+      - "AWS IAM Identity Center: permission set assigned (least privilege for role)"
+      - "1Password Teams: invited to team vault; TOTP MFA enrolled"
+      - "Cognito EAGLE_ADMIN or EAGLE_ENGINEER role assigned if applicable"
+
+    device_and_endpoint:
+      - "CrowdStrike Falcon Go installed and reporting to Eagle tenant"
+      - "Device enrolled in Google Workspace MDM"
+      - "Full-disk encryption confirmed active"
+      - "Screen lock timeout confirmed ≤ 5 minutes"
+
+    training_and_acknowledgement:
+      - "ST-001 security training completed and sign-off recorded (Section 11)"
+      - "This document read in full — written acknowledgement signed"
+      - "RL-001 to RL-006 red lines reviewed and understood"
+      - "Section 15 (Third-Party Risk Management) reviewed — Anthropic, NCA portal, AWS obligations understood"
+      - "Section 16 (BCP) reviewed — engineer's role in BCP scenarios understood"
+      - "IS-008 privileged access alerting reviewed — response to a CloudWatch alert on own IAM identity confirmed"
+
+    toolchain:
+      - "Local development environment set up using the engineering onboarding guide"
+      - "Pre-commit hooks installed (ruff, detect-secrets)"
+      - "AWS CLI configured with OIDC/IAM Identity Center — no long-lived access keys"
+      - "1Password CLI configured for Secrets Manager credential injection in local dev"
+
+  references: [Section11_security_training, Section7_device_security, EL-006, REQ-ISO-013]
+
+# =============================================================================
+# 10. EXCEPTION AND WAIVER PROCESS
+# =============================================================================
+
+exceptions:
+
+  description: >-
+    These guidelines are mandatory. Exceptions require written approval and are
+    time-limited. No exception may be granted for red lines (Section 1).
+
+  process:
+    - >-
+      Engineer raises exception request to CTO in writing, stating: the specific rule,
+      the business justification, the duration, and the compensating control
+    - "CTO reviews and approves or rejects within 5 business days"
+    - "Approved exceptions logged in the risk register with an expiry date"
+    - "Head of Compliance & Risk notified of any exception affecting a REQ-ISO, REQ-SEC, or REQ-GDPR requirement"
+    - "Exceptions reviewed at expiry — renewal requires the same approval process"
+
+  scope: "Exceptions may only be granted for guidelines in Sections 2–8. Red lines (Section 1) are non-waivable."
+
+# =============================================================================
+# 11. SECURITY TRAINING
+#     SSDF PO.4 / ISO 27001 A.6.3
+# =============================================================================
+
+security_training:
+
+  description: >-
+    SSDF PO.4 and ISO 27001 A.6.3 require that all software development team members
+    understand and can apply the security practices relevant to their roles. This section
+    defines Eagle's minimum training requirements for engineers.
+
+  ST-001:
+    title: "Mandatory onboarding security training"
+    applies_to: "All engineers — permanent and contractor — before first code contribution"
+    delivery: >-
+      The CTO or Head of Engineering conducts a 60–90 minute guided session covering
+      all items below. May be delivered live (video call) or as a recorded walkthrough
+      with written Q&A. Engineer must confirm understanding in writing before access is granted.
+    content:
+      - "OWASP Top 10:2025 (https://owasp.org/Top10/2025/) — all ten categories with focus on A01 (SSRF/access control), A03 (supply chain), A10 (exception handling) as most relevant to Eagle's stack"
+      - "Eagle secure coding standards — walkthrough of Sections 1 and 2 of this document"
+      - "Secrets hygiene — 1Password usage, AWS Secrets Manager patterns, GHAS secret scanning awareness"
+      - "AI boundary rules — RL-005 rationale and SC-014 prompt injection controls"
+      - "Incident response obligations — engineer duties under Section 5"
+      - "Data handling rules — Section 8: synthetic data, no local storage, retention obligations"
+    evidence: "Written sign-off in engineering onboarding log"
+    review_cycle: "Training content reviewed within 90 days of each new OWASP Top 10 release"
+
+  ST-002:
+    title: "Annual security refresher"
+    applies_to: "All active engineers"
+    delivery: >-
+      Conducted annually, timed to coincide with this document's annual review cadence.
+      Format: async reading + acknowledgement, with a live Q&A session for any significant
+      changes. Minimum 30 minutes allocated.
+    content:
+      - "Review of any new red lines or secure coding standards added since last training cycle"
+      - "Lessons learned from any MAJOR or SIGNIFICANT incidents in the preceding 12 months (Section 5)"
+      - >-
+        OWASP Top 10:2025 version changes since last training cycle — specifically any new
+        categories or re-ranked risks that affect Eagle's technology stack
+      - "Review of pentest findings from the most recent annual exercise and their mitigations"
+    evidence: "Signed acknowledgement per engineer stored in onboarding log with date"
+
+  ST-003:
+    title: "Role-specific training — AI component engineers"
+    applies_to: "Engineers working on the AI pipeline (L2 extraction, L3 validation, Claude API integration)"
+    delivery: >-
+      CTO or Head of Engineering prepares and delivers a 30-minute structured briefing
+      covering the three items below. Delivered live (video call) or as a recorded session
+      with written Q&A. A 2-page summary document tailored to Eagle's stack serves as the
+      primary reference and is updated within 60 days of any significant AI pipeline
+      architecture change.
+    content:
+      - "AI model output validation obligations — NIST SP 800-218A AI SSDF Profile: tasks directly relevant to Eagle's AI system producer role"
+      - "Eagle's EU AI Act non-high-risk classification conditions and how RL-005 preserves that classification"
+      - "Prompt injection attack patterns and SC-014 mitigation controls relevant to Eagle's document ingestion pipeline"
+    evidence: "Completion noted in engineering onboarding log alongside ST-002 annual refresher"
+
+  tracking:
+    - "CTO maintains training completion record in the engineering onboarding log (Google Drive — restricted)"
+    - "Completion is a precondition for access renewal at each annual IAM access review (REQ-ISO-013)"
+    - "Contractors who cannot evidence ST-001 completion within 30 days of engagement start have access suspended"
+
+  references: [SSDF_PO4, REQ-ISO-006, ISO27001_A6_3, REQ-AIACT-001, onboarding_checklist_Section9]
+
+# =============================================================================
+# 12. THREAT MODELING AND SECURITY DESIGN REVIEW
+#     SSDF PW.1, PW.2
+# =============================================================================
+
+threat_modeling:
+
+  description: >-
+    SSDF PW.1 and PW.2 require that software be designed to mitigate identified threats
+    and that designs be reviewed for security compliance. Eagle adopts a lightweight STRIDE
+    approach calibrated to startup velocity: mandatory for changes that alter the trust
+    model; optional for routine work.
+
+  when_required:
+    - "New external-facing API endpoint or authentication surface"
+    - "Changes to the AI boundary (L2/L3 interface, Claude API integration)"
+    - "New data store or significant change to the data model"
+    - "New third-party integration or dependency with network access"
+    - "Changes to IAM policies, VPC configuration, or security group rules"
+
+  when_not_required:
+    - "Bug fixes within existing, already-modelled components"
+    - "UI-only changes with no backend impact"
+    - "Documentation or test updates"
+    - "Dependency version bumps (covered by G6/G7)"
+
+  process:
+    step_1_identify_scope: "Define the component or change being assessed and its trust boundaries"
+    step_2_stride_analysis: >-
+      Apply STRIDE categories: Spoofing, Tampering, Repudiation, Information Disclosure,
+      Denial of Service, Elevation of Privilege
+    step_3_review: "Head of Engineering or CTO reviews the threat model before implementation begins"
+    step_4_document: "Threat model documented as a markdown file in the PR — stored as a GitHub Actions artefact"
+    step_5_verify: "Post-implementation: confirm mitigations are implemented and test cases cover identified threats"
+
+  eagle_specific_stride_notes:
+    spoofing: "Cognito JWT verification (SC-003) is the primary control; also covers NCA portal credential spoofing risk (RL-001)"
+    tampering: "Immutable S3 audit artefacts (IS-004); cosign image signing (SRI-001); Temporal workflow idempotency"
+    repudiation: "CloudTrail (IS-004) + CloudWatch structured logs (SC-006) provide non-repudiation for all pipeline actions"
+    information_disclosure: "Tenancy isolation via PostgreSQL RLS (REQ-TEN-001); SC-006 never_log list; DH-002 no local data"
+    denial_of_service: "ALB WAF rate limiting; Temporal retry policy with max_attempts (SC-013); submission queue throttling"
+    elevation_of_privilege: "IAM least privilege (IS-001); RL-002 no direct infrastructure access; IS-008 separation of duties"
+
+  references: [SSDF_PW1, SSDF_PW2, REQ-SEC-001, Section18_pentest]
+
+# =============================================================================
+# 13. SOFTWARE RELEASE INTEGRITY
+#     SSDF RV.3 / DORA Art. 9
+# =============================================================================
+
+software_release_integrity:
+
+  SRI-001:
+    title: "Container image signing — cosign"
+    ssdf_reference: "RV.3"
+    priority: MUST
+    description: >-
+      Every production container image must be cryptographically signed using cosign
+      (Sigstore) immediately after the Trivy vulnerability scan passes. Fargate
+      deployment validates the signature before applying the task definition.
+      An unsigned or invalid image is a MAJOR incident trigger.
+    implementation:
+      - "cosign sign --key awssecrets://cosign-private-key called in G9 after Trivy pass"
+      - "Public key: cosign.pub committed to repository root (version-controlled)"
+      - "Signature stored in ECR alongside the image digest"
+      - "Fargate task startup: cosign verify --key cosign.pub confirms signature before deployment proceeds"
+      - "Key rotation: annual; new key generated and cosign.pub updated in the repository"
+    references: [cicd_gate_G9, REQ-REL-008, REQ-DORA-001]
+
+  SRI-002:
+    title: "Software Bill of Materials (SBOM)"
+    ssdf_reference: "RV.3"
+    priority: MUST
+    description: >-
+      A CycloneDX SBOM is generated for every production container image at G7. The SBOM
+      documents all direct and transitive dependencies (Python packages, OS packages, and
+      system libraries) present in the final image. SBOMs are archived as immutable
+      pipeline artefacts.
+    implementation:
+      - "Trivy --format cyclonedx output generates the SBOM at the same stage as the vulnerability scan (G7)"
+      - "SBOM stored as a GitHub Actions artefact alongside the pipeline artefacts (5-year retention per REQ-REL-008)"
+      - "SBOM also uploaded to S3 (eagle-sbom-archive bucket, SSE-KMS) with the image digest as the key suffix"
+      - "SBOM generation failure blocks the pipeline at G7 — treated as a CRITICAL gate failure"
+    sbom_minimum_content:
+      - "Package name, version, and license for every direct and transitive Python dependency"
+      - "Base image OS packages and their versions"
+      - "Image digest and build timestamp"
+      - "Pipeline run ID and Git commit SHA as correlation identifiers"
+    availability: >-
+      SBOMs are available to: (1) Internal audit and compliance review on request to CTO;
+      (2) Clients on request under NDA as part of vendor security assessment;
+      (3) NCAs if required under DORA supervisory obligations.
+    update_cadence: "A new SBOM is generated on every production deployment — no manual update required"
+    references: [REQ-REL-008, REQ-DORA-001, REQ-CPL-003, SRI-001, cicd_gate_G7]
+
+# =============================================================================
+# 14. SECURITY ROLE MATRIX
+#     SSDF PO.2 / ISO 27001 A.6.1.1
+# =============================================================================
+
+security_role_matrix:
+
+  description: >-
+    SSDF PO.2 requires that security-related roles and responsibilities are defined and
+    assigned across the software development lifecycle. This matrix documents who is
+    accountable and responsible for each security function in Eagle.
+
+  roles:
+    security_owner:
+      title: "Security Owner"
+      held_by: "CTO / CPO"
+      responsibilities:
+        - "Owns and approves this document and all exceptions to red lines"
+        - "Approves all new IAM roles and significant infrastructure changes (IS-002)"
+        - "Signs off threat model reviews for significant changes (Section 12, step_3)"
+        - "Conducts monthly security review and quarterly 1Password audit (RL-001)"
+        - "Primary recipient of vulnerability disclosure reports (Section 6)"
+        - "Notified within 15 minutes of any MAJOR incident (Section 5)"
+
+    compliance_security_liaison:
+      title: "Compliance and Security Liaison"
+      held_by: "Head of Compliance and Risk"
+      responsibilities:
+        - "Notified of all exceptions affecting REQ-ISO, REQ-SEC, or REQ-GDPR requirements"
+        - "Quarterly review of AI component register (RL-005)"
+        - "Notified immediately when a vulnerability affects client data or regulatory outputs (Section 6)"
+        - "Reviews DORA-relevant incidents for regulatory notification obligations (REQ-DORA-001)"
+
+    security_gate_operator:
+      title: "Security Gate Operator"
+      held_by: "Head of Engineering (or CTO if no Head of Engineering appointed)"
+      responsibilities:
+        - "Monitors CI/CD gate results and ensures blocked builds are triaged within 1 business day"
+        - "Reviews DAST (G10) findings before each production promotion"
+        - "Conducts threat model review for changes requiring it (Section 12, step_3)"
+        - "Approves production deployments in GitHub Actions (G11 manual approval)"
+        - "Maintains and updates the security toolchain (GHAS, Trivy, Checkov, OWASP ZAP)"
+
+    engineer_all:
+      title: "Engineer (all)"
+      held_by: "All permanent and contractor engineers"
+      responsibilities:
+        - "Complies with all rules in this document from first day of access"
+        - "Completes mandatory security training (Section 11, ST-001)"
+        - "Self-assesses PRs against the SC-009 secure code review checklist before review request"
+        - "Conducts STRIDE analysis for changes in the when_required list (Section 12)"
+        - "Reports potential vulnerabilities to CTO within 24 hours of discovery (Section 6)"
+        - "Responds to MAJOR incident alerts within 15 minutes during on-call rotation (Section 5)"
+
+    external_reviewer:
+      title: "External Security Reviewer"
+      held_by: "Pentest vendor (annual engagement)"
+      responsibilities:
+        - "Conducts annual penetration test per Section 18 scope"
+        - "Bound by NDA and data processing agreement before scope briefing"
+        - "Reports CRITICAL and HIGH findings to CTO within 24 hours of discovery during exercise"
+        - "Provides targeted retest of CRITICAL and HIGH remediations"
+
+  quarterly_repository_access_audit:
+    description: "CTO conducts quarterly audit of all repository and system access"
+    scope:
+      - "GitHub: all active collaborators across all Eagle repositories reviewed"
+      - "AWS IAM Identity Center: all active permission set assignments audited"
+      - "1Password: team vault membership; all accounts with access confirmed as active"
+      - "Cognito: all active user pool accounts; EAGLE_ADMIN role assignments verified"
+    output: "Access review record in engineering onboarding log with date and CTO sign-off"
+
+  references: [SSDF_PO2, ISO27001_A6_1_1, REQ-ISO-013, Section11_security_training]
+
+# =============================================================================
+# 15. ICT THIRD-PARTY RISK MANAGEMENT
+#     DORA Art. 28–30 / ISO 27001 A.5.19–A.5.23
+# =============================================================================
+
+third_party_risk_management:
+
+  description: >-
+    DORA Art. 28–30 requires financial entities and their service providers to manage
+    ICT third-party risk. Eagle maintains a vendor register of all ICT dependencies
+    with security and contractual assessments.
+
+  critical_vendors:
+    anthropic:
+      service: "Claude API — AI extraction engine (L2)"
+      classification: "ICT third-party service provider — critical (AI pipeline dependency)"
+      data_shared: "AIFMD document content (anonymised fields per GDPR allowlist — REQ-GDPR-005)"
+      contractual:
+        - "Anthropic usage policies accepted as part of API access"
+        - "GDPR: Anthropic's Data Processing Agreement (DPA) covers API usage — reviewed annually"
+        - "EU-US data transfer basis: EU-US Data Privacy Framework (DPF) adequacy decision"
+      security_controls:
+        - "API key stored in AWS Secrets Manager (RL-001)"
+        - "Outbound SSRF control via SC-011 + IS-007"
+        - "Data minimisation: only fields on the canonical allowlist sent to the API (REQ-GDPR-005)"
+        - "AI output always validated by L3 before use (RL-005)"
+      monitoring:
+        - "Anthropic service status page monitored; alerts on API degradation"
+        - "BCP scenario 3 covers Claude API unavailability (Section 16)"
+        - "Annual review of Anthropic DPA and usage policy changes"
+
+    nca_portals:
+      service: "NCA submission portals — regulatory filing destinations"
+      classification: "Regulatory counterparty — not an ICT vendor; different risk profile"
+      security_controls:
+        - "NCA credentials stored in Secrets Manager under nca-portal-credentials (RL-001)"
+        - "IS-008 separation of duties: NCA credential access separated from deployment authority"
+        - "IS-007 egress rules: NCA portal CIDR allowlist maintained in Terraform"
+        - "BCP scenario 4: NCA portal unavailability handled by archiving and direct NCA contact (Section 16)"
+      monitoring:
+        - "NCA portal certificate renewals trigger review of IS-007 egress rules"
+        - "Submission failures to NCA portal treated as SIGNIFICANT incidents (Section 5)"
+
+    aws:
+      service: "AWS — compute, storage, networking, managed services"
+      classification: "ICT third-party service provider — critical (infrastructure)"
+      contractual:
+        - "AWS Business Associate Addendum not applicable (no HIPAA data)"
+        - "AWS GDPR DPA covers all EU data processing"
+        - "AWS ISO 27001 certification reviewed annually"
+      security_controls:
+        - "Shared responsibility model documented: AWS manages underlying infrastructure; Eagle manages configuration"
+        - "RL-002: no direct SSH — SSM Session Manager only"
+        - "CloudTrail (IS-004) provides audit trail for all AWS API calls"
+        - "AWS Config: continuous compliance monitoring of Eagle account"
+      monitoring:
+        - "AWS Health Dashboard monitored for service degradation in eu-west-1 (primary) and eu-central-1 (DR)"
+        - "BCP scenario 1 (AZ failure) and scenario 2 (region failure) cover AWS resilience (Section 16)"
+
+  vendor_assessment_process:
+    new_vendor_assessment:
+      - "CTO completes vendor security questionnaire before any new ICT dependency is approved"
+      - "Questionnaire covers: data processing, certifications (ISO 27001 / SOC 2), incident notification, SLA, exit provisions"
+      - "Head of Compliance & Risk reviews questionnaire for DORA and GDPR implications"
+      - "Assessment stored in eagle-vendor-register (Google Drive — restricted)"
+    annual_review:
+      - "All critical vendors reviewed annually: updated certifications, DPA changes, security incidents"
+      - "Vendor assessment results presented in the annual security review (Section 17)"
+    exit_provisions:
+      - "All vendor contracts must include: data return/deletion provisions; minimum 3-month notice period for material changes"
+      - "Eagle's architecture avoids proprietary lock-in where possible (P16 platform-independence principle)"
+
+  references: [REQ-DORA-001, REQ-GDPR-001, REQ-CPL-003, IS-007, RL-001, IS-008]
+
+# =============================================================================
+# 16. CYBER RESILIENCE AND BUSINESS CONTINUITY
+#     DORA Art. 11 / ISO 27001 A.5.29–A.5.30
+# =============================================================================
+
+cyber_resilience_and_bcp:
+
+  description: >-
+    DORA Art. 11 requires digital operational resilience testing and business continuity
+    planning. This section defines Eagle's RTO/RPO targets, BCP scenarios, and annual
+    test programme.
+
+  rto_rpo_targets:
+    rto: "4 hours — maximum acceptable time to restore the submission pipeline from a full outage"
+    rpo: "1 hour — maximum acceptable data loss (RDS automated backups every hour)"
+    basis: "Targets derived from DORA Art. 11 requirements and NCA submission deadline risk assessment"
+
+  bcp_scenarios:
+    scenario_1_az_failure:
+      description: "Single Availability Zone failure in eu-west-1 (primary region)"
+      expected_behaviour: >-
+        ECS Fargate tasks automatically rescheduled in the remaining AZs (multi-AZ task placement).
+        RDS Multi-AZ standby promoted automatically. ALB continues serving traffic. Recovery is
+        automated with no engineer action required. RTO target: < 15 minutes.
+      owner: "Head of Engineering monitors; no manual intervention expected"
+
+    scenario_2_region_failure:
+      description: "Full eu-west-1 region failure requiring failover to eu-central-1 (DR)"
+      expected_behaviour: >-
+        CTO declares disaster. Head of Engineering initiates DR runbook: restore latest RDS
+        snapshot to eu-central-1; deploy ECS services from ECR image (available cross-region);
+        update Route 53 DNS to eu-central-1 ALB. Target RTO: 4 hours. S3 cross-region
+        replication ensures data availability in DR region.
+      owner: "CTO decision; Head of Engineering execution"
+
+    scenario_3_claude_api_unavailable:
+      description: "Anthropic Claude API unavailable or severely degraded"
+      expected_behaviour: >-
+        In-flight submissions are queued in Temporal workflows (retry policy per SC-013).
+        Client notification sent via COO/Head of CS. If unavailability persists > 4 hours
+        during active NCA submission window: CTO assesses manual extraction (L2 bypass with
+        human review). NCA notified per DORA Art. 19 if submission deadline is at risk.
+      rto_impact: "Dependent on Anthropic resolution; manual fallback available for small submission volumes"
+      owner: "CTO assesses; COO communicates to affected clients"
+
+    scenario_4_nca_portal_unavailable:
+      description: "NCA submission portal unavailable on submission deadline"
+      expected_behaviour: >-
+        Eagle generates and validates the complete submission package and retains it in the
+        immutable S3 archive (REQ-AUD-001). COO contacts the NCA via the established
+        regulatory channel to report the technical issue and agree an alternative submission
+        method. DORA Art. 19 operational disruption notification evaluated by Head of
+        Compliance & Risk.
+      owner: "COO + Head of Compliance & Risk"
+
+  annual_bcp_test:
+    description: "DORA Art. 11(6) requires regular testing of BCP measures. Eagle's minimum annual test programme:"
+    tests:
+      - "Q1: AZ failure simulation via AWS Fault Injection Simulator — automated, < 30 minutes, conducted by Head of Engineering"
+      - >-
+        Q2: Tabletop exercise — BCP scenario 2 (region failure) or scenario 3 (Claude API
+        unavailable) — 90 minutes, CTO + Head of Compliance & Risk + Head of CS
+      - >-
+        Q3: Backup restoration test — restore RDS snapshot and S3 data to isolated test
+        environment, verify data integrity — conducted by Head of Engineering
+      - "Q4: Integrated test as part of annual pentest — pentest vendor attempts disruption scenarios; resilience of controls validated"
+    documentation:
+      - "Each test produces a written summary: test date, scope, outcome, gaps identified, remediation actions"
+      - "Test results stored as immutable artefacts per REQ-AUD-001"
+      - "Gaps identified in testing logged in the risk register with owner and target remediation date"
+      - "DORA Art. 11 compliance evidence: CTO signs off annual BCP test completion"
+
+  references: [REQ-DORA-001, REQ-CPL-001, ISO27001_A5_29, REQ-ISO-005, SRI-001, SRI-002]
+
+# =============================================================================
+# 17. SECURITY METRICS AND POSTURE REPORTING
+#     SSDF PO.1 / ISO 27001 A.5.36 / DORA Art. 6
+# =============================================================================
+
+security_metrics:
+
+  description: >-
+    Security governance without measurement is performative. This section defines the
+    minimum set of security metrics Eagle tracks, the reporting frequency, and the audience.
+    The goal is a one-page monthly security scorecard giving the CTO and CEO leading
+    indicators of security posture.
+
+  monthly_metrics:
+    - metric: "CI/CD gate failure rate by gate (G1–G11)"
+      owner: "Head of Engineering"
+      target: "G4 (SAST) and G7 (container scan) block rate < 5% of builds"
+    - metric: "Mean time to remediate CRITICAL CVEs"
+      owner: "Head of Engineering"
+      target: "< 14 days (IS-005 cadence)"
+    - metric: "Open security findings count (by severity: CRITICAL, HIGH, MEDIUM)"
+      owner: "CTO"
+      target: "Zero open CRITICAL; HIGH findings have remediation plan within 10 business days"
+    - metric: "Dependabot PR merge rate"
+      owner: "Head of Engineering"
+      target: "Patch-level PRs merged within 7 days of opening"
+    - metric: "Number of security incidents (by severity)"
+      owner: "CTO"
+      target: "Zero MAJOR; SIGNIFICANT incidents have completed PIR within 5 business days"
+
+  quarterly_metrics:
+    - metric: "IAM access review completion"
+      owner: "CTO"
+      target: "100% completion of quarterly access review (IS-008)"
+    - metric: "Security training completion rate"
+      owner: "CTO"
+      target: "100% of active engineers current on ST-001/ST-002"
+    - metric: "Vendor security assessment currency"
+      owner: "CTO"
+      target: "All critical vendor assessments current (< 12 months old)"
+    - metric: "Exception register review"
+      owner: "Head of Compliance & Risk"
+      target: "All active exceptions reviewed; expired exceptions closed or renewed"
+
+  annual_metrics:
+    - metric: "Annual penetration test completion and remediation rate"
+      owner: "CTO"
+      target: "100% of CRITICAL findings remediated within 30 days; pentest completed within Q1"
+    - metric: "BCP test completion"
+      owner: "CTO"
+      target: "All four quarterly BCP tests completed with documented outcomes"
+    - metric: "SSDF practice coverage score"
+      owner: "CTO"
+      target: "All SSDF practices addressed — no CRITICAL gaps"
+
+  scorecard_format:
+    description: "Monthly one-page security scorecard distributed to CTO and CEO"
+    sections:
+      - "RAG status per metric (Red / Amber / Green)"
+      - "Trend vs prior month"
+      - "Top 3 open actions with owner and due date"
+      - "Incident summary (count by severity; any MAJOR: brief narrative)"
+
+  references: [SSDF_PO1, ISO27001_A5_36, REQ-DORA-001, REQ-ISO-009]
+
+# =============================================================================
+# 18. ANNUAL PENETRATION TEST
+#     REQ-SEC-002 / DORA Art. 26 / ISO 27001 A.8.8
+# =============================================================================
+
+annual_penetration_test:
+
+  description: >-
+    Eagle conducts an annual penetration test. Without a defined scope, a pentest vendor
+    will test what is technically accessible, not what is strategically significant.
+    This section defines the minimum scope.
+
+  mandatory_scope:
+    submission_pipeline:
+      - "End-to-end AIFMD submission pipeline: client file ingestion → L2 AI extraction → L3 validation → NCA submission"
+      - "All FastAPI endpoints (authenticated and unauthenticated) via the ALB"
+      - "Client-facing portal: authentication, session management, file upload, submission status"
+    ai_boundary:
+      - "AI component boundary (RL-005): attempt to bypass L3 validation gate via crafted AI responses"
+      - "Prompt injection via client document upload (SC-014 validation)"
+    cloud_configuration:
+      - "AWS configuration review: IAM policies, S3 bucket policies, security group rules, KMS key policies"
+      - "ECS task definition security: container running as root, privileged containers, sensitive environment variables"
+      - "Secrets Manager: verify no secrets accessible outside their intended ECS task role"
+    supply_chain:
+      - "CI/CD pipeline integrity: attempt to inject malicious code via a crafted PR or compromised dependency"
+      - "GitHub Actions workflow security: review for unpinned actions, secret exposure in logs"
+    social_engineering:
+      - "Phishing simulation targeting NCA credential handling (email to engineer claiming to be NCA with portal credential reset link)"
+      - "Vishing or impersonation attempt targeting production deployment approval process"
+      - "Scope: maximum 2 engineers targeted per exercise; full disclosure to CTO before commencement"
+    resilience:
+      - "Denial of service simulation against the submission pipeline during a simulated NCA submission window"
+      - >-
+        Backup and restore validation: pentest vendor requests CTO to restore a production
+        snapshot to an isolated environment and verify data integrity
+
+  methodology: >-
+    Grey-box methodology (tester has knowledge of the technology stack but no credentials).
+    Pentest report must use CVSS 4.0 scoring. Findings classified as CRITICAL or HIGH are
+    communicated to the CTO within 24 hours of discovery during the exercise, not at final
+    report. Final report delivered within 10 business days of exercise completion.
+    Report stored as an immutable artefact per REQ-AUD-001.
+
+  vendor_requirements:
+    - "Pentest vendor must hold CREST accreditation or equivalent (OSCP-certified testers minimum)"
+    - "NDA and data processing agreement in place before scope briefing (Section 15 vendor requirements)"
+    - "Conducted in staging environment where possible; production testing requires explicit CTO approval outside NCA submission windows"
+
+  remediation_slas:
+    CRITICAL: "Remediation plan within 5 business days; verified fix within 30 days"
+    HIGH: "Remediation plan within 10 business days; verified fix within 60 days"
+    retest: "Pentest vendor conducts targeted retest of CRITICAL and HIGH remediations — included in contract scope"
+    review: "Lessons learned from pentest presented in the next monthly security review (Section 17)"
+
+  references: [REQ-SEC-002, REQ-DORA-001, REQ-ISO-005, Section5_incident_response, Section17_metrics]

@@ -1,0 +1,44 @@
+# ============================================================
+# Project Eagle — .gitignore
+# Only GENERATED files are excluded. All source code, config,
+# scripts, test inputs, and reference XMLs are tracked.
+# ============================================================
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# --- Regression test evidence (generated per run) ---
+**/evidence/
+
+# --- SQLite databases (rebuilt by reference data scripts) ---
+*.db
+*.db-journal
+
+# --- Environment and secrets ---
+.env
+.env.local
+
+# --- Virtual environment ---
+.venv/
+
+# --- IDE ---
+.vscode/
+.idea/
+
+# --- OS junk ---
+desktop.ini
+Thumbs.db
+.DS_Store
+
+# --- Cowork session files ---
+.claude/
+
+# --- Test result output (generated) ---
+Testing/Test results/
+
+# --- Obsidian internal files ---
+Obsidian vault/.obsidian/

@@ -1,0 +1,98 @@
+# =============================================================================
+# Project Eagle — External API and Integration (MOD-API)
+# Source: eagle_company_requirements_v1_0_baseline_final_updated.yaml
+# Cross-cutting requirements defined in: eagle_requirements_overview.yaml
+# Manual controls: eagle_manual_controls_v1_1.yaml
+# =============================================================================
+
+metadata:
+  module: MOD-API
+  name: "External API and Integration"
+  primary_users: [External integrators, service providers]
+  pipeline_layers: [L10_API]
+  module_req_count: 2
+  cross_req_count: 12
+  total_applicable: 14
+
+# =============================================================================
+# MODULE REQUIREMENTS  (2 requirements)
+# =============================================================================
+
+requirements:
+
+  # -------------------------------------------------------------------------
+  # External API and integration
+  # -------------------------------------------------------------------------
+  external_api_and_integration:
+
+    - id: REQ-API-001
+      title: "Versioned REST API"
+      layer: [L10_API]
+      priority: MUST
+      phase: 1.5
+      principles: [P3, P6, P13]
+      regulatory: [DORA]
+      requirements:
+        - "OpenAPI 3.0 specification published at /api/docs"
+        - "Breaking changes require new major version with 90-day deprecation notice"
+        - "API changelog accessible to TENANT_ADMIN"
+      minimum_endpoints:
+        ingestion: ["POST /api/v1/submissions/aifm", "POST /api/v1/submissions/aif", "POST /api/v1/submissions/positions", "POST /api/v1/submissions/unstructured"]
+        status: ["GET /api/v1/submissions/{id}", "GET /api/v1/submissions"]
+        calendar: ["GET /api/v1/calendar"]
+        audit: ["GET /api/v1/audit/{submission_id}"]
+        reference: ["GET /api/v1/health"]
+
+    - id: REQ-API-002
+      title: "White-label and embedded integration"
+      layer: [L10_API]
+      priority: SHOULD
+      phase: 1.5
+      principles: [P3, P13]
+      regulatory: []
+      requirements:
+        - "Embeddable UI components via iframe with configurable origin allowlist"
+        - "White-label branding (logo, primary colour) configurable per tenant by EAGLE_ADMIN"
+        - "Branding limited to logo and colour — layout and functionality fixed per Principle 3"
+        - "White-label configuration change does not require code deployment"
+
+
+# =============================================================================
+# CROSS-CUTTING REQUIREMENTS  (12 applicable)
+# Definitions in eagle_requirements_overview.yaml — references only below.
+# =============================================================================
+
+cross_cutting_requirements_applied:
+
+  # -------------------------------------------------------------------------
+  # Security (REQ-SEC-*)         → eagle_requirements_overview.yaml §5.1
+  # -------------------------------------------------------------------------
+  - REQ-SEC-001  # Encryption in transit and at rest
+  - REQ-SEC-002  # Vulnerability management and security testing programme
+  - REQ-SEC-003  # Data retention and deletion
+
+  # -------------------------------------------------------------------------
+  # Scale (REQ-SCL-*)             → eagle_requirements_overview.yaml §5.3
+  # -------------------------------------------------------------------------
+  - REQ-SCL-001  # Priority queue architecture for pipeline execution
+  - REQ-SCL-002  # Per-client throughput SLA
+
+  # -------------------------------------------------------------------------
+  # Performance (REQ-PER-*)       → eagle_requirements_overview.yaml §5.4
+  # -------------------------------------------------------------------------
+  - REQ-PER-001  # Performance targets
+
+  # -------------------------------------------------------------------------
+  # DORA operational (REQ-CPL-*)  → eagle_requirements_overview.yaml §5.6
+  # -------------------------------------------------------------------------
+  - REQ-CPL-002  # DORA Art.30 contractual information pack
+
+  # -------------------------------------------------------------------------
+  # GDPR (REQ-GDPR-*)             → eagle_requirements_overview.yaml §7
+  # -------------------------------------------------------------------------
+  - REQ-GDPR-001  # Data subject rights request workflow
+  - REQ-GDPR-002  # Data breach communication workflow
+  - REQ-GDPR-003  # Systematic data minimisation controls
+  - REQ-GDPR-004  # GDPR DPA existence check at tenant activation
+  - REQ-GDPR-005  # Anthropic sub-processor transfer control
+
