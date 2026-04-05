@@ -419,3 +419,15 @@ Result: AIF fields went from 18/302 (6%) to 133/302 (44%) — the 44% represents
 1. **Don't collect only FAILs from the validator.** WARNING findings are just as important for the reviewer. Always include all severity levels in the validation_map.
 2. **Use table-fixed layout when multiple sections share the same column structure.** Auto layout causes every section to compute its own widths, creating visual jumps.
 3. **Empty optional ≠ editable.** If a field has no value because the source data doesn't provide it, making it editable creates a false sense of control — the field would just be overwritten on the next regeneration.
+
+## 2026-04-05: Report Viewer — Source Data fix, multi-NCA, no-reporting support
+
+### What was fixed
+1. **Source Data sidebar empty.** The `_serialize_source_canonical(adapter)` function checked for `adapter.source_canonical` (an attribute that doesn't exist) instead of calling `adapter.to_source_canonical()` (the method). Fix: call the method, which returns `(aifm_source, aif_sources)` tuple of SourceCanonical dataclasses, then serialize via `.to_dict()`.
+2. **Multi-NCA codes not collected.** Session creation only stored `[rms]` (single reporting member state). For templates with multiple NCAs (e.g., BE, NL, DE, GB), the per-AIF national code records were not read. Fix: extract NCA codes from `adapter.aifm_national_codes` and `adapter.aif_national_codes`, matching by AIF ID.
+3. **No-reporting AIFs showed all fields.** When `AIFNoReportingFlag=true` (field 23), only header fields (1-23) should be visible per ESMA rules. The backend showed all fields including empty mandatory ones from post-header sections. Fix: filter fields > 23 (or > 21 for AIFM), suppress groups, and limit completeness calculation to header-only required fields. Added amber banner in frontend.
+
+### Lessons for next time
+1. **Check for the method, not the attribute.** When integrating with adapters, verify the exact API (`hasattr(x, "source_canonical")` vs `hasattr(x, "to_source_canonical")`). The silent fallback to an empty dict masked this for months.
+2. **NCA codes live in collection records, not on the AIF object.** The M template stores per-NCA registration data in `aif_national_codes` records keyed by AIF ID + member state. Don't look for a flat `nca_codes` attribute on adapter.aifs entries — those are raw M template dicts.
+3. **Regulatory flags change report structure.** The no-reporting flag isn't just a data issue — it changes which fields are applicable, which groups exist, and how completeness is calculated. Test with both reporting and no-reporting templates.

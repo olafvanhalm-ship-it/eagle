@@ -23,32 +23,46 @@ router = APIRouter(prefix="/api/v1", tags=["session"])
 
 
 def _serialize_source_canonical(adapter) -> dict:
-    """Extract source canonical data from MAdapter into serializable dict."""
-    result = {
+    """Extract source canonical data from MAdapter into serializable dict.
+
+    The adapter exposes ``to_source_canonical()`` which returns
+    ``(aifm_source, aif_sources)`` — each a SourceCanonical dataclass with
+    a ``.to_dict()`` method.  We call that method and restructure the result
+    into the flat dict expected by the ReviewSession persistence layer and
+    the ``GET /session/{id}/source`` endpoint.
+    """
+    result: dict = {
         "manager": {},
         "aifs": [],
     }
 
-    # Manager static
-    if hasattr(adapter, "source_canonical") and adapter.source_canonical:
-        sc = adapter.source_canonical
-        if hasattr(sc, "manager") and sc.manager:
-            result["manager"] = sc.manager.to_dict()
-        if hasattr(sc, "aifs") and sc.aifs:
-            for aif in sc.aifs:
-                aif_data = {
-                    "fund_static": aif.fund_static.to_dict() if hasattr(aif, "fund_static") and aif.fund_static else {},
-                    "fund_dynamic": aif.fund_dynamic.to_dict() if hasattr(aif, "fund_dynamic") and aif.fund_dynamic else {},
-                    "positions": [p.to_dict() for p in (aif.positions if hasattr(aif, "positions") else [])],
-                    "transactions": [t.to_dict() for t in (aif.transactions if hasattr(aif, "transactions") else [])],
-                    "share_classes": [s.to_dict() for s in (aif.share_classes if hasattr(aif, "share_classes") else [])],
-                    "counterparties": [c.to_dict() for c in (aif.counterparties if hasattr(aif, "counterparties") else [])],
-                    "strategies": [s.to_dict() for s in (aif.strategies if hasattr(aif, "strategies") else [])],
-                    "investors": [i.to_dict() for i in (aif.investors if hasattr(aif, "investors") else [])],
-                    "risk_measures": [r.to_dict() for r in (aif.risk_measures if hasattr(aif, "risk_measures") else [])],
-                    "borrowing_sources": [b.to_dict() for b in (aif.borrowing_sources if hasattr(aif, "borrowing_sources") else [])],
-                }
-                result["aifs"].append(aif_data)
+    if not hasattr(adapter, "to_source_canonical"):
+        log.warning("Adapter has no to_source_canonical() method — source data unavailable")
+        return result
+
+    aifm_source, aif_sources = adapter.to_source_canonical()
+
+    # AIFM-level: manager entity
+    if aifm_source:
+        aifm_dict = aifm_source.to_dict()
+        result["manager"] = aifm_dict.get("manager", {})
+
+    # AIF-level: one dict per fund
+    for aif_sc in (aif_sources or []):
+        aif_dict = aif_sc.to_dict()
+        result["aifs"].append({
+            "fund_static": aif_dict.get("fund_static", {}),
+            "fund_dynamic": aif_dict.get("fund_dynamic", {}),
+            "positions": aif_dict.get("positions", []),
+            "transactions": aif_dict.get("transactions", []),
+            "share_classes": aif_dict.get("share_classes", []),
+            "counterparties": aif_dict.get("counterparties", []),
+            "strategies": aif_dict.get("strategies", []),
+            "investors": aif_dict.get("investors", []),
+            "risk_measures": aif_dict.get("risk_measures", []),
+            "borrowing_sources": aif_dict.get("borrowing_sources", []),
+        })
+
     return result
 
 
@@ -205,12 +219,20 @@ async def upload_and_validate(file: UploadFile = File(...)):
             aifm_xmls = result.get("aifm_xmls", [])
             if aifm_xmls:
                 aifm_fields, aifm_groups = extract_aifm_fields(aifm_xmls[0])
+                # Collect all NCA codes from AIFM national code records
+                aifm_nca_list = [rms] if rms else []
+                if hasattr(adapter, "aifm_national_codes"):
+                    for nc in adapter.aifm_national_codes:
+                        nc_rms = str(nc.get("AIFM Reporting Member State", "") or "").strip()
+                        if nc_rms and nc_rms not in aifm_nca_list:
+                            aifm_nca_list.append(nc_rms)
+
                 aifm_report = ReviewReport(
                     session_id=session.session_id,
                     report_type="AIFM",
                     entity_name=aifm_name,
                     entity_index=0,
-                    nca_codes=[rms],
+                    nca_codes=aifm_nca_list,
                     fields_json=aifm_fields,
                     groups_json=aifm_groups,
                     history_json={},
@@ -236,14 +258,39 @@ async def upload_and_validate(file: UploadFile = File(...)):
                 aif_name = ""
                 if hasattr(adapter, "aifs") and idx < len(adapter.aifs):
                     aif = adapter.aifs[idx]
-                    aif_name = getattr(aif, "name", "") or getattr(aif, "aif_name", f"AIF {idx+1}")
+                    aif_name = getattr(aif, "name", "") or getattr(aif, "aif_name", "")
+                # Prefer AIF Name from extracted XML fields (field 18)
+                if not aif_name and aif_fields:
+                    aif_name = (aif_fields.get("18", {}).get("value", "") or "")
+                if not aif_name:
+                    aif_name = f"AIF {idx + 1}"
 
-                # Collect NCA codes for this AIF
-                nca_list = [rms]
-                if hasattr(adapter, "aifs") and idx < len(adapter.aifs):
-                    aif_obj = adapter.aifs[idx]
-                    if hasattr(aif_obj, "nca_codes") and aif_obj.nca_codes:
-                        nca_list = list(set(nca_list + aif_obj.nca_codes))
+                # Collect NCA codes for this AIF from aif_national_codes
+                nca_list = [rms] if rms else []
+                if hasattr(adapter, "aif_national_codes"):
+                    # Get AIF ID to match national code records
+                    aif_id = ""
+                    if hasattr(adapter, "aifs") and idx < len(adapter.aifs):
+                        aif_obj = adapter.aifs[idx]
+                        aif_id = str(
+                            aif_obj.get("Custom AIF Identification", "") or
+                            aif_obj.get("AIF ID", "") or ""
+                        ).strip() if isinstance(aif_obj, dict) else str(
+                            getattr(aif_obj, "aif_id", "") or ""
+                        ).strip()
+                    # Also try field 14 from extracted XML (AIF national code)
+                    if not aif_id and aif_fields:
+                        aif_id = str(aif_fields.get("14", {}).get("value", "") or "").strip()
+                    for nc in adapter.aif_national_codes:
+                        nc_aif = str(
+                            nc.get("Custom AIF Identification", "") or
+                            nc.get("AIF ID", "") or ""
+                        ).strip()
+                        nc_rms = str(nc.get("AIF Reporting Member State", "") or "").strip()
+                        if nc_rms and nc_rms not in nca_list:
+                            # Include if AIF ID matches OR if no AIF ID to match
+                            if not aif_id or nc_aif == aif_id:
+                                nca_list.append(nc_rms)
 
                 aif_report = ReviewReport(
                     session_id=session.session_id,

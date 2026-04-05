@@ -131,6 +131,13 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
     except (ValueError, TypeError):
         content_type = 2  # default to Art 24(1) if unknown
 
+    # Detect no-reporting flag: AIF field 23 or AIFM field 21
+    # When true, only header fields apply (1-23 for AIF, 1-21 for AIFM)
+    _no_reporting_field = "23" if report_type == "AIF" else "21"
+    _no_reporting_val = fields_data_raw.get(_no_reporting_field, {}).get("value", "")
+    is_no_reporting = str(_no_reporting_val).strip().lower() in ("true", "t", "yes", "1")
+    _no_reporting_max = int(_no_reporting_field)  # 23 for AIF, 21 for AIFM
+
     # Get latest validation results for inline indicators.
     # Findings have field_path like "AIFM.4" or "AIF.17" — filter by report_type.
     validation_map: dict[str, FieldValidationResponse] = {}
@@ -201,6 +208,15 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
             if not has_value:
                 continue
 
+        # No-reporting filing: only header fields apply (1-23 for AIF, 1-21 for AIFM)
+        if is_no_reporting:
+            try:
+                fid_num = int(fid)
+                if fid_num > _no_reporting_max:
+                    continue  # skip all fields beyond the header
+            except ValueError:
+                continue  # skip non-numeric fields (CANC-*, etc.)
+
         # Hide entire cancellation sections for INIT filings
         if filing_type == "INIT" and fdef.section in _init_hide_when_empty_sections:
             if not has_value:
@@ -238,7 +254,57 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
     empty_section_count = len(all_sections - visible_sections)
 
     # Groups — resolve field_id column headers to human-readable names
-    groups_data = report.groups_json or {}
+    # For no-reporting filings, suppress all groups (they're all post-header data)
+    groups_data = {} if is_no_reporting else dict(report.groups_json or {})
+
+    # Create synthetic groups for geographical focus (scalar fields → table rows)
+    # These are fixed-size arrays in the schema, not XML repeating groups,
+    # so we synthesise them here for tabular display.
+    _synthetic_field_ids: set[str] = set()
+    if report_type == "AIF" and fields_data:
+        _GEO_REGIONS = [
+            "Africa", "Asia Pacific", "Europe (non-EEA)", "Europe EEA",
+            "Middle East", "North America", "South America", "Supra National",
+        ]
+        _nav_ids = [str(i) for i in range(78, 86)]
+        _aum_ids = [str(i) for i in range(86, 94)]
+        nav_rows = []
+        for region, fid in zip(_GEO_REGIONS, _nav_ids):
+            val = fields_data.get(fid, {}).get("value")
+            if val is not None:
+                nav_rows.append({"region": region, "nav_pct": val})
+        if nav_rows:
+            groups_data["nav_geographical_focus"] = nav_rows
+            _synthetic_field_ids.update(_nav_ids)
+        aum_rows = []
+        for region, fid in zip(_GEO_REGIONS, _aum_ids):
+            val = fields_data.get(fid, {}).get("value")
+            if val is not None:
+                aum_rows.append({"region": region, "aum_pct": val})
+        if aum_rows:
+            groups_data["aum_geographical_focus"] = aum_rows
+            _synthetic_field_ids.update(_aum_ids)
+
+    # Collect field IDs covered by groups → exclude from section display
+    group_field_ids: set[str] = set(_synthetic_field_ids)
+    for gname, rows in groups_data.items():
+        if not rows:
+            continue
+        for row in rows:
+            for key in row:
+                # Only exclude numeric field IDs (not synthetic keys like "region")
+                try:
+                    int(key)
+                    group_field_ids.add(key)
+                except ValueError:
+                    pass
+
+    # Remove group-covered fields from sections
+    for sec_name in list(sections.keys()):
+        sections[sec_name] = [f for f in sections[sec_name] if f.field_id not in group_field_ids]
+        if not sections[sec_name]:
+            del sections[sec_name]
+
     group_columns: dict[str, dict[str, str]] = {}
     for gname, rows in groups_data.items():
         if not rows:
@@ -251,7 +317,11 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
                     registry.aifm_field(col_id) if report_type == "AIFM"
                     else registry.aif_field(col_id)
                 )
-            col_map[col_id] = fdef_col.field_name if fdef_col else f"Field {col_id}"
+            if fdef_col:
+                col_map[col_id] = fdef_col.field_name
+            else:
+                # Synthetic columns (region, nav_pct, etc.) — prettify
+                col_map[col_id] = col_id.replace("_", " ").title()
         group_columns[gname] = col_map
 
     # Compute completeness dynamically:
@@ -271,6 +341,13 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
     for fid, fdef in all_fields.items():
         if filing_type == "INIT" and fid.startswith("CANC-"):
             continue
+        # No-reporting: only header fields count
+        if is_no_reporting:
+            try:
+                if int(fid) > _no_reporting_max:
+                    continue
+            except ValueError:
+                continue
         # Skip sections not applicable to this content type
         if report_type == "AIF" and not _FR.is_section_applicable(fdef.section, content_type):
             continue
@@ -281,7 +358,10 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
         elif ob == "C" and fdef.section in active_sections:
             required_ids.add(fid)
 
-    error_count = sum(1 for fid in required_ids if fid in validation_map)
+    error_count = sum(
+        1 for fid in required_ids
+        if fid in validation_map and validation_map[fid].status == "FAIL"
+    )
     required_count = len(required_ids) if required_ids else 1
     completeness = round(100.0 * (required_count - error_count) / required_count, 1)
 
@@ -300,6 +380,7 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
         group_columns=group_columns,
         empty_section_count=empty_section_count,
         validation_run=validation_run,
+        no_reporting=is_no_reporting,
     )
 
 

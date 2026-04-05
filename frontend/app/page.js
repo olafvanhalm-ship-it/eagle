@@ -283,19 +283,19 @@ function SectionAccordion({ name, fields, onEdit, cascadedFields }) {
       {open && (
         <table className="w-full" style={{ tableLayout: "fixed" }}>
           <colgroup>
-            <col style={{ width: "40px" }} />
-            <col style={{ width: "38%" }} />
+            <col style={{ width: "36px" }} />
+            <col style={{ width: "32%" }} />
             <col style={{ width: "auto" }} />
-            <col style={{ width: "36px" }} />
-            <col style={{ width: "36px" }} />
+            <col style={{ width: "56px" }} />
+            <col style={{ width: "56px" }} />
           </colgroup>
           <thead>
             <tr className="bg-gray-50 text-xs text-gray-500 uppercase">
               <th className="px-2 py-1 text-left">#</th>
               <th className="px-2 py-1 text-left">Field</th>
               <th className="px-2 py-1 text-left">Value</th>
-              <th className="px-1 py-1 text-center" title="Data source">Source</th>
-              <th className="px-1 py-1 text-center" title="Validation status">DQF</th>
+              <th className="px-2 py-1 text-center" title="Data source">Source</th>
+              <th className="px-2 py-1 text-center" title="Validation status">Validate</th>
             </tr>
           </thead>
           <tbody>
@@ -319,19 +319,27 @@ function SectionAccordion({ name, fields, onEdit, cascadedFields }) {
 // ============================================================================
 
 const GROUP_LABELS = {
-  main_instruments: "Main instruments traded",
-  principal_exposures: "Principal exposures",
-  portfolio_concentrations: "Portfolio concentrations",
-  counterparty_exposures: "Top 5 counterparty exposures",
+  main_instruments: "Main instruments traded (ranked)",
+  nav_geographical_focus: "NAV geographical focus",
+  aum_geographical_focus: "AUM geographical focus",
+  principal_exposures: "Principal exposures (ranked)",
+  portfolio_concentrations: "Portfolio concentrations (ranked)",
+  fund_to_counterparty: "Top 5 counterparty exposures (fund to counterparty)",
+  counterparty_to_fund: "Top 5 counterparty exposures (counterparty to fund)",
   ccp_exposures: "CCP exposures",
-  individual_exposures: "Individual exposures",
-  turnovers: "Turnover by asset class",
+  asset_type_exposures: "Individual exposures by asset type",
+  asset_type_turnovers: "Turnover by asset class",
+  currency_exposures: "Currency exposures",
   borrowing_sources: "Largest borrowing sources",
   funding_jurisdictions: "Funding source jurisdictions",
   market_risk_measures: "Market risk measures",
   strategies: "Investment strategies",
+  investor_groups: "Investor groups",
   share_classes: "Share classes",
+  aif_principal_markets: "Principal markets",
   aifm_principal_markets: "Principal markets (AIFM)",
+  dominant_influence: "Dominant influence",
+  controlled_structures: "Controlled structures",
   monthly_returns: "Monthly returns",
   monthly_navs: "Monthly NAVs",
 };
@@ -683,7 +691,7 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit }) {
 
   const CT_LABELS_AIF = {
     "1": "Header only",
-    "2": "Art 24(1)",
+    "2": "Art 24(1)(2)",
     "3": "Art 24(1)(2)",
     "4": "Art 24(1)(2)(4)",
     "5": "Art 24(1)(4)",
@@ -725,6 +733,13 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit }) {
           <CompletionBar pct={report.completeness} filled={report.filled_count} total={report.field_count} />
         </div>
       </div>
+
+      {/* No-reporting banner */}
+      {report.no_reporting && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4 text-sm text-amber-800">
+          <span className="font-medium">No-reporting filing</span> — only header fields (1–{report.report_type === "AIFM" ? "21" : "23"}) are applicable per ESMA rules.
+        </div>
+      )}
 
       {/* Toggle */}
       <div className="flex items-center gap-3 mb-4">
@@ -810,7 +825,7 @@ function FundSidebar({ reports, selectedIndex, onSelect, sourceEntities, onSelec
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="truncate">{fund.entity_name || `Fund ${idx + 1}`}</span>
+                <span className="truncate text-xs">{fund.entity_name || `Fund ${idx + 1}`}</span>
                 <span className="text-xs text-gray-400">{expandedFund === idx ? "▼" : "▶"}</span>
               </div>
               <div className="flex items-center gap-2 mt-0.5">
@@ -1026,7 +1041,7 @@ export default function EagleApp() {
             </div>
           )}
         </div>
-        {sessionData && sessionId && (
+        {sessionData && sessionId && tab !== "upload" && (
           <div className="max-w-7xl mx-auto px-4 pb-2 text-xs text-gray-500 flex gap-4">
             <span>File: {sessionData.filename}</span>
             <span>AIFM: {sessionData.aifm_name}</span>
