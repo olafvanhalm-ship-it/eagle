@@ -283,11 +283,19 @@ function FieldRow({ field, onEdit, cascaded, onDrillDown }) {
     }
   };
 
+  // Build hover tooltip: technical_guidance (ESMA definition) + obligation + XSD element
+  const guidanceLines = [];
+  if (field.technical_guidance) guidanceLines.push(field.technical_guidance);
+  guidanceLines.push(`${field.obligation === "M" ? "Mandatory" : field.obligation === "C" ? "Conditional" : "Optional"} | ${field.xsd_element || ""}`);
+  if (field.format) guidanceLines.push(`Format: ${field.format}`);
+  if (field.data_type) guidanceLines.push(`Type: ${field.data_type}`);
+  const guidanceText = guidanceLines.join("\n");
+
   return (
     <tr className={`border-b border-gray-100 hover:bg-gray-50 ${cascaded ? "cascade-highlight" : ""}`}>
-      <td className="px-2 py-1 text-xs font-mono text-gray-400">{field.field_id}</td>
+      <td className="px-2 py-1 text-xs font-mono text-gray-400 cursor-help" title={guidanceText}>Q{field.field_id}</td>
       <td className="px-2 py-1 text-sm text-gray-700 truncate">
-        <Tip text={`${field.obligation === "M" ? "Mandatory" : field.obligation === "C" ? "Conditional" : "Optional"} | ${field.xsd_element || ""}`}>
+        <Tip text={guidanceText}>
           {field.field_name}
           {field.obligation === "M" && <span className="text-red-500 ml-1">*</span>}
         </Tip>
@@ -301,7 +309,7 @@ function FieldRow({ field, onEdit, cascaded, onDrillDown }) {
           dataType={field.data_type}
           format={field.format}
           allowedValuesRef={field.allowed_values_ref}
-          referenceValues={[]}
+          referenceValues={field.reference_values || []}
           validation={field.validation}
           nonEditableReason={_nonEditableReason(field)}
           onDrillDown={field.category === "composite" && onDrillDown ? () => onDrillDown(field) : undefined}
@@ -405,6 +413,7 @@ const GROUP_LABELS = {
   controlled_structures: "Controlled structures",
   monthly_returns: "Monthly returns",
   monthly_navs: "Monthly NAVs",
+  monthly_data: "Monthly data (returns, NAV, subscriptions, redemptions)",
 };
 
 // (5) Question number ranges for each group
@@ -428,6 +437,7 @@ const GROUP_QUESTION_RANGES = {
   aifm_principal_markets: "Q208\u2013Q217",
   monthly_returns: "Q218\u2013Q229",
   monthly_navs: "Q230\u2013Q241",
+  monthly_data: "Q219\u2013Q278",
 };
 
 function GroupTable({ groupName, rows, columnNames }) {
@@ -718,7 +728,7 @@ function UploadTab({ onUploadSuccess }) {
 //                  (10) improved drill-down mapping
 // ============================================================================
 
-function ReportViewer({ sessionId, reportType, fundIndex, onEdit, onDrillDown }) {
+function ReportViewer({ sessionId, reportType, fundIndex, onEdit, onDrillDown, nca }) {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -729,9 +739,10 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit, onDrillDown })
     if (!sessionId) return;
     setLoading(true);
     try {
+      const ncaParam = nca ? `&nca=${encodeURIComponent(nca)}` : "";
       const path = reportType === "AIFM"
-        ? `/session/${sessionId}/report/manager?show_all=${showAll}`
-        : `/session/${sessionId}/report/fund/${fundIndex}?show_all=${showAll}`;
+        ? `/session/${sessionId}/report/manager?show_all=${showAll}${ncaParam}`
+        : `/session/${sessionId}/report/fund/${fundIndex}?show_all=${showAll}${ncaParam}`;
       const data = await api(path);
       setReport(data);
       setError(null);
@@ -740,7 +751,7 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit, onDrillDown })
     } finally {
       setLoading(false);
     }
-  }, [sessionId, reportType, fundIndex, showAll]);
+  }, [sessionId, reportType, fundIndex, showAll, nca]);
 
   useEffect(() => { loadReport(); }, [loadReport]);
 
@@ -777,7 +788,12 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit, onDrillDown })
   if (!report) return <div className="text-gray-400 text-center py-12">No report data available</div>;
 
   const sections = report.sections || {};
-  const sectionNames = Object.keys(sections);
+  // Sort sections by the minimum question number in each section
+  const sectionNames = Object.keys(sections).sort((a, b) => {
+    const minA = Math.min(...(sections[a] || []).map((f) => parseInt(f.field_id, 10) || 9999));
+    const minB = Math.min(...(sections[b] || []).map((f) => parseInt(f.field_id, 10) || 9999));
+    return minA - minB;
+  });
   const groups = report.groups || {};
   const groupColumns = report.group_columns || {};
   const groupNames = Object.keys(groups).filter((g) => groups[g]?.length > 0);
@@ -794,8 +810,9 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit, onDrillDown })
     "5": "Art 24(1)(4)",
   };
   const CT_LABELS_AIFM = {
-    "1": "Registered (Art 3(3)(d))",
-    "2": "Authorised (Art 7)",
+    "1": "24(1) Authorised AIFM",
+    "2": "3(3)(d) Registered AIFM",
+    "3": "24(1) NPPR AIFM",
   };
   const CT_LABELS = reportType === "AIFM" ? CT_LABELS_AIFM : CT_LABELS_AIF;
   const FREQ_LABELS = {
@@ -820,7 +837,8 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit, onDrillDown })
           <div>
             <h2 className="text-lg font-semibold text-gray-800">{displayName}</h2>
             <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
-              {report.nca_codes?.length > 0 && <span>NCA: {report.nca_codes.join(", ")}</span>}
+              {nca && <span className="text-blue-600 font-medium">NCA: {nca} (filtered)</span>}
+              {!nca && report.nca_codes?.length > 0 && <span>NCA: {report.nca_codes.join(", ")}</span>}
               <span>Type: {report.report_type}</span>
               {obligation && <span>Obligation: {obligation}</span>}
               {frequency && <span>Frequency: {frequency}</span>}
@@ -900,16 +918,22 @@ function EntitySidebar({ reports, selectedIndex, onSelect, sourceEntities, onSel
     ? reports.filter((r) => r.report_type === "AIFM")
     : reports.filter((r) => r.report_type === "AIF");
 
-  const entityTypes = [
-    { key: "positions", label: "Positions" },
-    { key: "transactions", label: "Transactions" },
-    { key: "share_classes", label: "Share Classes" },
-    { key: "counterparties", label: "Counterparties" },
-    { key: "strategies", label: "Strategies" },
-    { key: "investors", label: "Investors" },
-    { key: "risk_measures", label: "Risk Measures" },
-    { key: "borrowing_sources", label: "Borrowing Sources" },
+  // Filter source entity types based on report type
+  // AIFM reports only use positions, transactions, counterparties (aggregated across all funds)
+  // AIF reports use all entity types
+  const allEntityTypes = [
+    { key: "positions", label: "Positions", aifm: true, aif: true },
+    { key: "transactions", label: "Transactions", aifm: true, aif: true },
+    { key: "share_classes", label: "Share Classes", aifm: false, aif: true },
+    { key: "counterparties", label: "Counterparties", aifm: true, aif: true },
+    { key: "strategies", label: "Strategies", aifm: false, aif: true },
+    { key: "investors", label: "Investors", aifm: false, aif: true },
+    { key: "risk_measures", label: "Risk Measures", aifm: true, aif: true },
+    { key: "borrowing_sources", label: "Borrowing Sources", aifm: false, aif: true },
   ];
+  const entityTypes = allEntityTypes.filter((et) =>
+    reportType === "AIFM" ? et.aifm : et.aif
+  );
 
   const heading = reportType === "AIFM" ? "Manager" : "Funds";
 
@@ -1058,10 +1082,10 @@ export default function EagleApp() {
     api(`/session/${sessionId}/source?fund_index=${selectedFund}`).then(setSourceData).catch(() => {});
   }, [sessionId, selectedFund]);
 
-  // Load AIFM source data (for manager sidebar)
+  // Load AIFM source data (for manager sidebar) — aggregate=true to collect all funds
   useEffect(() => {
     if (!sessionId) return;
-    api(`/session/${sessionId}/source?fund_index=0`).then(setAifmSourceData).catch(() => {});
+    api(`/session/${sessionId}/source?fund_index=0&aggregate=true`).then(setAifmSourceData).catch(() => {});
   }, [sessionId]);
 
   const handleUploadSuccess = async (newSessionId) => {
@@ -1280,6 +1304,7 @@ export default function EagleApp() {
                   fundIndex={0}
                   onEdit={handleEdit}
                   onDrillDown={handleDrillDown}
+                  nca={selectedNca}
                 />
               )}
             </div>
@@ -1326,6 +1351,7 @@ export default function EagleApp() {
                   fundIndex={selectedFund}
                   onEdit={handleEdit}
                   onDrillDown={handleDrillDown}
+                  nca={selectedNca}
                 />
               )}
             </div>

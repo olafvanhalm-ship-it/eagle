@@ -60,9 +60,14 @@ def _field_level_validation(reports: list, registry) -> list[dict]:
             if value is None or (isinstance(value, str) and not value.strip()):
                 continue
 
-            # Check format constraints
-            if fdef.format and isinstance(value, str):
-                import re
+            # Skip format check for fields validated via allowed_values_ref
+            # (booleans, enums, country codes etc. are validated against the
+            # reference table, not the ESMA format string which often specifies
+            # a max-length that doesn't apply to the human-readable values)
+            has_ref = bool(fdef.allowed_values_ref)
+
+            # Check format constraints (skip for enum/boolean/reference fields)
+            if fdef.format and isinstance(value, str) and not has_ref:
                 format_ok = _check_format_quick(value, fdef.format)
                 if not format_ok:
                     findings.append({
@@ -74,8 +79,21 @@ def _field_level_validation(reports: list, registry) -> list[dict]:
                         "message": f"Q{fid} ({fdef.field_name}) value '{value}' does not match expected format '{fdef.format}'",
                     })
 
-            # Check data type
-            if fdef.data_type and value is not None:
+            # Check allowed values (for fields with reference tables)
+            if has_ref and registry:
+                allowed = registry.reference_table(fdef.allowed_values_ref)
+                if allowed and str(value) not in [str(v) for v in allowed]:
+                    findings.append({
+                        "rule_id": f"REF-{report_type}-{fid}",
+                        "field_path": f"{report_type}.{fid}",
+                        "status": "WARNING",
+                        "check_type": "dqf",
+                        "severity": "LOW",
+                        "message": f"Q{fid} ({fdef.field_name}) value '{value}' not in reference table '{fdef.allowed_values_ref}'",
+                    })
+
+            # Check data type (skip for booleans with allowed_values_ref)
+            if fdef.data_type and value is not None and not has_ref:
                 type_ok = _check_data_type_quick(value, fdef.data_type.value)
                 if not type_ok:
                     findings.append({
@@ -170,6 +188,11 @@ def _build_field_response(
     if validation_map and field_id in validation_map:
         val_response = validation_map[field_id]
 
+    # Load reference values for dropdown fields
+    ref_values: list = []
+    if fdef and fdef.allowed_values_ref and registry:
+        ref_values = registry.reference_table(fdef.allowed_values_ref)
+
     return ReportFieldResponse(
         field_id=field_id,
         field_name=fdef.field_name if fdef else f"Field {field_id}",
@@ -181,10 +204,13 @@ def _build_field_response(
         obligation=fdef.obligation.value if fdef else "O",
         format=fdef.format if fdef else "",
         allowed_values_ref=fdef.allowed_values_ref if fdef else None,
+        reference_values=ref_values,
         xsd_element=fdef.xsd_element if fdef else "",
         repetition=fdef.repetition if fdef else "[1..1]",
         editable=editable,
         category=category,
+        report_type=report_type,
+        technical_guidance=fdef.technical_guidance if fdef else "",
         nca_deviations={},
         validation=val_response,
     )
@@ -203,9 +229,10 @@ def _is_system_field(field_id: str, report_type: str) -> bool:
 async def get_manager_report(
     session_id: str,
     show_all: bool = Query(False, description="Show all fields including empty optional"),
+    nca: str = Query(None, description="NCA code to show NCA-specific overrides"),
 ):
     """Get the AIFM (Manager) report for a session."""
-    return await _get_report(session_id, "AIFM", 0, show_all)
+    return await _get_report(session_id, "AIFM", 0, show_all, nca=nca)
 
 
 @router.get("/session/{session_id}/report/fund/{index}")
@@ -213,12 +240,13 @@ async def get_fund_report(
     session_id: str,
     index: int,
     show_all: bool = Query(False, description="Show all fields including empty optional"),
+    nca: str = Query(None, description="NCA code to show NCA-specific overrides"),
 ):
     """Get a specific AIF (Fund) report by index."""
-    return await _get_report(session_id, "AIF", index, show_all)
+    return await _get_report(session_id, "AIF", index, show_all, nca=nca)
 
 
-async def _get_report(session_id: str, report_type: str, index: int, show_all: bool):
+async def _get_report(session_id: str, report_type: str, index: int, show_all: bool, nca: str | None = None):
     """Internal: build and return a report detail response."""
     store = get_store()
     report = store.get_report_by_type_and_index(session_id, report_type, index)
@@ -251,6 +279,7 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
     # Always run field-level validation on load so every field gets a
     # traffic-light colour.  This replaces the old "only after Validate
     # button" approach and validates the canonical, not the XML.
+    validation_run = True  # Always true now — we auto-validate on every load
     validation_map: dict[str, FieldValidationResponse] = {}
 
     # Step 1: run canonical field-level validation (mandatory, format, type)
@@ -341,6 +370,16 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
     # Import content-type applicability from the registry (single source of truth)
     from canonical.aifmd_field_registry import FieldRegistry as _FR
 
+    # ── Gate-value helpers (used by both field-level and group-level gates) ──
+    def _gate_val(fid_arg: str) -> str:
+        return str(fields_data.get(fid_arg, {}).get("value", "")).strip().lower()
+
+    def _gate_is_true(fid_arg: str) -> bool:
+        return _gate_val(fid_arg) in ("true", "t", "1", "yes")
+
+    def _gate_is_false_or_empty(fid_arg: str) -> bool:
+        return _gate_val(fid_arg) in ("false", "f", "0", "no", "")
+
     for fid, fdef in all_fields.items():
         has_value = fid in fields_data
         has_failure = fid in validation_map and validation_map[fid].status in ("FAIL", "WARNING")
@@ -369,6 +408,60 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
         if report_type == "AIF" and not _FR.is_section_applicable(fdef.section, content_type):
             if not has_value:
                 continue  # skip inapplicable empty fields
+
+        # ── Dynamic field-level visibility gates (AIF) ─────────────────
+        # Hide empty fields whose gate condition is not met.
+        # Fields WITH values are always shown (the user entered them).
+        if report_type == "AIF" and not has_value:
+            try:
+                fid_num = int(fid)
+            except ValueError:
+                fid_num = -1
+
+            # Q33 (ShareClassFlag) → share class identifiers (Q34-Q41)
+            if 34 <= fid_num <= 41 and _gate_is_false_or_empty("33"):
+                continue
+
+            # Q57 (PredominantAIFType) → dominant influence (Q131-Q138)
+            if 131 <= fid_num <= 138 and _gate_val("57") != "peqf":
+                continue
+
+            # Q57 (PredominantAIFType) → controlled structures (Q286-Q296)
+            if 286 <= fid_num <= 296 and _gate_val("57") != "peqf":
+                continue
+
+            # Q203 (InvestorPreferentialTreatment) → details (Q204-Q213)
+            if 204 <= fid_num <= 213 and _gate_is_false_or_empty("203"):
+                continue
+
+            # Content type → stress test results (Q279-Q280), only CT 4/5
+            if 279 <= fid_num <= 280 and content_type not in (4, 5):
+                continue
+
+            # Q172 (DirectClearingFlag) → CCP details (Q173-Q177)
+            if 173 <= fid_num <= 177 and _gate_is_false_or_empty("172"):
+                continue
+
+            # Q161 (CounterpartyExposureFlag, AIF→counterparty) →
+            # counterparty details (Q162-Q165)
+            if 162 <= fid_num <= 165 and _gate_is_false_or_empty("161"):
+                continue
+
+            # Q167 (CounterpartyExposureFlag, counterparty→AIF) →
+            # counterparty details (Q168-Q171)
+            if 168 <= fid_num <= 171 and _gate_is_false_or_empty("167"):
+                continue
+
+            # Q297 (BorrowingSourceFlag) → borrowing source details (Q298-Q301)
+            if 298 <= fid_num <= 301 and _gate_is_false_or_empty("297"):
+                continue
+
+            # Prime broker section (Q45-Q47): optional, but only relevant
+            # when the fund actually uses prime brokers.  Hide when the
+            # entire section is empty AND no prime broker data exists in
+            # source canonical (no explicit flag — presence-based gate).
+            # This is handled by the standard "hide empty optional" logic
+            # below, so no extra gate needed here.
 
         # Determine visibility in default view
         if not show_all:
@@ -426,6 +519,80 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
         if aum_rows:
             groups_data["aum_geographical_focus"] = aum_rows
             _synthetic_field_ids.update(_aum_ids)
+
+        # Monthly data table: 12 months × 5 metrics (Q219-Q278)
+        _MONTHS = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December",
+        ]
+        _monthly_metrics = [
+            ("gross_return", 219),   # Q219-Q230: Gross investment return %
+            ("net_return", 231),     # Q231-Q242: Net investment return %
+            ("nav_change", 243),     # Q243-Q254: NAV change %
+            ("subscriptions", 255),  # Q255-Q266: Number of subscriptions
+            ("redemptions", 267),    # Q267-Q278: Number of redemptions
+        ]
+        monthly_rows = []
+        monthly_field_ids: set[str] = set()
+        for month_idx, month_name in enumerate(_MONTHS):
+            row: dict[str, Any] = {"month": month_name}
+            has_any = False
+            for metric_name, start_fid in _monthly_metrics:
+                fid = str(start_fid + month_idx)
+                val = fields_data.get(fid, {}).get("value")
+                row[metric_name] = val
+                monthly_field_ids.add(fid)
+                if val is not None:
+                    has_any = True
+            if has_any:
+                monthly_rows.append(row)
+        if monthly_rows:
+            groups_data["monthly_data"] = monthly_rows
+            _synthetic_field_ids.update(monthly_field_ids)
+
+    # ── Dynamic visibility gates (group-level) ──────────────────────────
+    if report_type == "AIF":
+        # Q33 (ShareClassFlag): if false/empty, hide the share_classes group
+        if _gate_is_false_or_empty("33"):
+            groups_data.pop("share_classes", None)
+
+        # Q57 (PredominantAIFType): dominant influence section only for PEQF
+        _predominant_type = _gate_val("57")
+        if _predominant_type != "peqf":
+            # Hide dominant_influence group and the section
+            groups_data.pop("dominant_influence", None)
+            sections.pop("Dominant Influence [see Article 1 of Directive 83/349/EEC]", None)
+
+        # Q57: controlled_structures group only for PEQF
+        if _predominant_type != "peqf":
+            groups_data.pop("controlled_structures", None)
+
+        # Q172 (DirectClearingFlag): if false/empty, hide CCP exposures group
+        if _gate_is_false_or_empty("172"):
+            groups_data.pop("ccp_exposures", None)
+
+        # Q161 (CounterpartyExposureFlag, AIF→counterparty): if false/empty,
+        # hide fund_to_counterparty group
+        if _gate_is_false_or_empty("161"):
+            groups_data.pop("fund_to_counterparty", None)
+
+        # Q167 (CounterpartyExposureFlag, counterparty→AIF): if false/empty,
+        # hide counterparty_to_fund group
+        if _gate_is_false_or_empty("167"):
+            groups_data.pop("counterparty_to_fund", None)
+
+        # Q297 (BorrowingSourceFlag): if false/empty, hide borrowing_sources group
+        if _gate_is_false_or_empty("297"):
+            groups_data.pop("borrowing_sources", None)
+
+        # Monthly data visibility: only for certain reporting periods
+        # Q8 = reporting period type. Monthly fields (Q219-Q278) are only
+        # relevant for H1, H2, Y1, X1, X2 (not Q1-Q4 single quarter)
+        _period_type = _gate_val("8")
+        if _period_type in ("q1", "q2", "q3", "q4"):
+            # For quarterly reporting, only 3 months of data are relevant
+            # Don't hide the group — the backend already filters by which months have values
+            pass
 
     # Collect field IDs covered by groups → exclude from section display
     group_field_ids: set[str] = set(_synthetic_field_ids)
@@ -507,6 +674,10 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
     required_count = len(required_ids) if required_ids else 1
     completeness = round(100.0 * (required_count - error_count) / required_count, 1)
 
+    # ── Apply NCA-specific overrides when nca parameter is set ──────────
+    if nca:
+        _apply_nca_overrides(sections, validation_map, nca, report_type, fields_data)
+
     return ReportDetailResponse(
         report_id=report.report_id,
         session_id=report.session_id,
@@ -524,6 +695,145 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
         validation_run=validation_run,
         no_reporting=is_no_reporting,
     )
+
+
+def _load_nca_overrides(nca_code: str) -> list[dict]:
+    """Load NCA-specific override rules from the NCA YAML file.
+
+    Searches for the file matching the given NCA code (country code)
+    in the NCA overrides directory.  Returns a list of rule dicts,
+    or empty list if file not found.
+    """
+    import os, yaml, glob as _glob
+
+    nca_dir = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "..", "..",
+        "Application", "regulation", "aifmd", "annex_iv", "nca_overrides",
+    )
+    nca_dir = os.path.normpath(nca_dir)
+
+    # Search for file matching the country code (case-insensitive)
+    cc = nca_code.lower()
+    pattern = os.path.join(nca_dir, f"aifmd_nca_overrides_{cc}_*.yaml")
+    matches = _glob.glob(pattern)
+    if not matches:
+        log.warning("No NCA override file found for %s (pattern: %s)", nca_code, pattern)
+        return []
+
+    try:
+        with open(matches[0], "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        overrides = data.get("nca_overrides", {})
+        return overrides.get("nca_rules", [])
+    except Exception as e:
+        log.error("Failed to load NCA overrides for %s: %s", nca_code, e)
+        return []
+
+
+def _apply_nca_overrides(
+    sections: dict[str, list[ReportFieldResponse]],
+    validation_map: dict[str, FieldValidationResponse],
+    nca_code: str,
+    report_type: str,
+    fields_data: dict,
+) -> None:
+    """Apply NCA-specific overrides to field responses in-place.
+
+    For each NCA override rule that applies to the given report_type:
+    - Update nca_deviations with the NCA-specific values
+    - If the NCA has a different format/validation_rules, run NCA validation
+      and add findings to the field's validation
+    - Override technical_guidance with NCA-specific guidance
+    """
+    import re
+
+    rules = _load_nca_overrides(nca_code)
+    if not rules:
+        return
+
+    # Build a flat lookup: field_id → field_response
+    field_map: dict[str, ReportFieldResponse] = {}
+    for section_fields in sections.values():
+        for fr in section_fields:
+            field_map[fr.field_id] = fr
+
+    for rule in rules:
+        # Check if rule applies to this report type
+        rule_report_type = rule.get("report_type", "")
+        if rule_report_type not in (report_type, f"AIF+AIFM", "AIF+AIFM"):
+            if rule_report_type != report_type:
+                continue
+
+        fid = str(rule.get("field_id", ""))
+        fr = field_map.get(fid)
+        if not fr:
+            continue  # field not in current view
+
+        nca_key = nca_code.upper()
+
+        # Store NCA deviation info
+        fr.nca_deviations[nca_key] = {
+            "rule_id": rule.get("rule_id", ""),
+            "format": rule.get("format", ""),
+            "technical_guidance": rule.get("technical_guidance", ""),
+            "validation_rules": rule.get("validation_rules", ""),
+            "severity": rule.get("severity", "HIGH"),
+        }
+
+        # Override technical_guidance with NCA-specific guidance
+        nca_guidance = rule.get("technical_guidance", "")
+        if nca_guidance:
+            fr.technical_guidance = f"[NCA {nca_key}] {nca_guidance}"
+
+        # Run NCA-specific format validation
+        nca_format = rule.get("format", "")
+        value = fields_data.get(fid, {}).get("value")
+        if nca_format and value is not None and str(value).strip():
+            val_str = str(value).strip()
+            format_ok = True
+            try:
+                # Try as regex pattern
+                if not re.fullmatch(nca_format, val_str):
+                    format_ok = False
+            except re.error:
+                # If not a valid regex, try as max-length
+                try:
+                    if len(val_str) > int(nca_format):
+                        format_ok = False
+                except ValueError:
+                    pass
+
+            if not format_ok:
+                nca_finding = FieldValidationFinding(
+                    rule_id=rule.get("rule_id", f"NCA-{nca_key}-{fid}"),
+                    status="FAIL",
+                    severity=rule.get("severity", "HIGH"),
+                    message=f"NCA {nca_key}: value '{val_str}' does not match required format '{nca_format}'",
+                    fix_suggestion=f"Value must match NCA format: {nca_format}",
+                )
+
+                # Update field validation
+                if fid in validation_map:
+                    existing = validation_map[fid]
+                    existing.findings.append(nca_finding)
+                    if nca_finding.status == "FAIL":
+                        existing.status = "FAIL"
+                        existing.rule_id = nca_finding.rule_id
+                        existing.message = nca_finding.message
+                        existing.fix_suggestion = nca_finding.fix_suggestion
+                        existing.severity = nca_finding.severity
+                else:
+                    validation_map[fid] = FieldValidationResponse(
+                        status="FAIL",
+                        findings=[nca_finding],
+                        rule_id=nca_finding.rule_id,
+                        message=nca_finding.message,
+                        fix_suggestion=nca_finding.fix_suggestion,
+                        severity=nca_finding.severity,
+                    )
+                # Update the field's validation reference
+                fr.validation = validation_map[fid]
 
 
 def _sort_key(field_id: str) -> tuple:
@@ -557,8 +867,18 @@ def _generate_fix_suggestion(finding: dict, registry, report_type: str) -> str:
 
 
 @router.get("/session/{session_id}/source")
-async def get_source_data(session_id: str, fund_index: int = Query(0)):
-    """Get source canonical entities for editing."""
+async def get_source_data(
+    session_id: str,
+    fund_index: int = Query(0),
+    aggregate: bool = Query(False),
+):
+    """Get source canonical entities for editing.
+
+    When ``aggregate=True`` (used for the AIFM manager view), positions,
+    transactions, counterparties, and risk_measures are collected from
+    **all** funds instead of just one.  This gives the manager-level
+    overview across the full portfolio.
+    """
     store = get_store()
     session = store.get_session(session_id)
     if session is None:
@@ -569,12 +889,10 @@ async def get_source_data(session_id: str, fund_index: int = Query(0)):
 
     # Get AIF-level source data
     aifs = sc.get("aifs", [])
-    if fund_index < len(aifs):
-        aif = aifs[fund_index]
-    else:
-        aif = {}
 
-    # Build entity responses
+    # Entity keys relevant to the AIFM aggregate view
+    aifm_aggregate_keys = {"positions", "transactions", "counterparties", "risk_measures"}
+
     entity_types = {
         "positions": "positions",
         "transactions": "transactions",
@@ -586,9 +904,30 @@ async def get_source_data(session_id: str, fund_index: int = Query(0)):
         "borrowing_sources": "borrowing_sources",
     }
 
+    # Build a single AIF dict for per-fund view
+    if fund_index < len(aifs):
+        aif = aifs[fund_index]
+    else:
+        aif = {}
+
     entities = {}
     for key, label in entity_types.items():
-        items = aif.get(key, [])
+        # Aggregate from ALL funds for AIFM-relevant entity types
+        if aggregate and key in aifm_aggregate_keys:
+            items = []
+            for fund_idx, fund_data in enumerate(aifs):
+                fund_name = fund_data.get("fund_static", {}).get("name", {})
+                if isinstance(fund_name, dict):
+                    fund_name = fund_name.get("value", f"Fund {fund_idx + 1}")
+                elif not fund_name:
+                    fund_name = f"Fund {fund_idx + 1}"
+                for item in fund_data.get(key, []):
+                    enriched = dict(item)
+                    enriched["_fund"] = fund_name
+                    items.append(enriched)
+        else:
+            items = aif.get(key, [])
+
         # Extract field names from items
         field_names = set()
         for item in items:

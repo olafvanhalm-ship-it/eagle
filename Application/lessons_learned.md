@@ -377,6 +377,59 @@ I never checked the field numbering against `aifmd_validation_rules.yaml` — I 
 
 4. **"It works in the UI" is not "it works correctly."** The Report Viewer showed data in every row — it just showed the wrong data in the wrong fields. Functional tests must verify *content correctness*, not just *presence* of data.
 
+## 2026-04-07: Report Viewer round 2 — dropdowns, NCA view, monthly table, hover tooltips
+
+### What was built
+
+1. **Reference value dropdowns**: Fields with `allowed_values_ref` (boolean, filing type, currency, country, sub-asset type, etc.) now show proper dropdown menus using `reference_values` from the API response instead of hardcoded empty arrays.
+
+2. **NCA-specific report view**: Clicking an NCA code in the sidebar loads NCA override rules from the per-country YAML file. The backend applies format validation, overrides technical guidance with NCA-specific text, and populates `nca_deviations` on each field. Frontend passes `?nca=XX` parameter and shows "(filtered)" indicator.
+
+3. **Monthly data table**: AIF fields Q219-Q278 (5 metrics × 12 months: gross return, net return, NAV change, subscriptions, redemptions) are synthesised into a single `monthly_data` group table, removing them from individual section display.
+
+4. **Technical guidance hover**: Hovering over any field number (now prefixed with "Q") or field name shows the ESMA technical guidance text, obligation, format, and data type from the field registry.
+
+5. **AIFM CT labels corrected**: Content type labels now match ESMA terminology: 1="24(1) Authorised AIFM", 2="3(3)(d) Registered AIFM", 3="24(1) NPPR AIFM".
+
+6. **Section sorting**: Sections are now sorted by the minimum question number in each section, ensuring consistent display order.
+
+7. **AIFM source data aggregation**: Manager tab source data now uses `aggregate=true` to collect positions, transactions, counterparties, and risk measures from ALL funds. A `_fund` column identifies which fund each item belongs to. Irrelevant source types (strategies, investors, share classes, borrowing sources) are filtered out for AIFM.
+
+8. **Dynamic visibility**: ShareClassFlag (Q33) gates the share_classes group — hidden when false, shown when true. Full report reload after every edit ensures visibility recalculation.
+
+### Architecture decisions
+
+1. **NCA overrides loaded on-demand, not cached.** Each report request with `?nca=XX` reads the YAML file. For a UI with few concurrent users this is fine. If performance becomes an issue, add a `@lru_cache` on `_load_nca_overrides()`.
+
+2. **NCA validation runs client-side of the field level.** NCA format checks apply after the base ESMA validation, adding findings rather than replacing them. This means a field can have both an ESMA PASS and an NCA FAIL.
+
+3. **Monthly data as synthetic group, not XML group.** The ESMA schema stores months as individual scalar fields (Q219=January gross, Q220=February gross, etc.), not as repeating XML elements. The backend synthesises them into a tabular group just like geographical focus fields.
+
+4. **Aggregate source data adds `_fund` metadata.** When `aggregate=true`, each position/transaction gets a `_fund` key showing which fund it belongs to, so the user can see the cross-fund overview.
+
+### Lessons for next time
+
+1. **Pass API response fields through to components — don't hardcode defaults.** The `referenceValues={[]}` hardcoding silently disabled all dropdown functionality. Always wire up the actual API response field (`field.reference_values`) even during initial development.
+
+2. **ESMA content type codes differ between AIFM and AIF.** AIFM uses 1=Authorised, 2=Registered, 3=NPPR. AIF uses 1-5 for different Article combinations. Never assume they share the same labels.
+
+3. **NCA override files have their own field_id mapping.** An NCA override references `field_id: '18'` but this could mean AIFM field 18 or AIF field 18 depending on `report_type`. Always filter by `report_type` when applying overrides.
+
+4. **Synthetic groups must track their field IDs for exclusion.** Without `_synthetic_field_ids`, the monthly fields would appear both in the section view and the group table. Always add synthesised fields to the exclusion set.
+
+5. **Dynamic visibility must cover ALL gate fields, not just the first one found.** The AIFMD schema has multiple boolean and enum gate fields that control section/field visibility. Full gate inventory (field-level + group-level):
+
+   - Q33 (ShareClassFlag) → share class identifiers (Q34-Q41) + `share_classes` group
+   - Q57 (PredominantAIFType=PEQF) → dominant influence (Q131-Q138) + controlled structures (Q286-Q296) + both groups + section
+   - Q172 (DirectClearingFlag) → CCP details (Q173-Q177) + `ccp_exposures` group
+   - Q161 (CounterpartyExposureFlag, AIF→counterparty) → counterparty details (Q162-Q165) + `fund_to_counterparty` group
+   - Q167 (CounterpartyExposureFlag, counterparty→AIF) → counterparty details (Q168-Q171) + `counterparty_to_fund` group
+   - Q297 (BorrowingSourceFlag) → borrowing source details (Q298-Q301) + `borrowing_sources` group
+   - Q203 (PreferentialTreatment) → preferential treatment details (Q204-Q213)
+   - Content type 4/5 → stress test results (Q279-Q280)
+
+   Prime broker fields (Q45-Q47) have no explicit boolean gate — they are optional `[0..n]` and are handled by the standard "hide empty optional fields" logic. Gates operate at two levels: field-level (in the field-building loop) and group-level (on `groups_data` after synthesis).
+
 ## 2026-04-05: XML→field extraction — the right architecture for Report Viewer
 
 ### What happened

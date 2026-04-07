@@ -62,11 +62,14 @@ class ReportFieldResponse(BaseModel):
     obligation: str
     format: str
     allowed_values_ref: Optional[str] = None
+    reference_values: list[Any] = []        # Actual dropdown values from reference_tables
     xsd_element: str
     repetition: str
     editable: bool
     category: str  # entity, composite, report
-    nca_deviations: dict[str, Any] = {}  # CC → value
+    report_type: str = ""                   # AIFM or AIF (for frontend _nonEditableReason)
+    technical_guidance: str = ""            # ESMA field definition for hover
+    nca_deviations: dict[str, Any] = {}    # CC → value
     validation: Optional[FieldValidationResponse] = None
 
 
