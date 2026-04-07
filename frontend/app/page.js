@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 const API = "http://localhost:8000/api/v1";
 
@@ -21,15 +21,15 @@ async function api(path, opts = {}) {
 }
 
 // ============================================================================
-// Provenance Icons
+// Provenance Icons — (9) Only show pen when priority is MANUALLY_OVERRIDDEN
 // ============================================================================
 
 const PROVENANCE = {
-  SMART_DEFAULT: { icon: "⚙️", label: "System default", color: "text-gray-400" },
-  AI_PROPOSED: { icon: "🤖", label: "AI extracted", color: "text-purple-500" },
-  DERIVED: { icon: "🧮", label: "Calculated from source data", color: "text-blue-500" },
-  IMPORTED: { icon: "📥", label: "Imported from template", color: "text-green-600" },
-  MANUALLY_OVERRIDDEN: { icon: "✏️", label: "Manual override", color: "text-orange-500" },
+  SMART_DEFAULT: { icon: "\u2699\uFE0F", label: "System default", color: "text-gray-400" },
+  AI_PROPOSED: { icon: "\uD83E\uDD16", label: "AI extracted", color: "text-purple-500" },
+  DERIVED: { icon: "\uD83E\uDDEE", label: "Calculated from source data", color: "text-blue-500" },
+  IMPORTED: { icon: "\uD83D\uDCE5", label: "Imported from template", color: "text-green-600" },
+  MANUALLY_OVERRIDDEN: { icon: "\u270F\uFE0F", label: "Manual override", color: "text-orange-500" },
 };
 
 function ProvenanceIcon({ priority, source }) {
@@ -42,30 +42,41 @@ function ProvenanceIcon({ priority, source }) {
 }
 
 // ============================================================================
-// Validation Badge
+// Validation background color for value cells — (1) traffic light in value
 // ============================================================================
 
-function ValidationBadge({ validation }) {
-  if (!validation) return <span className="text-gray-300" title="Not validated yet">○</span>;
-  if (validation.status === "PASS") return <span title="Validation passed" style={{ color: "#16a34a" }}>●</span>;
-  if (validation.status === "WARNING") return (
-    <span
-      className="cursor-help"
-      style={{ color: "#ea980c" }}
-      title={`${validation.rule_id}: ${validation.message}\n${validation.fix_suggestion || ""}`}
-    >
-      ● <span className="text-xs font-mono" style={{ color: "#ea980c" }}>{validation.rule_id}</span>
-    </span>
-  );
-  return (
-    <span
-      className="cursor-help"
-      style={{ color: "#dc2626" }}
-      title={`${validation.rule_id}: ${validation.message}\n${validation.fix_suggestion || ""}`}
-    >
-      ● <span className="text-xs font-mono" style={{ color: "#dc2626" }}>{validation.rule_id}</span>
-    </span>
-  );
+function validationBg(validation) {
+  if (!validation) return "bg-gray-50";
+  if (validation.status === "PASS") return "bg-green-50";
+  if (validation.status === "WARNING") return "bg-orange-50";
+  if (validation.status === "FAIL") return "bg-red-50";
+  return "bg-gray-50";
+}
+
+// (1) Build hover text from ALL findings, not just one
+function validationTitle(validation) {
+  if (!validation) return "";
+  if (validation.status === "PASS") return "Validation passed";
+  // Use the findings array if available (multi-finding support)
+  const findings = validation.findings || [];
+  if (findings.length > 0) {
+    return findings
+      .filter((f) => f.status !== "PASS")
+      .map((f) => {
+        const parts = [];
+        if (f.rule_id) parts.push(`[${f.rule_id}]`);
+        if (f.message) parts.push(f.message);
+        if (f.fix_suggestion) parts.push(`Fix: ${f.fix_suggestion}`);
+        return parts.join(" ");
+      })
+      .join("\n\n");
+  }
+  // Fallback to legacy single-finding fields
+  const parts = [];
+  if (validation.rule_id) parts.push(`[${validation.rule_id}]`);
+  if (validation.message) parts.push(validation.message);
+  if (validation.fix_suggestion) parts.push(`Fix: ${validation.fix_suggestion}`);
+  return parts.join("\n");
 }
 
 // ============================================================================
@@ -93,16 +104,52 @@ function CompletionBar({ pct, filled, total }) {
 }
 
 // ============================================================================
-// Editable Cell
+// Editable Cell — (1) traffic light bg, (3) non-editable hover reason,
+//                 (4) fixed Enter+blur double-fire, (10) composite drill-down
 // ============================================================================
 
-function EditableCell({ value, field, onSave, editable, dataType, format: fmt, allowedValuesRef, referenceValues }) {
+function EditableCell({ value, field, onSave, editable, dataType, format: fmt, allowedValuesRef, referenceValues, validation, nonEditableReason, onDrillDown }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value ?? "");
   const [error, setError] = useState("");
+  // (4) Track whether save was already triggered by Enter to prevent double-fire
+  const savedRef = useRef(false);
+
+  // Sync draft with value prop when value changes externally
+  useEffect(() => { setDraft(value ?? ""); }, [value]);
+
+  const vBg = validationBg(validation);
+  const vTitle = validationTitle(validation);
+
+  // (4) Unified save handler that prevents double-fire
+  const doSave = useCallback((val) => {
+    if (savedRef.current) return;
+    savedRef.current = true;
+    onSave(val);
+    setEditing(false);
+  }, [onSave]);
+
+  // Reset saved flag when entering edit mode
+  useEffect(() => {
+    if (editing) savedRef.current = false;
+  }, [editing]);
 
   if (!editable) {
-    return <span className="text-gray-900 bg-gray-50 px-1.5 py-0.5 rounded text-sm">{value ?? <span className="text-gray-300 italic">—</span>}</span>;
+    // (3) Show reason why field is not editable on hover
+    const reasonText = nonEditableReason
+      ? `${nonEditableReason}${vTitle ? "\n\n" + vTitle : ""}`
+      : vTitle || "";
+    // (10) If category is composite, show pointer cursor for drill-down
+    const isComposite = field?.category === "composite";
+    return (
+      <span
+        className={`text-gray-900 px-1.5 py-0.5 rounded text-sm ${vBg} ${isComposite ? "cursor-pointer underline decoration-dotted hover:bg-blue-50" : ""}`}
+        title={reasonText}
+        onClick={isComposite && onDrillDown ? onDrillDown : undefined}
+      >
+        {value ?? <span className="text-gray-300 italic">{"\u2014"}</span>}
+      </span>
+    );
   }
 
   if (editing) {
@@ -114,10 +161,10 @@ function EditableCell({ value, field, onSave, editable, dataType, format: fmt, a
           value={draft}
           autoFocus
           onChange={(e) => { setDraft(e.target.value); setError(""); }}
-          onBlur={() => { onSave(draft); setEditing(false); }}
-          onKeyDown={(e) => { if (e.key === "Escape") { setEditing(false); setDraft(value ?? ""); } }}
+          onBlur={() => doSave(draft)}
+          onKeyDown={(e) => { if (e.key === "Escape") { savedRef.current = true; setEditing(false); setDraft(value ?? ""); } }}
         >
-          <option value="">— Select —</option>
+          <option value="">{"— Select —"}</option>
           {referenceValues.map((v) => (
             <option key={typeof v === "object" ? v.code || v.value : v} value={typeof v === "object" ? v.code || v.value : v}>
               {typeof v === "object" ? `${v.code || v.value} — ${v.description || v.label || ""}` : v}
@@ -134,9 +181,9 @@ function EditableCell({ value, field, onSave, editable, dataType, format: fmt, a
           className="border rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-300"
           value={draft}
           autoFocus
-          onChange={(e) => { setDraft(e.target.value); onSave(e.target.value); setEditing(false); }}
+          onChange={(e) => { setDraft(e.target.value); doSave(e.target.value); }}
         >
-          <option value="">— Select —</option>
+          <option value="">{"— Select —"}</option>
           <option value="true">true</option>
           <option value="false">false</option>
         </select>
@@ -152,10 +199,10 @@ function EditableCell({ value, field, onSave, editable, dataType, format: fmt, a
           value={draft}
           autoFocus
           onChange={(e) => setDraft(e.target.value)}
-          onBlur={() => { onSave(draft); setEditing(false); }}
+          onBlur={() => doSave(draft)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") { onSave(draft); setEditing(false); }
-            if (e.key === "Escape") { setEditing(false); setDraft(value ?? ""); }
+            if (e.key === "Enter") doSave(draft);
+            if (e.key === "Escape") { savedRef.current = true; setEditing(false); setDraft(value ?? ""); }
           }}
         />
       );
@@ -172,10 +219,10 @@ function EditableCell({ value, field, onSave, editable, dataType, format: fmt, a
           autoFocus
           placeholder={fmt || ""}
           onChange={(e) => { setDraft(e.target.value); setError(""); }}
-          onBlur={() => { onSave(draft); setEditing(false); }}
+          onBlur={() => doSave(draft)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") { onSave(draft); setEditing(false); }
-            if (e.key === "Escape") { setEditing(false); setDraft(value ?? ""); }
+            if (e.key === "Enter") doSave(draft);
+            if (e.key === "Escape") { savedRef.current = true; setEditing(false); setDraft(value ?? ""); }
           }}
         />
       );
@@ -190,21 +237,22 @@ function EditableCell({ value, field, onSave, editable, dataType, format: fmt, a
         autoFocus
         placeholder={fmt || ""}
         onChange={(e) => { setDraft(e.target.value); setError(""); }}
-        onBlur={() => { onSave(draft); setEditing(false); }}
+        onBlur={() => doSave(draft)}
         onKeyDown={(e) => {
-          if (e.key === "Enter") { onSave(draft); setEditing(false); }
-          if (e.key === "Escape") { setEditing(false); setDraft(value ?? ""); }
+          if (e.key === "Enter") doSave(draft);
+          if (e.key === "Escape") { savedRef.current = true; setEditing(false); setDraft(value ?? ""); }
         }}
       />
     );
   }
 
   // Display mode — click to edit
+  // (1) Validation status as background color on the value
   return (
     <span
-      className="text-gray-900 px-1.5 py-0.5 rounded text-sm cursor-pointer hover:bg-blue-50 border border-transparent hover:border-blue-200 transition"
+      className={`text-gray-900 px-1.5 py-0.5 rounded text-sm cursor-pointer hover:brightness-95 border border-transparent hover:border-blue-200 transition ${vBg}`}
       onClick={() => { setDraft(value ?? ""); setEditing(true); }}
-      title="Click to edit"
+      title={vTitle ? `Click to edit\n\n${vTitle}` : "Click to edit"}
     >
       {value ?? <span className="text-gray-300 italic">empty</span>}
     </span>
@@ -212,10 +260,23 @@ function EditableCell({ value, field, onSave, editable, dataType, format: fmt, a
 }
 
 // ============================================================================
-// Field Row
+// Field Row — (1) traffic light in value, no separate Validate column
 // ============================================================================
 
-function FieldRow({ field, onEdit, cascaded }) {
+function _nonEditableReason(field) {
+  if (!field) return "";
+  if (field.category === "composite") return "Derived field \u2014 edit the underlying source data instead. Click to view source positions.";
+  if (field.category === "entity") return "";
+  // System fields (auto-generated)
+  const sysAifm = new Set(["1","2","3","4","5","6","7","8","9","10","11","12","13","16"]);
+  const sysAif = new Set(["1","2","3","4","5","6","7","8","9","10","11","12","13","16","17"]);
+  const sysSet = field.report_type === "AIFM" ? sysAifm : sysAif;
+  if (sysSet.has(field.field_id)) return "System-generated field \u2014 populated automatically from template metadata";
+  if (field.obligation === "O" && (field.value == null || field.value === "")) return "Empty optional field \u2014 data must come from source";
+  return "";
+}
+
+function FieldRow({ field, onEdit, cascaded, onDrillDown }) {
   const handleSave = (newValue) => {
     if (newValue !== field.value) {
       onEdit(field.field_id, newValue);
@@ -241,13 +302,13 @@ function FieldRow({ field, onEdit, cascaded }) {
           format={field.format}
           allowedValuesRef={field.allowed_values_ref}
           referenceValues={[]}
+          validation={field.validation}
+          nonEditableReason={_nonEditableReason(field)}
+          onDrillDown={field.category === "composite" && onDrillDown ? () => onDrillDown(field) : undefined}
         />
       </td>
       <td className="px-1 py-1 text-center">
         <ProvenanceIcon priority={field.priority} source={field.source} />
-      </td>
-      <td className="px-1 py-1 text-center">
-        <ValidationBadge validation={field.validation} />
       </td>
     </tr>
   );
@@ -257,11 +318,11 @@ function FieldRow({ field, onEdit, cascaded }) {
 // Section Accordion
 // ============================================================================
 
-function SectionAccordion({ name, fields, onEdit, cascadedFields }) {
+function SectionAccordion({ name, fields, onEdit, cascadedFields, onDrillDown }) {
   const [open, setOpen] = useState(true);
   const filled = fields.filter((f) => f.value != null && f.value !== "").length;
-  const mandatory = fields.filter((f) => f.obligation === "M").length;
   const failed = fields.filter((f) => f.validation?.status === "FAIL").length;
+  const warned = fields.filter((f) => f.validation?.status === "WARNING").length;
 
   return (
     <div className="border border-gray-200 rounded-lg mb-2 overflow-hidden">
@@ -270,12 +331,15 @@ function SectionAccordion({ name, fields, onEdit, cascadedFields }) {
         className="w-full flex items-center justify-between px-3 py-2 bg-white hover:bg-gray-50 transition"
       >
         <div className="flex items-center gap-2">
-          <span className="text-gray-400 text-xs">{open ? "▼" : "▶"}</span>
+          <span className="text-gray-400 text-xs">{open ? "\u25BC" : "\u25B6"}</span>
           <span className="font-medium text-gray-800 text-sm">{name}</span>
         </div>
         <div className="flex items-center gap-3 text-xs">
           {failed > 0 && (
-            <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded-full">{failed} failed</span>
+            <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded-full">{failed} error{failed !== 1 ? "s" : ""}</span>
+          )}
+          {warned > 0 && (
+            <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">{warned} warning{warned !== 1 ? "s" : ""}</span>
           )}
           <span className="text-gray-500">{filled}/{fields.length} fields</span>
         </div>
@@ -286,8 +350,7 @@ function SectionAccordion({ name, fields, onEdit, cascadedFields }) {
             <col style={{ width: "36px" }} />
             <col style={{ width: "32%" }} />
             <col style={{ width: "auto" }} />
-            <col style={{ width: "56px" }} />
-            <col style={{ width: "56px" }} />
+            <col style={{ width: "48px" }} />
           </colgroup>
           <thead>
             <tr className="bg-gray-50 text-xs text-gray-500 uppercase">
@@ -295,7 +358,6 @@ function SectionAccordion({ name, fields, onEdit, cascadedFields }) {
               <th className="px-2 py-1 text-left">Field</th>
               <th className="px-2 py-1 text-left">Value</th>
               <th className="px-2 py-1 text-center" title="Data source">Source</th>
-              <th className="px-2 py-1 text-center" title="Validation status">Validate</th>
             </tr>
           </thead>
           <tbody>
@@ -305,6 +367,7 @@ function SectionAccordion({ name, fields, onEdit, cascadedFields }) {
                 field={f}
                 onEdit={onEdit}
                 cascaded={cascadedFields?.includes(f.field_id)}
+                onDrillDown={onDrillDown}
               />
             ))}
           </tbody>
@@ -315,7 +378,7 @@ function SectionAccordion({ name, fields, onEdit, cascadedFields }) {
 }
 
 // ============================================================================
-// Group Table — renders repeating groups (instruments, exposures, etc.)
+// Group Table — (5) question numbers in header, black header text
 // ============================================================================
 
 const GROUP_LABELS = {
@@ -344,17 +407,43 @@ const GROUP_LABELS = {
   monthly_navs: "Monthly NAVs",
 };
 
+// (5) Question number ranges for each group
+const GROUP_QUESTION_RANGES = {
+  main_instruments: "Q24\u2013Q35",
+  nav_geographical_focus: "Q78\u2013Q85",
+  aum_geographical_focus: "Q86\u2013Q93",
+  principal_exposures: "Q94\u2013Q102",
+  portfolio_concentrations: "Q103\u2013Q112",
+  fund_to_counterparty: "Q113\u2013Q117",
+  counterparty_to_fund: "Q118\u2013Q122",
+  ccp_exposures: "Q123\u2013Q127",
+  asset_type_exposures: "Q128\u2013Q137",
+  asset_type_turnovers: "Q138\u2013Q147",
+  currency_exposures: "Q148\u2013Q157",
+  borrowing_sources: "Q158\u2013Q167",
+  strategies: "Q168\u2013Q177",
+  investor_groups: "Q178\u2013Q187",
+  share_classes: "Q188\u2013Q197",
+  aif_principal_markets: "Q198\u2013Q207",
+  aifm_principal_markets: "Q208\u2013Q217",
+  monthly_returns: "Q218\u2013Q229",
+  monthly_navs: "Q230\u2013Q241",
+};
+
 function GroupTable({ groupName, rows, columnNames }) {
   const [open, setOpen] = useState(true);
   if (!rows || rows.length === 0) return null;
 
   const label = GROUP_LABELS[groupName] || groupName.replace(/_/g, " ");
+  const qRange = GROUP_QUESTION_RANGES[groupName] || "";
   const columns = Object.keys(rows[0]).filter((k) => k !== "field_id");
 
-  // Use columnNames from backend (field_id → human name), fallback to field_id
+  // (5) Use columnNames from backend (field_id -> human name), show Q# + name
   const colHeader = (col) => {
-    if (columnNames && columnNames[col]) return columnNames[col];
-    return col.replace(/_/g, " ");
+    const humanName = columnNames && columnNames[col] ? columnNames[col] : col.replace(/_/g, " ");
+    const isNumeric = /^\d+$/.test(col);
+    if (isNumeric) return `Q${col}: ${humanName}`;
+    return humanName;
   };
 
   return (
@@ -364,8 +453,9 @@ function GroupTable({ groupName, rows, columnNames }) {
         className="w-full flex items-center justify-between px-4 py-2 bg-blue-50 hover:bg-blue-100 transition"
       >
         <div className="flex items-center gap-3">
-          <span className="text-blue-400">{open ? "▼" : "▶"}</span>
+          <span className="text-blue-400">{open ? "\u25BC" : "\u25B6"}</span>
           <span className="font-medium text-blue-800 text-sm">{label}</span>
+          {qRange && <span className="text-xs text-blue-400 font-mono">{qRange}</span>}
         </div>
         <span className="text-xs text-blue-500">{rows.length} row{rows.length !== 1 ? "s" : ""}</span>
       </button>
@@ -373,10 +463,11 @@ function GroupTable({ groupName, rows, columnNames }) {
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="bg-blue-50 text-xs text-blue-600">
-                <th className="px-2 py-1 text-left w-8">#</th>
+              {/* (5) Black header text */}
+              <tr className="bg-blue-50 text-xs text-gray-900">
+                <th className="px-2 py-1 text-left w-8 font-semibold">#</th>
                 {columns.map((col) => (
-                  <th key={col} className="px-2 py-1 text-left font-medium" title={`Field ${col}`}>
+                  <th key={col} className="px-2 py-1 text-left font-semibold" title={`Field ${col}`}>
                     {colHeader(col)}
                   </th>
                 ))}
@@ -388,7 +479,7 @@ function GroupTable({ groupName, rows, columnNames }) {
                   <td className="px-2 py-1 text-gray-400">{idx + 1}</td>
                   {columns.map((col) => (
                     <td key={col} className="px-2 py-1 text-gray-900">
-                      {row[col] != null && row[col] !== "" ? String(row[col]) : <span className="text-gray-300">—</span>}
+                      {row[col] != null && row[col] !== "" ? String(row[col]) : <span className="text-gray-300">{"\u2014"}</span>}
                     </td>
                   ))}
                 </tr>
@@ -411,7 +502,6 @@ function SourceDataEditor({ entityType, items, fieldNames, onEditItem }) {
   const totalPages = Math.ceil(items.length / pageSize);
   const pageItems = items.slice(page * pageSize, (page + 1) * pageSize);
 
-  // Show most useful columns first
   const priorityFields = ["instrument_name", "name", "isin", "sub_asset_type", "market_value",
     "notional_value", "currency", "region", "market_type", "counterparty_name"];
   const sortedFields = [
@@ -459,10 +549,10 @@ function SourceDataEditor({ entityType, items, fieldNames, onEditItem }) {
           <span>{items.length} items</span>
           <div className="flex gap-2">
             <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}
-              className="px-2 py-1 rounded border disabled:opacity-30 hover:bg-white">← Prev</button>
+              className="px-2 py-1 rounded border disabled:opacity-30 hover:bg-white">{"\u2190 Prev"}</button>
             <span>Page {page + 1} of {totalPages}</span>
             <button onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}
-              className="px-2 py-1 rounded border disabled:opacity-30 hover:bg-white">Next →</button>
+              className="px-2 py-1 rounded border disabled:opacity-30 hover:bg-white">{"Next \u2192"}</button>
           </div>
         </div>
       )}
@@ -480,7 +570,7 @@ function DiffPanel({ diff, onClose }) {
     <div className="fixed inset-y-0 right-0 w-96 bg-white shadow-xl border-l z-50 flex flex-col">
       <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
         <h3 className="font-medium text-gray-800">Changes Since Upload</h3>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">{"\u2715"}</button>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {diff.entries?.length === 0 && (
@@ -493,7 +583,7 @@ function DiffPanel({ diff, onClose }) {
               <span className="bg-red-50 text-red-700 px-1.5 py-0.5 rounded text-xs line-through">
                 {JSON.stringify(e.old_value)}
               </span>
-              <span className="text-gray-400">→</span>
+              <span className="text-gray-400">{"\u2192"}</span>
               <span className="bg-green-50 text-green-700 px-1.5 py-0.5 rounded text-xs">
                 {JSON.stringify(e.new_value)}
               </span>
@@ -580,7 +670,7 @@ function UploadTab({ onUploadSuccess }) {
         ) : file ? (
           <div>
             <p className="text-lg font-medium text-gray-700">{file.name}</p>
-            <p className="text-sm text-gray-500 mt-1">{(file.size / 1024).toFixed(0)} KB — Click or drop to replace</p>
+            <p className="text-sm text-gray-500 mt-1">{(file.size / 1024).toFixed(0)} KB {"\u2014"} Click or drop to replace</p>
           </div>
         ) : (
           <div>
@@ -624,10 +714,11 @@ function UploadTab({ onUploadSuccess }) {
 }
 
 // ============================================================================
-// Report Viewer (shared by Manager and Fund tabs)
+// Report Viewer — (4) passes report_type + fund_index to edit endpoint,
+//                  (10) improved drill-down mapping
 // ============================================================================
 
-function ReportViewer({ sessionId, reportType, fundIndex, onEdit }) {
+function ReportViewer({ sessionId, reportType, fundIndex, onEdit, onDrillDown }) {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -661,14 +752,20 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit }) {
     }
   }, [cascadedFields]);
 
+  // (4) Send report_type and fund_index so the backend edits the correct report
   const handleEdit = async (fieldId, newValue) => {
     try {
       const data = await api(`/session/${sessionId}/field`, {
         method: "PUT",
-        body: JSON.stringify({ field_id: fieldId, value: newValue }),
+        body: JSON.stringify({
+          field_id: fieldId,
+          value: newValue,
+          report_type: reportType,
+          fund_index: fundIndex,
+        }),
       });
       setCascadedFields(data.updated_fields || []);
-      loadReport(); // Reload to get updated data
+      await loadReport(); // Reload to get updated data + re-validated state
       if (onEdit) onEdit(data);
     } catch (e) {
       alert(`Edit failed: ${e.message}`);
@@ -711,7 +808,6 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit }) {
   const obligation = CT_LABELS[contentType] || contentType;
   const frequency = FREQ_LABELS[periodType] || periodType;
 
-  // Use AIF Name (field 18) for AIF, AIFM Name (field 16 = national code, use entity_name) for AIFM
   const displayName = (reportType === "AIF" ? getFieldValue("18") : null)
     || report.entity_name
     || (reportType === "AIFM" ? "Manager Report" : "Fund Report");
@@ -726,7 +822,7 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit }) {
             <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
               {report.nca_codes?.length > 0 && <span>NCA: {report.nca_codes.join(", ")}</span>}
               <span>Type: {report.report_type}</span>
-              {obligation && <span>Reporting obligation: {obligation}</span>}
+              {obligation && <span>Obligation: {obligation}</span>}
               {frequency && <span>Frequency: {frequency}</span>}
             </div>
           </div>
@@ -737,7 +833,7 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit }) {
       {/* No-reporting banner */}
       {report.no_reporting && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4 text-sm text-amber-800">
-          <span className="font-medium">No-reporting filing</span> — only header fields (1–{report.report_type === "AIFM" ? "21" : "23"}) are applicable per ESMA rules.
+          <span className="font-medium">No-reporting filing</span> {"\u2014"} only header fields (1{"\u2013"}{report.report_type === "AIFM" ? "21" : "23"}) are applicable per ESMA rules.
         </div>
       )}
 
@@ -765,6 +861,7 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit }) {
           fields={sections[name]}
           onEdit={handleEdit}
           cascadedFields={cascadedFields}
+          onDrillDown={onDrillDown}
         />
       ))}
 
@@ -778,13 +875,13 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit }) {
         </div>
       )}
 
-      {/* Empty sections badge */}
+      {/* (6) Show count of hidden sections when not showing all */}
       {report.empty_section_count > 0 && !showAll && (
         <button
           onClick={() => setShowAll(true)}
           className="w-full text-center py-2 text-xs text-gray-400 hover:text-gray-600 transition"
         >
-          {report.empty_section_count} empty sections — click "All Fields" to show
+          {report.empty_section_count} empty/optional sections hidden {"\u2014"} click "All Fields" to show all
         </button>
       )}
     </div>
@@ -792,14 +889,16 @@ function ReportViewer({ sessionId, reportType, fundIndex, onEdit }) {
 }
 
 // ============================================================================
-// Fund Sidebar
+// Entity Sidebar — (2) NCA click filters report, (8) shared for AIFM + AIF
 // ============================================================================
 
-function FundSidebar({ reports, selectedIndex, onSelect, sourceEntities, onSelectSource }) {
-  const [expandedFund, setExpandedFund] = useState(null);
+function EntitySidebar({ reports, selectedIndex, onSelect, sourceEntities, onSelectSource, reportType, selectedNca, onSelectNca }) {
+  const [expandedEntity, setExpandedEntity] = useState(null);
   const [selectedSource, setSelectedSource] = useState(null);
 
-  const funds = reports.filter((r) => r.report_type === "AIF");
+  const entities = reportType === "AIFM"
+    ? reports.filter((r) => r.report_type === "AIFM")
+    : reports.filter((r) => r.report_type === "AIF");
 
   const entityTypes = [
     { key: "positions", label: "Positions" },
@@ -812,43 +911,73 @@ function FundSidebar({ reports, selectedIndex, onSelect, sourceEntities, onSelec
     { key: "borrowing_sources", label: "Borrowing Sources" },
   ];
 
+  const heading = reportType === "AIFM" ? "Manager" : "Funds";
+
   return (
     <div className="w-56 flex-shrink-0 border-r bg-white overflow-y-auto">
       <div className="p-3">
-        <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Funds</h3>
-        {funds.map((fund, idx) => (
-          <div key={fund.report_id} className="mb-1">
+        <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">{heading}</h3>
+        {entities.map((entity, idx) => (
+          <div key={entity.report_id || idx} className="mb-1">
             <button
-              onClick={() => { onSelect(fund.entity_index); setExpandedFund(expandedFund === idx ? null : idx); }}
+              onClick={() => {
+                onSelect(entity.entity_index);
+                setExpandedEntity(expandedEntity === idx ? null : idx);
+                setSelectedSource(null);
+                onSelectSource(null);
+                if (onSelectNca) onSelectNca(null); // Reset NCA filter
+              }}
               className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
-                selectedIndex === fund.entity_index ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-600 hover:bg-gray-50"
+                selectedSource === null && selectedIndex === entity.entity_index && !selectedNca
+                  ? "bg-blue-50 text-blue-700 font-medium"
+                  : "text-gray-600 hover:bg-gray-50"
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="truncate text-xs">{fund.entity_name || `Fund ${idx + 1}`}</span>
-                <span className="text-xs text-gray-400">{expandedFund === idx ? "▼" : "▶"}</span>
+                <span className="truncate text-xs">{entity.entity_name || (reportType === "AIFM" ? "Manager" : `Fund ${idx + 1}`)}</span>
+                <span className="text-xs text-gray-400">{expandedEntity === idx ? "\u25BC" : "\u25B6"}</span>
               </div>
               <div className="flex items-center gap-2 mt-0.5">
                 <div className="w-16 h-1 bg-gray-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500 rounded-full" style={{ width: `${fund.completeness}%` }} />
+                  <div className="h-full bg-blue-500 rounded-full" style={{ width: `${entity.completeness}%` }} />
                 </div>
-                <span className="text-xs text-gray-400">{Math.round(fund.completeness)}%</span>
+                <span className="text-xs text-gray-400">{Math.round(entity.completeness)}%</span>
               </div>
             </button>
-            {expandedFund === idx && (
+            {expandedEntity === idx && (
               <div className="ml-4 mt-1 space-y-0.5">
+                {/* (2) "Consolidated" shows all NCAs */}
                 <button
-                  onClick={() => { onSelect(fund.entity_index); setSelectedSource(null); onSelectSource(null); }}
-                  className={`w-full text-left px-2 py-1 rounded text-xs ${selectedSource === null && selectedIndex === fund.entity_index ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:bg-gray-50"}`}
+                  onClick={() => {
+                    onSelect(entity.entity_index);
+                    setSelectedSource(null);
+                    onSelectSource(null);
+                    if (onSelectNca) onSelectNca(null);
+                  }}
+                  className={`w-full text-left px-2 py-1 rounded text-xs ${
+                    selectedSource === null && selectedIndex === entity.entity_index && !selectedNca
+                      ? "bg-blue-100 text-blue-700 font-medium"
+                      : "text-gray-500 hover:bg-gray-50"
+                  }`}
                 >
-                  Consolidated
+                  Consolidated (all NCAs)
                 </button>
-                {fund.nca_codes?.map((nca) => (
+                {/* (2) Per-NCA view */}
+                {entity.nca_codes?.map((nca) => (
                   <button key={nca}
-                    onClick={() => { onSelect(fund.entity_index); }}
-                    className="w-full text-left px-2 py-1 rounded text-xs text-gray-500 hover:bg-gray-50"
+                    onClick={() => {
+                      onSelect(entity.entity_index);
+                      setSelectedSource(null);
+                      onSelectSource(null);
+                      if (onSelectNca) onSelectNca(nca);
+                    }}
+                    className={`w-full text-left px-2 py-1 rounded text-xs ${
+                      selectedNca === nca && selectedIndex === entity.entity_index
+                        ? "bg-blue-100 text-blue-700 font-medium"
+                        : "text-gray-500 hover:bg-gray-50"
+                    }`}
                   >
-                    {nca}
+                    NCA: {nca}
                   </button>
                 ))}
               </div>
@@ -856,22 +985,27 @@ function FundSidebar({ reports, selectedIndex, onSelect, sourceEntities, onSelec
           </div>
         ))}
 
-        <hr className="my-3" />
-        <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Source Data</h3>
-        {entityTypes.map((et) => {
-          const count = sourceEntities?.entities?.[et.key]?.items?.length || 0;
-          if (count === 0) return null;
-          return (
-            <button key={et.key}
-              onClick={() => { setSelectedSource(et.key); onSelectSource(et.key); }}
-              className={`w-full text-left px-3 py-1.5 rounded text-xs transition mb-0.5 ${
-                selectedSource === et.key ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-500 hover:bg-gray-50"
-              }`}
-            >
-              {et.label} <span className="text-gray-400">({count})</span>
-            </button>
-          );
-        })}
+        {/* Source Data section — shown for both AIFM and AIF */}
+        {sourceEntities && (
+          <>
+            <hr className="my-3" />
+            <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Source Data</h3>
+            {entityTypes.map((et) => {
+              const count = sourceEntities?.entities?.[et.key]?.items?.length || 0;
+              if (count === 0) return null;
+              return (
+                <button key={et.key}
+                  onClick={() => { setSelectedSource(et.key); onSelectSource(et.key); }}
+                  className={`w-full text-left px-3 py-1.5 rounded text-xs transition mb-0.5 ${
+                    selectedSource === et.key ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-500 hover:bg-gray-50"
+                  }`}
+                >
+                  {et.label} <span className="text-gray-400">({count})</span>
+                </button>
+              );
+            })}
+          </>
+        )}
       </div>
     </div>
   );
@@ -886,13 +1020,13 @@ function Toast({ message, onClose }) {
   return (
     <div className="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg text-sm flex items-center gap-3 z-50">
       <span>{message}</span>
-      <button onClick={onClose} className="text-gray-400 hover:text-white">✕</button>
+      <button onClick={onClose} className="text-gray-400 hover:text-white">{"\u2715"}</button>
     </div>
   );
 }
 
 // ============================================================================
-// Main App
+// Main App — (7) NCA display, (8) AIFM sidebar, (10) improved drill-down
 // ============================================================================
 
 export default function EagleApp() {
@@ -901,7 +1035,9 @@ export default function EagleApp() {
   const [sessionData, setSessionData] = useState(null);
   const [selectedFund, setSelectedFund] = useState(0);
   const [selectedSource, setSelectedSource] = useState(null);
+  const [selectedNca, setSelectedNca] = useState(null);
   const [sourceData, setSourceData] = useState(null);
+  const [aifmSourceData, setAifmSourceData] = useState(null);
   const [showDiff, setShowDiff] = useState(false);
   const [diff, setDiff] = useState(null);
   const [toast, setToast] = useState(null);
@@ -916,11 +1052,17 @@ export default function EagleApp() {
     }).catch(() => {});
   }, []);
 
-  // Load source data when session changes
+  // Load source data when session/fund changes
   useEffect(() => {
     if (!sessionId) return;
     api(`/session/${sessionId}/source?fund_index=${selectedFund}`).then(setSourceData).catch(() => {});
   }, [sessionId, selectedFund]);
+
+  // Load AIFM source data (for manager sidebar)
+  useEffect(() => {
+    if (!sessionId) return;
+    api(`/session/${sessionId}/source?fund_index=0`).then(setAifmSourceData).catch(() => {});
+  }, [sessionId]);
 
   const handleUploadSuccess = async (newSessionId) => {
     setSessionId(newSessionId);
@@ -949,10 +1091,44 @@ export default function EagleApp() {
       // Reload source data
       const data = await api(`/session/${sessionId}/source?fund_index=${selectedFund}`);
       setSourceData(data);
-      setToast("Source data updated");
+      setToast("Source data updated — derived fields will be recalculated");
     } catch (e) {
       alert(`Edit failed: ${e.message}`);
     }
+  };
+
+  // (10) Handle drill-down from composite field to source data
+  // Maps field ranges to the most likely source entity type
+  const FIELD_TO_SOURCE = {
+    // Main instruments → positions
+    ...Object.fromEntries(Array.from({ length: 12 }, (_, i) => [String(24 + i), "positions"])),
+    // Asset type exposures → positions
+    ...Object.fromEntries(Array.from({ length: 10 }, (_, i) => [String(128 + i), "positions"])),
+    // Turnovers → transactions
+    ...Object.fromEntries(Array.from({ length: 10 }, (_, i) => [String(138 + i), "transactions"])),
+    // Principal exposures → positions
+    ...Object.fromEntries(Array.from({ length: 9 }, (_, i) => [String(94 + i), "positions"])),
+    // Counterparty → counterparties
+    ...Object.fromEntries(Array.from({ length: 10 }, (_, i) => [String(113 + i), "counterparties"])),
+    // Strategies → strategies
+    ...Object.fromEntries(Array.from({ length: 10 }, (_, i) => [String(168 + i), "strategies"])),
+    // Investor groups → investors
+    ...Object.fromEntries(Array.from({ length: 10 }, (_, i) => [String(178 + i), "investors"])),
+    // Borrowing sources → borrowing_sources
+    ...Object.fromEntries(Array.from({ length: 10 }, (_, i) => [String(158 + i), "borrowing_sources"])),
+    // Currency → positions
+    ...Object.fromEntries(Array.from({ length: 10 }, (_, i) => [String(148 + i), "positions"])),
+    // Geographical focus → positions
+    ...Object.fromEntries(Array.from({ length: 16 }, (_, i) => [String(78 + i), "positions"])),
+    // Q48 (total AIF NAV), Q47 (net equity delta) → positions
+    "47": "positions", "48": "positions", "49": "positions",
+  };
+
+  const handleDrillDown = (field) => {
+    const source = FIELD_TO_SOURCE[field.field_id] || "positions";
+    setTab("funds");
+    setSelectedSource(source);
+    setToast(`Showing ${source.replace(/_/g, " ")} for derived field Q${field.field_id}. Edit here and save to recalculate.`);
   };
 
   const loadDiff = async () => {
@@ -971,7 +1147,6 @@ export default function EagleApp() {
     try {
       await api(`/session/${sessionId}/undo`, { method: "POST" });
       setToast("Last edit undone");
-      // Reload everything
       const data = await api(`/session/${sessionId}/source?fund_index=${selectedFund}`);
       setSourceData(data);
     } catch (e) {
@@ -983,11 +1158,14 @@ export default function EagleApp() {
     if (!sessionId) return;
     try {
       const data = await api(`/session/${sessionId}/validate`, { method: "POST" });
-      setToast(`Validation complete: ${data.dqf_pass} pass, ${data.dqf_fail} fail`);
+      setToast(`Validation complete: ${data.dqf_pass} pass, ${data.dqf_fail} fail${data.has_critical ? " (CRITICAL issues found)" : ""}`);
     } catch (e) {
       alert(e.message);
     }
   };
+
+  // (7) Collect all unique NCA codes across all reports
+  const allNcaCodes = [...new Set((sessionData?.reports || []).flatMap((r) => r.nca_codes || []))].sort();
 
   const tabs = [
     { key: "upload", label: "Upload" },
@@ -1025,7 +1203,7 @@ export default function EagleApp() {
             <div className="flex items-center gap-2">
               <Tip text="Undo the last edit">
                 <button onClick={handleUndo} className="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-50 transition" title="Undo last edit">
-                  ↩ Undo
+                  {"\u21A9"} Undo
                 </button>
               </Tip>
               <Tip text="View all changes since upload">
@@ -1033,19 +1211,20 @@ export default function EagleApp() {
                   View Changes
                 </button>
               </Tip>
-              <Tip text="Validate report and generate NCA files">
-                <button onClick={handleValidate} className="px-3 py-1.5 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 transition" title="Validate report">
+              <Tip text="Run full validation (YAML business rules) on canonical data">
+                <button onClick={handleValidate} className="px-3 py-1.5 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 transition" title="Validate canonical">
                   Validate Report
                 </button>
               </Tip>
             </div>
           )}
         </div>
+        {/* (7) Fixed top bar — show all NCA codes with proper spacing */}
         {sessionData && sessionId && tab !== "upload" && (
-          <div className="max-w-7xl mx-auto px-4 pb-2 text-xs text-gray-500 flex gap-4">
+          <div className="max-w-7xl mx-auto px-4 pb-2 text-xs text-gray-500 flex gap-6">
             <span>File: {sessionData.filename}</span>
             <span>AIFM: {sessionData.aifm_name}</span>
-            <span>NCA: {sessionData.reporting_member_state}</span>
+            <span>NCA: {allNcaCodes.length > 0 ? allNcaCodes.join(", ") : sessionData.reporting_member_state}</span>
             <span>Filing: {sessionData.filing_type}</span>
             <span>Status: {sessionData.status}</span>
           </div>
@@ -1060,32 +1239,79 @@ export default function EagleApp() {
           </div>
         )}
 
+        {/* (8) Manager tab uses sidebar with NCA list and source data */}
         {tab === "manager" && sessionId && (
-          <div className="p-6">
-            <ReportViewer
-              sessionId={sessionId}
+          <div className="flex h-[calc(100vh-120px)]">
+            <EntitySidebar
+              reports={sessionData?.reports || []}
+              selectedIndex={0}
+              onSelect={() => {}}
+              sourceEntities={aifmSourceData}
+              onSelectSource={(src) => { setSelectedSource(src); }}
               reportType="AIFM"
-              fundIndex={0}
-              onEdit={handleEdit}
+              selectedNca={selectedNca}
+              onSelectNca={setSelectedNca}
             />
+            <div className="flex-1 overflow-y-auto p-6">
+              {selectedSource && aifmSourceData ? (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-gray-800">
+                      {selectedSource.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </h2>
+                    <button
+                      onClick={() => setSelectedSource(null)}
+                      className="text-sm text-blue-600 hover:text-blue-800"
+                    >
+                      {"\u2190"} Back to report
+                    </button>
+                  </div>
+                  <SourceDataEditor
+                    entityType={selectedSource}
+                    items={aifmSourceData.entities?.[selectedSource]?.items || []}
+                    fieldNames={aifmSourceData.entities?.[selectedSource]?.field_names || []}
+                    onEditItem={handleSourceEdit}
+                  />
+                </div>
+              ) : (
+                <ReportViewer
+                  sessionId={sessionId}
+                  reportType="AIFM"
+                  fundIndex={0}
+                  onEdit={handleEdit}
+                  onDrillDown={handleDrillDown}
+                />
+              )}
+            </div>
           </div>
         )}
 
         {tab === "funds" && sessionId && (
           <div className="flex h-[calc(100vh-120px)]">
-            <FundSidebar
+            <EntitySidebar
               reports={sessionData?.reports || []}
               selectedIndex={selectedFund}
-              onSelect={(idx) => { setSelectedFund(idx); setSelectedSource(null); }}
+              onSelect={(idx) => { setSelectedFund(idx); setSelectedSource(null); setSelectedNca(null); }}
               sourceEntities={sourceData}
               onSelectSource={setSelectedSource}
+              reportType="AIF"
+              selectedNca={selectedNca}
+              onSelectNca={setSelectedNca}
             />
             <div className="flex-1 overflow-y-auto p-6">
               {selectedSource && sourceData ? (
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                    {selectedSource.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                  </h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-gray-800">
+                      {selectedSource.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </h2>
+                    <button
+                      onClick={() => setSelectedSource(null)}
+                      className="text-sm text-blue-600 hover:text-blue-800"
+                    >
+                      {"\u2190"} Back to report
+                    </button>
+                  </div>
                   <SourceDataEditor
                     entityType={selectedSource}
                     items={sourceData.entities?.[selectedSource]?.items || []}
@@ -1099,6 +1325,7 @@ export default function EagleApp() {
                   reportType="AIF"
                   fundIndex={selectedFund}
                   onEdit={handleEdit}
+                  onDrillDown={handleDrillDown}
                 />
               )}
             </div>

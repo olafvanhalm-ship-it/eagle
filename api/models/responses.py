@@ -70,8 +70,19 @@ class ReportFieldResponse(BaseModel):
     validation: Optional[FieldValidationResponse] = None
 
 
+class FieldValidationFinding(BaseModel):
+    """Single validation finding for a field."""
+    rule_id: str = ""
+    status: str = "PASS"  # PASS, FAIL, WARNING
+    severity: str = "INFO"  # CRITICAL, HIGH, MEDIUM, LOW, INFO
+    message: str = ""
+    fix_suggestion: str = ""
+
+
 class FieldValidationResponse(BaseModel):
-    status: str  # PASS, FAIL, NOT_RUN
+    status: str  # Aggregate: FAIL if any FAIL, WARNING if any WARNING, else PASS
+    findings: list[FieldValidationFinding] = []
+    # Legacy single-finding fields (populated from worst finding)
     rule_id: Optional[str] = None
     message: Optional[str] = None
     fix_suggestion: Optional[str] = None

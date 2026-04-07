@@ -9,6 +9,8 @@ class FieldEditRequest(BaseModel):
     """Edit a report-level entity field."""
     field_id: str = Field(..., description="ESMA question number")
     value: Any = Field(..., description="New field value")
+    report_type: str = Field("AIFM", description="Report type: AIFM or AIF")
+    fund_index: int = Field(0, description="Fund index (0 for AIFM, 0-N for AIF)")
     note: Optional[str] = Field(None, description="Optional edit note")
 
 

@@ -431,3 +431,41 @@ Result: AIF fields went from 18/302 (6%) to 133/302 (44%) — the 44% represents
 1. **Check for the method, not the attribute.** When integrating with adapters, verify the exact API (`hasattr(x, "source_canonical")` vs `hasattr(x, "to_source_canonical")`). The silent fallback to an empty dict masked this for months.
 2. **NCA codes live in collection records, not on the AIF object.** The M template stores per-NCA registration data in `aif_national_codes` records keyed by AIF ID + member state. Don't look for a flat `nca_codes` attribute on adapter.aifs entries — those are raw M template dicts.
 3. **Regulatory flags change report structure.** The no-reporting flag isn't just a data issue — it changes which fields are applicable, which groups exist, and how completeness is calculated. Test with both reporting and no-reporting templates.
+
+## 2026-04-07: Report Viewer — validation in value cells, AIFM sidebar, composite drill-down
+
+### What was changed
+1. **Validation status integrated into value cell.** Removed the separate "Validate" column. Value cells now have colored backgrounds: light green (PASS), light orange (WARNING), light red (FAIL). Hover shows the validation message. This saves a column and makes the status immediately visible.
+2. **Non-editable fields show reason on hover.** System fields, composite/derived fields, and empty optionals now show why they're not editable. Composite fields have dotted underline and can be clicked to drill down to source data.
+3. **Edit value persistence fixed.** Added `useEffect` to sync draft state with the value prop when it changes externally (e.g., after `loadReport()` completes). Previously the draft was initialized once and never updated.
+4. **Group table headers show question numbers.** Numeric column IDs now display as "Q64: Sub-asset Type" instead of just the field name. Headers changed from blue to black for better readability.
+5. **Top bar NCA display.** Now collects all unique NCA codes across all reports (AIFM + AIFs) instead of just `sessionData.reporting_member_state`.
+6. **AIFM sidebar.** Manager Report tab now has a sidebar with NCA list, matching the Fund Reports layout. Replaced the separate `FundSidebar` with a shared `EntitySidebar` component.
+7. **Composite field drill-down.** Clicking a derived field (category "composite") switches to the Fund Reports source data view, showing the underlying positions/entities.
+
+### Architecture note from Olaf
+Validation should run on the canonical layer, not on generated XML. The current flow (generate XML → validate XML → show results) should become (validate canonical → show results → generate XML only after validation passes). This is a larger refactor for a future session.
+
+### Lessons for next time
+1. **Separate validation columns waste space.** Integrating status into the value cell via background color is more information-dense and more intuitive — it's the standard pattern in spreadsheet tools.
+2. **React state sync matters for edit flows.** When `EditableCell` receives a new value via props after an API call, the internal `draft` state must be updated. Without `useEffect(() => setDraft(value), [value])`, the old value persists in the input after a successful save.
+3. **Shared sidebar components reduce duplication.** Instead of having `FundSidebar` (AIF-only) and a separate AIFM layout, a single `EntitySidebar` with a `reportType` prop works for both. Less code, consistent UX.
+
+## 2026-04-07: Report Viewer — canonical validation, edit endpoint fix, multi-finding support
+
+### What was changed
+1. **Architecture: validate canonical, not XML.** Auto-validation now runs on every report load via `_field_level_validation()` in `report.py`. Every field gets a traffic-light colour immediately — no need to click "Validate Report" first. The "Validate Report" button runs the full YAML business rule set and stores results. Both sets of findings are merged per-field.
+2. **Edit endpoint fixed.** `FieldEditRequest` now includes `report_type` and `fund_index`. The old endpoint defaulted everything to AIFM index 0, silently discarding edits to AIF reports. The frontend sends the correct report context with every edit.
+3. **Multiple validation findings per field.** `FieldValidationResponse` now carries a `findings[]` array. The frontend hover tooltip shows ALL findings, not just the worst one. Aggregate status (FAIL > WARNING > PASS) determines the background color.
+4. **Double-fire on Enter+blur fixed.** Used a `useRef(savedRef)` flag to prevent `onBlur` from triggering a second save after `Enter` already saved and closed the editor. The old code fired both `onKeyDown(Enter)` and `onBlur` when React removed the input from the DOM.
+5. **Composite drill-down mapping.** `FIELD_TO_SOURCE` maps field ID ranges to the correct source entity type (positions, transactions, counterparties, etc.) instead of always defaulting to "positions".
+6. **AIFM sidebar with source data.** Manager Report tab now loads AIFM-level source data and shows it in the sidebar, matching the Fund Reports layout.
+
+### Critical bug found: edit endpoint silently updating wrong report
+The `edit_field` endpoint had `report_type = "AIFM"` hardcoded with a TODO comment. It then tried to guess the type from the field registry, but many fields exist in both AIFM and AIF registries (header fields 1-13). All AIF edits were silently going to the AIFM report. The `fund_index` was also hardcoded to 0. Multi-fund templates had all edits targeting fund 0.
+
+### Lessons for next time
+1. **Never hardcode report context in API endpoints.** When an API serves multiple report types and entities, the client MUST specify which one it's editing. "Guess from field_id" is fragile because field numbering overlaps.
+2. **Auto-validation on load eliminates the "run validation first" UX friction.** The previous design required users to click a button before seeing any validation feedback. Running lightweight validation on every load gives instant feedback. Heavy rules (YAML business logic) still need the explicit button.
+3. **React: Enter and blur fire sequentially on input removal.** When `setEditing(false)` removes an `<input>` from the DOM, React fires `onBlur` even though the element is being destroyed. Use a ref-based flag to prevent double-action.
+4. **Multiple findings per field is essential.** A single field can have both a format error AND a mandatory check failure. Showing only the "worst" one hides actionable information. The hover tooltip must show all.

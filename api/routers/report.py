@@ -12,12 +12,121 @@ from api.deps import get_store, get_field_registry, get_field_classification
 from api.models.requests import FieldEditRequest, SourceEntityEditRequest
 from api.models.responses import (
     ReportDetailResponse, ReportFieldResponse, FieldValidationResponse,
+    FieldValidationFinding,
     SourceDataResponse, SourceEntityResponse, EditResultResponse,
 )
 from persistence.report_store import ReviewEdit
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["report"])
+
+
+def _field_level_validation(reports: list, registry) -> list[dict]:
+    """Canonical field-level validation: mandatory, format, type checks.
+
+    Runs on every report load so fields always have traffic-light colours.
+    This validates the *canonical* data, not XML.
+    """
+    findings = []
+    if not registry:
+        return findings
+
+    for report in reports:
+        report_type = report.report_type
+        all_fields = (
+            registry.aifm_fields() if report_type == "AIFM"
+            else registry.aif_fields()
+        )
+        fields_json = report.fields_json or {}
+
+        for fid, fdef in all_fields.items():
+            field_data = fields_json.get(fid, {})
+            value = field_data.get("value") if isinstance(field_data, dict) else field_data
+
+            # Check mandatory fields
+            if fdef.mandatory and not fdef.is_repeating:
+                if value is None or (isinstance(value, str) and not value.strip()):
+                    findings.append({
+                        "rule_id": f"MAN-{report_type}-{fid}",
+                        "field_path": f"{report_type}.{fid}",
+                        "status": "FAIL",
+                        "check_type": "dqf",
+                        "severity": "HIGH",
+                        "message": f"Mandatory field Q{fid} ({fdef.field_name}) is empty",
+                        "fix_suggestion": f"Provide a value for {fdef.field_name}",
+                    })
+                    continue
+
+            if value is None or (isinstance(value, str) and not value.strip()):
+                continue
+
+            # Check format constraints
+            if fdef.format and isinstance(value, str):
+                import re
+                format_ok = _check_format_quick(value, fdef.format)
+                if not format_ok:
+                    findings.append({
+                        "rule_id": f"FMT-{report_type}-{fid}",
+                        "field_path": f"{report_type}.{fid}",
+                        "status": "FAIL",
+                        "check_type": "dqf",
+                        "severity": "MEDIUM",
+                        "message": f"Q{fid} ({fdef.field_name}) value '{value}' does not match expected format '{fdef.format}'",
+                    })
+
+            # Check data type
+            if fdef.data_type and value is not None:
+                type_ok = _check_data_type_quick(value, fdef.data_type.value)
+                if not type_ok:
+                    findings.append({
+                        "rule_id": f"TYP-{report_type}-{fid}",
+                        "field_path": f"{report_type}.{fid}",
+                        "status": "FAIL",
+                        "check_type": "dqf",
+                        "severity": "MEDIUM",
+                        "message": f"Q{fid} ({fdef.field_name}) type mismatch — expected {fdef.data_type.value}",
+                    })
+
+    return findings
+
+
+def _check_format_quick(value: str, fmt: str) -> bool:
+    """Quick format check (subset of the full validator)."""
+    import re
+    if not fmt:
+        return True
+    stripped = fmt.strip()
+    if stripped.isdigit():
+        return len(str(value)) <= int(stripped)
+    if "(n)" in stripped:
+        esma_regex = re.sub(r"(\d+)\(n\)", lambda m: r"\d{" + m.group(1) + "}", stripped)
+        try:
+            if "T" in esma_regex and "T" not in str(value):
+                date_regex = esma_regex.split("T")[0]
+                return bool(re.fullmatch(date_regex, str(value)))
+            return bool(re.fullmatch(esma_regex, str(value)))
+        except re.error:
+            return True
+    return True  # Skip complex patterns for auto-validation
+
+
+def _check_data_type_quick(value, expected_type: str) -> bool:
+    """Quick data type check."""
+    if value is None:
+        return True
+    try:
+        if expected_type in ("N", "NUM", "NUMERIC"):
+            float(str(value))
+            return True
+        elif expected_type in ("D", "DATE"):
+            from datetime import datetime
+            datetime.strptime(str(value)[:10], "%Y-%m-%d")
+            return True
+        elif expected_type in ("B", "BOOL", "BOOLEAN"):
+            return str(value).lower() in ("true", "false", "1", "0", "yes", "no")
+    except (ValueError, TypeError):
+        return False
+    return True
 
 
 def _build_field_response(
@@ -138,39 +247,72 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
     is_no_reporting = str(_no_reporting_val).strip().lower() in ("true", "t", "yes", "1")
     _no_reporting_max = int(_no_reporting_field)  # 23 for AIF, 21 for AIFM
 
-    # Get latest validation results for inline indicators.
-    # Findings have field_path like "AIFM.4" or "AIF.17" — filter by report_type.
+    # ── Auto-validate on canonical (not XML) ────────────────────────────
+    # Always run field-level validation on load so every field gets a
+    # traffic-light colour.  This replaces the old "only after Validate
+    # button" approach and validates the canonical, not the XML.
     validation_map: dict[str, FieldValidationResponse] = {}
-    validation_run = False
-    latest_val = store.get_latest_validation(session_id)
-    if latest_val and latest_val.findings_json is not None:
-        validation_run = True
-        for finding in latest_val.findings_json:
-            field_path = finding.get("field_path", "")
-            if not field_path or "." not in field_path:
-                continue
-            path_type, fid = field_path.rsplit(".", 1)
-            # Only include findings for the current report type
-            if path_type != report_type:
-                continue
-            fstatus = finding.get("status", "")
-            if fid and fstatus in ("FAIL", "WARNING"):
-                # Don't overwrite a FAIL with a WARNING for the same field
-                if fid in validation_map and validation_map[fid].status == "FAIL":
-                    continue
-                validation_map[fid] = FieldValidationResponse(
-                    status=fstatus,
-                    rule_id=finding.get("rule_id", ""),
-                    message=finding.get("message", ""),
-                    fix_suggestion=_generate_fix_suggestion(finding, registry, report_type),
-                    severity=finding.get("severity", "MEDIUM"),
-                )
 
-    # If validation has been run, add implicit PASS for valued fields without findings
-    if validation_run:
-        for fid in (report.fields_json or {}):
-            if fid not in validation_map:
-                validation_map[fid] = FieldValidationResponse(status="PASS")
+    # Step 1: run canonical field-level validation (mandatory, format, type)
+    auto_findings = _field_level_validation([report], registry)
+    # Step 2: merge any previously-stored validation run (YAML business rules)
+    latest_val = store.get_latest_validation(session_id)
+    stored_findings: list[dict] = []
+    if latest_val and latest_val.findings_json:
+        stored_findings = latest_val.findings_json
+
+    # Combine auto + stored findings into per-field lists
+    _all_findings: dict[str, list[dict]] = {}
+    for finding in auto_findings + stored_findings:
+        field_path = finding.get("field_path", "")
+        if not field_path or "." not in field_path:
+            continue
+        path_type, fid = field_path.rsplit(".", 1)
+        if path_type != report_type:
+            continue
+        if fid:
+            _all_findings.setdefault(fid, []).append(finding)
+
+    # Build FieldValidationResponse with multiple findings per field
+    for fid, flist in _all_findings.items():
+        # De-duplicate by rule_id
+        seen_rules: set[str] = set()
+        unique: list[FieldValidationFinding] = []
+        for f in flist:
+            rid = f.get("rule_id", "")
+            if rid and rid in seen_rules:
+                continue
+            seen_rules.add(rid)
+            unique.append(FieldValidationFinding(
+                rule_id=rid,
+                status=f.get("status", "PASS"),
+                severity=f.get("severity", "INFO"),
+                message=f.get("message", ""),
+                fix_suggestion=_generate_fix_suggestion(f, registry, report_type),
+            ))
+        # Aggregate status: FAIL > WARNING > PASS
+        agg = "PASS"
+        for u in unique:
+            if u.status == "FAIL":
+                agg = "FAIL"
+                break
+            if u.status == "WARNING":
+                agg = "WARNING"
+        # Legacy fields from worst finding
+        worst = next((u for u in unique if u.status == agg and agg != "PASS"), None)
+        validation_map[fid] = FieldValidationResponse(
+            status=agg,
+            findings=unique,
+            rule_id=worst.rule_id if worst else None,
+            message=worst.message if worst else None,
+            fix_suggestion=worst.fix_suggestion if worst else None,
+            severity=worst.severity if worst else None,
+        )
+
+    # Implicit PASS for valued fields without any findings
+    for fid in (report.fields_json or {}):
+        if fid not in validation_map:
+            validation_map[fid] = FieldValidationResponse(status="PASS")
 
     # Build sections from fields
     sections: dict[str, list[ReportFieldResponse]] = {}
@@ -201,7 +343,7 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
 
     for fid, fdef in all_fields.items():
         has_value = fid in fields_data
-        has_failure = fid in validation_map
+        has_failure = fid in validation_map and validation_map[fid].status in ("FAIL", "WARNING")
 
         # Hide AMND/CANCEL-only fields for INIT filings
         if filing_type == "INIT" and fid in amnd_only_fields.get(report_type, set()):
@@ -471,9 +613,13 @@ async def get_source_data(session_id: str, fund_index: int = Query(0)):
 
 @router.put("/session/{session_id}/field")
 async def edit_field(session_id: str, req: FieldEditRequest):
-    """Edit a report-level entity field value."""
+    """Edit a report-level entity field value.
+
+    The frontend MUST send report_type ("AIFM" or "AIF") and fund_index
+    so the edit targets the correct report.  This fixes the old behaviour
+    where every edit silently went to AIFM index 0.
+    """
     store = get_store()
-    report_type = "AIFM"  # TODO: determine from field_id range
     classification = get_field_classification()
     cat = classification.get(req.field_id, {}).get("category", "report")
 
@@ -483,22 +629,17 @@ async def edit_field(session_id: str, req: FieldEditRequest):
             detail="Composite fields cannot be edited directly. Edit the source data instead.",
         )
 
-    # Find the appropriate report
     session = store.get_session(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # Determine report type from field_id
-    registry = get_field_registry()
-    if registry:
-        if registry.aifm_field(req.field_id):
-            report_type = "AIFM"
-        elif registry.aif_field(req.field_id):
-            report_type = "AIF"
+    # Use report_type and fund_index from the request (sent by frontend)
+    report_type = req.report_type  # "AIFM" or "AIF"
+    fund_index = req.fund_index    # 0 for AIFM, 0-N for AIF
 
-    report = store.get_report_by_type_and_index(session_id, report_type, 0)
+    report = store.get_report_by_type_and_index(session_id, report_type, fund_index)
     if report is None:
-        raise HTTPException(status_code=404, detail="Report not found")
+        raise HTTPException(status_code=404, detail=f"{report_type} report index {fund_index} not found")
 
     # Record old value
     old_value = report.fields_json.get(req.field_id, {}).get("value")
