@@ -1,4 +1,5 @@
 @echo off
+setlocal EnableDelayedExpansion
 REM ============================================================
 REM  Eagle — Start Report Viewer (API + Frontend)
 REM  Usage: double-click to start both servers
@@ -8,6 +9,7 @@ REM ============================================================
 
 set LOCAL=C:\Dev\eagle
 set DATABASE_URL=postgresql://eagle_app:eagle_dev_local@localhost:5432/eagle_dev
+set "DRIVE_ROOT=C:\Users\olafv\Mijn Drive (olaf.van.halm@maxxmanagement.nl)\Project Eagle"
 
 echo.
 echo ============================================================
@@ -68,9 +70,23 @@ if %errorlevel% neq 0 (
 echo   Node.js OK.
 echo.
 
+REM ── Sync files from Google Drive to local dev ─────────────
+echo   [0/4] Syncing files from Google Drive to %LOCAL%...
+if not exist "!DRIVE_ROOT!\sync_to_local.bat" goto :skip_sync
+echo   Running sync_to_local.bat...
+call "!DRIVE_ROOT!\sync_to_local.bat"
+cd /d "%LOCAL%"
+echo   Sync complete.
+goto :done_sync
+:skip_sync
+echo   WARNING: sync_to_local.bat not found. Skipping sync.
+echo   Make sure files at %LOCAL% are up to date manually.
+:done_sync
+echo.
+
 REM ── Install frontend dependencies if needed ────────────────
 if not exist "%LOCAL%\frontend\node_modules" (
-    echo   [0/3] Installing frontend dependencies...
+    echo   Installing frontend dependencies...
     cd /d "%LOCAL%\frontend"
     call npm install
     cd /d "%LOCAL%"
@@ -79,7 +95,7 @@ if not exist "%LOCAL%\frontend\node_modules" (
 )
 
 REM ── Run database schema migration ─────────────────────────
-echo   [1/3] Initializing database schema...
+echo   [1/4] Initializing database schema...
 call .venv\Scripts\activate.bat
 python -c "import sys,os;os.environ['DATABASE_URL']='postgresql://eagle_app:eagle_dev_local@localhost:5432/eagle_dev';sys.path.insert(0,'Application');from persistence.report_store import ReportStore;ReportStore();print('    Database OK')"
 if %errorlevel% neq 0 (
@@ -88,11 +104,13 @@ if %errorlevel% neq 0 (
 echo.
 
 REM ── Start FastAPI backend in background ────────────────────
-echo   [2/3] Starting FastAPI API on port 8000...
-start "Eagle API" cmd /k "cd /d %LOCAL% && set DATABASE_URL=postgresql://eagle_app:eagle_dev_local@localhost:5432/eagle_dev && call .venv\Scripts\activate.bat && python -m uvicorn api.main:app --reload --port 8000"
+echo   [2/4] Starting FastAPI API on port 8000...
+REM  Note: --reload removed — it caused new endpoints to not be served.
+REM  After code changes, restart the server manually (close + rerun this script).
+start "Eagle API" cmd /k "cd /d %LOCAL% && set DATABASE_URL=postgresql://eagle_app:eagle_dev_local@localhost:5432/eagle_dev && call .venv\Scripts\activate.bat && python -m uvicorn api.main:app --port 8000"
 
 REM ── Start Next.js frontend in background ───────────────────
-echo   [3/3] Starting Next.js frontend on port 3000...
+echo   [3/4] Starting Next.js frontend on port 3000...
 start "Eagle Frontend" cmd /k "cd /d %LOCAL%\frontend && call npm run dev"
 
 REM ── Wait a moment then open browser ────────────────────────

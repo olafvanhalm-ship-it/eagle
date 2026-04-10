@@ -1269,6 +1269,57 @@ class MAdapter(AifmBuilderMixin, AifBuilderMixin, OrchestratorMixin):
                 controlled_structures.append(cs)
         return controlled_structures
 
+    # ── Content type derivation (single source of truth) ────────────
+    #
+    # AIFM and AIF use DIFFERENT content type numbering:
+    #
+    #   AIFM CT: 1=authorised (home NCA), 2=registered 3(3)(d), 3=authorised (marketing NCA)
+    #   AIF  CT: 1=Art 24(1), 2=Art 24(1)+24(2), 3=Art 3(3)(d),
+    #            4=Art 24(1)+24(2)+24(4), 5=Art 24(1)+24(4)
+    #
+    # All 4 code paths that set field "5" MUST call these methods.
+
+    def _derive_aifm_content_type(self, reporting_member_state: str = "") -> str:
+        """Derive AIFM content type from template type and jurisdiction.
+
+        Returns "1" (authorised, home), "2" (registered), or "3" (authorised, marketing).
+        """
+        if self.template_type != "FULL":
+            return "2"  # registered 3(3)(d)
+        rms = reporting_member_state or self.reporting_member_state or ""
+        if rms == self.aifm_jurisdiction:
+            return "1"  # authorised, home NCA
+        return "3"      # authorised, marketing NCA
+
+    def _derive_aif_content_type(self, aif: dict = None,
+                                  reporting_member_state: str = "") -> str:
+        """Derive AIF content type from template type and AIF domicile.
+
+        Returns "1" (Art 24(1)), "3" (Art 3(3)(d)), or the explicit value
+        from the template if provided.
+        Note: CT2/CT4/CT5 require additional threshold data and are set via
+        the reporting obligation matrix — not derivable from template alone.
+        """
+        # Honour explicit value from template if present
+        if aif:
+            explicit = _str(aif.get("AIF Content Type", "") or
+                           aif.get("AIF content type", ""))
+            if explicit:
+                return explicit
+
+        if self.template_type != "FULL":
+            return "3"  # registered AIFM → Art 3(3)(d)
+
+        # Authorised AIFM: derive from AIF domicile
+        rms = reporting_member_state or self.reporting_member_state or ""
+        domicile = ""
+        if aif:
+            domicile = (_str(aif.get("Domicile of the AIF", "")) or
+                       _str(aif.get("AIF Domicile", "")))
+        if not domicile:
+            domicile = self.aifm_jurisdiction or rms
+        return "1" if _is_eea(domicile) else "3"
+
     def _collect_aifm_report_fields(self) -> dict:
         """Collect AIFM report-specific fields (non-entity fields).
 
@@ -1293,14 +1344,8 @@ class MAdapter(AifmBuilderMixin, AifBuilderMixin, OrchestratorMixin):
         filing_type = self.filing_type or "INIT"
         report_fields["4"] = filing_type
 
-        # Q5: Content Type (calculated based on template type and jurisdiction)
-        if self.template_type != "FULL":
-            content_type = "2"  # registered
-        elif rms == self.aifm_jurisdiction:
-            content_type = "1"  # authorised, home NCA
-        else:
-            content_type = "3"  # authorised, marketing NCA
-        report_fields["5"] = content_type
+        # Q5: AIFM Content Type
+        report_fields["5"] = self._derive_aifm_content_type(rms)
 
         # Q6: Period Start Date
         period_start, period_end = _reporting_period_dates(self.reporting_period_type,
@@ -1343,13 +1388,7 @@ class MAdapter(AifmBuilderMixin, AifBuilderMixin, OrchestratorMixin):
         filing_type = self.filing_type or "INIT"
         report_fields["4"] = filing_type
 
-        if self.template_type != "FULL":
-            content_type = "2"
-        elif rms == self.aifm_jurisdiction:
-            content_type = "1"
-        else:
-            content_type = "3"
-        report_fields["5"] = content_type
+        report_fields["5"] = self._derive_aif_content_type(aif, rms)
 
         period_start, period_end = _reporting_period_dates(self.reporting_period_type,
                                                            self.reporting_year)
@@ -1451,14 +1490,9 @@ class MAdapter(AifmBuilderMixin, AifBuilderMixin, OrchestratorMixin):
         filing_type = self.filing_type or "INIT"
         report.set_field("4", filing_type, source="m_adapter", priority=SourcePriority.IMPORTED)
 
-        # Q5: Content Type (calculated based on template type and jurisdiction)
-        if self.template_type != "FULL":
-            content_type = "2"  # registered
-        elif rms == self.aifm_jurisdiction:
-            content_type = "1"  # authorised, home NCA
-        else:
-            content_type = "3"  # authorised, marketing NCA
-        report.set_field("5", content_type, source="m_adapter", priority=SourcePriority.DERIVED)
+        # Q5: AIFM Content Type
+        report.set_field("5", self._derive_aifm_content_type(rms),
+                        source="m_adapter", priority=SourcePriority.DERIVED)
 
         # Q6: Period Start Date
         period_start, period_end = _reporting_period_dates(self.reporting_period_type,
@@ -1683,18 +1717,10 @@ class MAdapter(AifmBuilderMixin, AifBuilderMixin, OrchestratorMixin):
             report.set_field("4", filing_type, source="m_adapter", priority=SourcePriority.IMPORTED)
 
             # Field 5: AIF content type
-            content_type = _str(aif.get("AIF Content Type", "") or aif.get("AIF content type", ""))
-            if not content_type:
-                # Derive: 1=24(1) authorised, 2=24(2) registered, 3=non-EU
-                if self.template_type != "FULL":
-                    content_type = "2"
-                else:
-                    domicile = (_str(aif.get("Domicile of the AIF", "")) or
-                               _str(aif.get("AIF Domicile", "")) or
-                               self.aifm_jurisdiction or rms)
-                    content_type = "1" if _is_eea(domicile) else "3"
+            content_type = self._derive_aif_content_type(aif, rms)
+            explicit = _str(aif.get("AIF Content Type", "") or aif.get("AIF content type", ""))
             report.set_field("5", content_type, source="m_adapter",
-                            priority=SourcePriority.DERIVED if not _str(aif.get("AIF Content Type", "")) else SourcePriority.IMPORTED)
+                            priority=SourcePriority.IMPORTED if explicit else SourcePriority.DERIVED)
 
             # Field 6: Reporting period start date
             period_start, period_end = _reporting_period_dates(self.reporting_period_type,

@@ -100,7 +100,8 @@ def get_field_registry():
 def get_field_classification() -> dict:
     """Load the field source classification YAML.
 
-    Returns dict: field_id → {"category": "entity"|"composite"|"report", ...}
+    Returns dict: "REPORT_TYPE.field_id" → {"category": ...}
+    Also includes un-prefixed entries for backward compat (AIF wins on conflict).
     """
     if str(_APP_ROOT) not in sys.path:
         sys.path.insert(0, str(_APP_ROOT))
@@ -117,15 +118,22 @@ def get_field_classification() -> dict:
                     raw = yaml.safe_load(f)
 
                 result = {}
+                _section_to_type = {"aifm_fields": "AIFM", "aif_fields": "AIF"}
                 for section_key in ("aifm_fields", "aif_fields"):
+                    rtype = _section_to_type[section_key]
                     for entry in raw.get(section_key, []):
                         fid = str(entry.get("field_id", ""))
-                        result[fid] = {
+                        val = {
                             "category": entry.get("category", "report"),
                             "source_entity": entry.get("source_entity"),
                             "source_field": entry.get("source_field"),
                         }
-                log.info("Loaded field classification: %d fields from %s", len(result), path.name)
+                        # Always use namespaced key: "AIFM.33" or "AIF.33"
+                        # Field IDs are NOT globally unique — AIF and AIFM have
+                        # independent numbering (e.g., field 33 = AuM in AIFM,
+                        # share class flag in AIF).
+                        result[f"{rtype}.{fid}"] = val
+                log.info("Loaded field classification: %d entries from %s", len(result), path.name)
                 return result
             except Exception as e:
                 log.warning("Failed to load field classification from %s: %s", path, e)

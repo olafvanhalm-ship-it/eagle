@@ -1,17 +1,42 @@
 ################################################################################
-# NCA-SPECIFIC OVERRIDES — FI / Finansinspektionen (Sweden)
-# Version: v1 — 2026-04-03
-# Base YAML: aifmd_validation_rules.yaml (v1.0)
+# NCA-SPECIFIC OVERRIDES — FI (SE)
+# Version: v2
+# Base YAML: aifmd_validation_rules.yaml (v2.3)
 #
-# Source: Finansinspektionen FFFS 2013:10, FIDAC portal documentation,
-#         and ESMA IT Technical Guidance Rev 6 as applied by FI.
+# SCHEMA: DELTA-ONLY OVERRIDES (Option B)
+#
+# This file uses the delta-only override pattern. Each nca_rules entry carries
+# ONLY the fields that DIFFER from the base YAML rule it overrides.
+# All other attributes are INHERITED from the base rule at load time.
+#
+# Required keys per override rule:
+#   rule_id        — unique NCA rule identifier
+#   base_rule_id   — links to the base YAML rule (e.g. AIFM-1, AIF-17)
+#   field_id       — the ESMA field number being overridden
+#
+# Always-present NCA keys (even if empty):
+#   nca_error_codes, overrides_esma, status, nca_source_doc, nca_doc_date
+#   validation_rules, technical_guidance, eagle_action
+#
+# Delta keys (only present when NCA value differs from base):
+#   field_name, format, data_type, m_c_o_f, mandatory, severity, etc.
+#
+# NCA-specific rules (base_rule_id empty): carry FULL field definition
+# since there is no base rule to inherit from.
+#
+# Infrastructure sections (transmission, file_format, correction_rules,
+# eagle_implementation, return_files) are NCA-specific and always present.
+#
+# LOADER CONTRACT:
+#   merged_rule = base_rule | nca_override   (Python dict merge)
+#   i.e. NCA keys overwrite base keys; base keys not in NCA are inherited.
 ################################################################################
 
 nca_overrides:
   nca: FI
   country: SE
   base_yaml: aifmd_validation_rules.yaml
-  base_yaml_version: '1.0'
+  base_yaml_version: '2.3'
   source_document:
     title: FFFS 2013:10 — Regulations regarding Alternative Investment Fund Managers
     version: Current (FIDAC migration 2024)
@@ -25,28 +50,20 @@ nca_overrides:
     - Initial FI/Sweden override file based on web research
     - 'Covers: ReportingMemberState, national code format, FIDAC portal, ZIP packaging,'
     - '  submission deadlines, holiday rule, nil return handling'
-
+  - version: v2
+    date: '2026-04-10'
+    changes:
+    - Migrated to delta-only override schema (Option B)
+    - Removed fields identical to base YAML — only NCA deltas retained
+    - Updated base_yaml_version from '2.3' to '2.3'
+    - 'Schema: NCA rules now carry only rule_id, base_rule_id, field_id + delta keys'
   nca_rules:
-
-  # ── Section: Header — ReportingMemberState ─────────────────────────────────
-
   - rule_id: NCA-FI-ReportingMemberState
     base_rule_id: AIFM-1
     field_id: '1'
     field_name: Reporting Member State
-    xsd_element: <ReportingMemberState>
-    xml_type: CountryCodeType
-    format: 2 [A-Z]+
-    data_type: A
-    m_c_o_f: M
-    repetition: '[1..1]'
-    mandatory: true
-    conditional: false
-    section: AIFM - Header file
     report_type: AIF+AIFM
-    severity: CRITICAL
     rule_source: Finansinspektionen AIFMD Reporting
-    esma_doc: ESMA/2013/1358 Rev.6
     nca_error_codes: []
     overrides_esma: true
     status: active
@@ -56,31 +73,16 @@ nca_overrides:
     base_rule_path:
       aifm_report: aifm_report.envelope.ReportingMemberState
       aif_report: aif_report.envelope.ReportingMemberState
-    technical_guidance: >-
-      For reports submitted to Finansinspektionen the value must always be "SE".
+    technical_guidance: For reports submitted to Finansinspektionen the value must always be "SE".
     eagle_action: ''
-    validation_rules: >-
-      ReportingMemberState = "SE"
-
-  # ── Section: AIFM Identifier — AIFMNationalCode ───────────────────────────
-
+    validation_rules: ReportingMemberState = "SE"
   - rule_id: NCA-FI-AIFMNationalCode
     base_rule_id: AIFM-18
     field_id: '18'
-    field_name: AIFM National Code
-    xsd_element: <AIFMNationalCode>
-    xml_type: AIFMNationalCodeType
     format: '[0-9]{5}'
     data_type: N
-    m_c_o_f: M
-    repetition: '[1..1]'
-    mandatory: true
-    conditional: false
     section: AIFM - Identifiers
-    report_type: AIFM
-    severity: CRITICAL
     rule_source: Finansinspektionen AIFMD Reporting
-    esma_doc: ESMA/2013/1358 Rev.6
     nca_error_codes: []
     overrides_esma: true
     status: active
@@ -89,34 +91,21 @@ nca_overrides:
     nca_doc_date: '2024-09-30'
     base_rule_path:
       aifm_report: aifm_report.identification.AIFMNationalCode
-    technical_guidance: >-
-      Finansinspektionen assigns AIFM national codes as 5-digit numeric identifiers. The code is assigned
-      by FI upon authorisation or registration.
+    technical_guidance: Finansinspektionen assigns AIFM national codes as 5-digit numeric identifiers.
+      The code is assigned by FI upon authorisation or registration.
     eagle_action: ''
     validation_rules:
     - Must match regex ^[0-9]{5}$
     - Total length must be exactly 5 digits
     example: '12345'
-
-  # ── Section: AIF Identifier — AIFNationalCode ────────────────────────────
-
   - rule_id: NCA-FI-AIFNationalCode
     base_rule_id: AIF-17
     field_id: '17'
     field_name: AIF National Code
-    xsd_element: <AIFNationalCode>
-    xml_type: AIFNationalCodeType
     format: '[0-9]{5}'
     data_type: N
-    m_c_o_f: M
-    repetition: '[1..1]'
-    mandatory: true
-    conditional: false
     section: AIF - Identifiers
-    report_type: AIF
-    severity: CRITICAL
     rule_source: Finansinspektionen AIFMD Reporting
-    esma_doc: ESMA/2013/1358 Rev.6
     nca_error_codes: []
     overrides_esma: true
     status: active
@@ -125,17 +114,13 @@ nca_overrides:
     nca_doc_date: '2024-09-30'
     base_rule_path:
       aif_report: aif_report.identification.AIFNationalCode
-    technical_guidance: >-
-      Finansinspektionen assigns AIF national codes as 5-digit numeric identifiers, same format as the
-      AIFM national code.
+    technical_guidance: Finansinspektionen assigns AIF national codes as 5-digit numeric identifiers,
+      same format as the AIFM national code.
     eagle_action: ''
     validation_rules:
     - Must match regex ^[0-9]{5}$
     - Total length must be exactly 5 digits
     example: '54321'
-
-  # ── Section: Submission deadlines ──────────────────────────────────────────
-
   - rule_id: NCA-FI-SubmissionDeadline
     base_rule_id: ''
     field_id: ''
@@ -152,7 +137,6 @@ nca_overrides:
     report_type: AIF+AIFM
     severity: HIGH
     rule_source: Finansinspektionen AIFMD Reporting
-    esma_doc: ''
     nca_error_codes: []
     overrides_esma: true
     status: active
@@ -160,19 +144,16 @@ nca_overrides:
     nca_source_doc: Finansinspektionen reporting calendar
     nca_doc_date: '2024-09-30'
     base_rule_path: {}
-    technical_guidance: >-
-      Returns must be submitted within one month after the end of the reporting period. Fund-of-funds managers
-      receive an additional 15-day extension. Unlike some NCAs, if the deadline falls on a weekend or Swedish
-      public holiday, it automatically moves to the next weekday.
-    eagle_action: >-
-      Calculate submission deadlines with Swedish holiday calendar adjustment. Alert users when deadlines shift.
+    technical_guidance: Returns must be submitted within one month after the end of the reporting period.
+      Fund-of-funds managers receive an additional 15-day extension. Unlike some NCAs, if the deadline
+      falls on a weekend or Swedish public holiday, it automatically moves to the next weekday.
+    eagle_action: Calculate submission deadlines with Swedish holiday calendar adjustment. Alert users
+      when deadlines shift.
     validation_rules:
     - Standard deadline: 1 month after reporting period end
     - Fund-of-funds extension: additional 15 calendar days
     - 'Holiday rule: if deadline falls on weekend/Swedish holiday, moves to next weekday'
-
-  # ── Section: File packaging ────────────────────────────────────────────────
-
+    esma_doc: ''
   - rule_id: NCA-FI-FilePackaging
     base_rule_id: ''
     field_id: ''
@@ -189,7 +170,6 @@ nca_overrides:
     report_type: AIF+AIFM
     severity: HIGH
     rule_source: Finansinspektionen AIFMD Reporting
-    esma_doc: ''
     nca_error_codes: []
     overrides_esma: true
     status: active
@@ -197,32 +177,29 @@ nca_overrides:
     nca_source_doc: Finansinspektionen FIDAC documentation
     nca_doc_date: '2024-09-30'
     base_rule_path: {}
-    technical_guidance: >-
-      Each XML file must be wrapped in .ZIP format before submission to FIDAC. Replace the '.xml' extension
-      with '.zip'. The ZIP must contain exactly one XML file.
-    eagle_action: >-
-      Adapter must compress each XML into a ZIP file with .zip extension replacing .xml.
+    technical_guidance: Each XML file must be wrapped in .ZIP format before submission to FIDAC. Replace
+      the '.xml' extension with '.zip'. The ZIP must contain exactly one XML file.
+    eagle_action: Adapter must compress each XML into a ZIP file with .zip extension replacing .xml.
     validation_rules:
     - XML files must be wrapped in ZIP format
     - ZIP must contain exactly one XML file
     - Filename extension: .zip (replacing .xml)
-
+    esma_doc: ''
   transmission:
-    note: >-
-      Finansinspektionen migrated from the legacy Periodic Reporting portal to FIDAC (Finansinspektionen Data Collection)
-      starting Q3 2024 (reference date 2024-09-30). All AIFMD reports must now be submitted via FIDAC.
+    note: Finansinspektionen migrated from the legacy Periodic Reporting portal to FIDAC (Finansinspektionen
+      Data Collection) starting Q3 2024 (reference date 2024-09-30). All AIFMD reports must now be submitted
+      via FIDAC.
     overrides_esma: true
     channels:
       fidac:
         name: FIDAC (Finansinspektionen Data Collection)
-        description: >-
-          XML files uploaded via the FIDAC reporting system. Credentials are the same as the legacy Periodic Reporting
-          portal. A test environment (FIDAC Test Reporting) is available for validation before production submission.
+        description: XML files uploaded via the FIDAC reporting system. Credentials are the same as the
+          legacy Periodic Reporting portal. A test environment (FIDAC Test Reporting) is available for
+          validation before production submission.
         url: https://www.fi.se/en/e-services-and-forms/reporting-to-fi/fidac/
-        note: >-
-          FIDAC has more extensive validation rules than the previous system, based on ESMA IT Technical Guidance Rev 6.
-          After validation, email notification is sent to the designated contact person. Validation results are also
-          available in the Messages tab of the FIDAC portal.
+        note: FIDAC has more extensive validation rules than the previous system, based on ESMA IT Technical
+          Guidance Rev 6. After validation, email notification is sent to the designated contact person.
+          Validation results are also available in the Messages tab of the FIDAC portal.
   file_format:
     encoding: UTF-8
     container: ZIP (XML wrapped in ZIP)
@@ -232,25 +209,23 @@ nca_overrides:
     - AIF reports use AIFMD_DATAIF_V1.2.xsd
   correction_rules:
     submission_deadlines:
-      description: >-
-        Returns due one month after reporting period end. Swedish holiday rule applies.
+      description: Returns due one month after reporting period end. Swedish holiday rule applies.
       schedule:
-      - reporting_date: '31-03'
-        due_date: '30-04'
-      - reporting_date: '30-06'
-        due_date: '31-07'
-      - reporting_date: '30-09'
-        due_date: '31-10'
-      - reporting_date: '31-12'
-        due_date: '31-01'
+      - reporting_date: 31-03
+        due_date: 30-04
+      - reporting_date: 30-06
+        due_date: 31-07
+      - reporting_date: 30-09
+        due_date: 31-10
+      - reporting_date: 31-12
+        due_date: 31-01
       fund_of_funds_extension:
         description: Additional 15-day extension for fund-of-funds managers.
         extension_days: 15
-      holiday_rule: >-
-        If deadline falls on a weekend or Swedish public holiday, it moves to the next weekday.
+      holiday_rule: If deadline falls on a weekend or Swedish public holiday, it moves to the next weekday.
   eagle_implementation:
     pre_submission_checks:
-    - 'Verify ReportingMemberState = "SE"'
+    - Verify ReportingMemberState = "SE"
     - Validate AIFMNationalCode is populated with FI-assigned code
     - Confirm XML is wrapped in ZIP before upload
     - Validate against ESMA XSD schema v1.2 Rev 6 before submission
@@ -258,6 +233,5 @@ nca_overrides:
     contact:
       fidac_faq: https://www.fi.se/en/e-services-and-forms/reporting-to-fi/fidac/faq/
       reporting_info: https://www.fi.se/en/e-services-and-forms/reporting-to-fi/reporting-calendar-and-information/fund/alternative-investment-funds/
-    update_trigger: >-
-      Monitor https://www.fi.se for updates. Note: AIFMD 2.0 transposition deadline is 16 April 2026;
-      new reporting requirements expected from April 2027.
+    update_trigger: 'Monitor https://www.fi.se for updates. Note: AIFMD 2.0 transposition deadline is
+      16 April 2026; new reporting requirements expected from April 2027.'

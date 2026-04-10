@@ -1042,23 +1042,28 @@ _AIFM_IDENTIFICATION = {
     "AIFMIdentifierBIC": "23",
 }
 
+_AIFM_OLD_IDENTIFIER = {
+    "ReportingMemberState": "24",
+    "AIFMNationalCode": "25",
+}
+
 _AIFM_CURRENCY = {
-    "AUMAmountInEuro": "24",
-    "BaseCurrency": "26",
-    "AUMAmountInBaseCurrency": "27",
-    "FXEURReferenceRateType": "28",
-    "FXEURRate": "29",
-    "FXEUROtherReferenceRateDescription": "30",
+    "AUMAmountInEuro": "33",
+    "AUMAmountInBaseCurrency": "34",
+    "BaseCurrency": "35",
+    "FXEURReferenceRateType": "36",
+    "FXEURRate": "37",
+    "FXEUROtherReferenceRateDescription": "38",
 }
 
 _AIFM_PRINCIPAL_MARKETS = [
-    ("Ranking", "31"), ("MarketCodeType", "32"), ("MarketCode", "33"),
-    ("AggregatedValueAmount", "34"),
+    ("Ranking", "26"), ("MarketCodeType", "27"), ("MarketCode", "28"),
+    ("AggregatedValueAmount", "29"),
 ]
 
 _AIFM_PRINCIPAL_INSTRUMENTS = [
-    ("Ranking", "35"), ("SubAssetType", "36"),
-    ("AggregatedValueAmount", "37"),
+    ("Ranking", "30"), ("SubAssetType", "31"),
+    ("AggregatedValueAmount", "32"),
 ]
 
 _AIFM_CANCELLATION = {
@@ -1114,25 +1119,28 @@ def extract_aifm_fields(xml_source: Union[str, Path, ET.Element]) -> tuple[dict,
     if ident is not None:
         _extract_scalars(ident, _AIFM_IDENTIFICATION, fields, prov)
 
-    # 5. AUM in Euro (field 24) — direct child of AIFMCompleteDescription
-    _extract_scalars_deep(root, {"AUMAmountInEuro": "24"}, fields, prov)
+    # 5. Old AIFM identifier (fields 24-25)
+    old_ident = _find_deep(root, "OldAIFMIdentifierNCA")
+    if old_ident is not None:
+        _extract_scalars(old_ident, _AIFM_OLD_IDENTIFIER, fields, prov)
 
-    # 6. Currency description (26-30)
-    curr = _find_deep(root, "AIFMBaseCurrencyDescription")
-    if curr is not None:
-        _extract_scalars(curr, _AIFM_CURRENCY, fields, prov)
-
-    # 7. Principal markets (31-34) — repeating, ranked 1..5
+    # 6. Principal markets (fields 26-29) — repeating, ranked 1..5
     _extract_repeating_group(
         root, "AIFMPrincipalMarkets", "AIFMFivePrincipalMarket",
         _AIFM_PRINCIPAL_MARKETS, fields, groups, "aifm_principal_markets", prov,
     )
 
-    # 8. Principal instruments (35-37) — repeating, ranked 1..5
+    # 7. Principal instruments (fields 30-32) — repeating, ranked 1..5
     _extract_repeating_group(
         root, "AIFMPrincipalInstruments", "AIFMPrincipalInstrument",
         _AIFM_PRINCIPAL_INSTRUMENTS, fields, groups, "aifm_principal_instruments", prov,
     )
+
+    # 8. AuM and currency (fields 33-38)
+    _extract_scalars_deep(root, {"AUMAmountInEuro": "33"}, fields, prov)
+    curr = _find_deep(root, "AIFMBaseCurrencyDescription")
+    if curr is not None:
+        _extract_scalars(curr, _AIFM_CURRENCY, fields, prov)
 
     # 9. Cancellation fields
     _extract_scalars_deep(root, _AIFM_CANCELLATION, fields, prov)

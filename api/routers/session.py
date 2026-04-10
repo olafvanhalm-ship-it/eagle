@@ -219,13 +219,17 @@ async def upload_and_validate(file: UploadFile = File(...)):
             aifm_xmls = result.get("aifm_xmls", [])
             if aifm_xmls:
                 aifm_fields, aifm_groups = extract_aifm_fields(aifm_xmls[0])
-                # Collect all NCA codes from AIFM national code records
+                # Collect all NCA codes + national codes from AIFM national code records
                 aifm_nca_list = [rms] if rms else []
+                aifm_nca_national: dict[str, str] = {}
                 if hasattr(adapter, "aifm_national_codes"):
                     for nc in adapter.aifm_national_codes:
                         nc_rms = str(nc.get("AIFM Reporting Member State", "") or "").strip()
+                        nc_code = str(nc.get("AIFM National Code", "") or "").strip()
                         if nc_rms and nc_rms not in aifm_nca_list:
                             aifm_nca_list.append(nc_rms)
+                        if nc_rms and nc_code:
+                            aifm_nca_national[nc_rms] = nc_code
 
                 aifm_report = ReviewReport(
                     session_id=session.session_id,
@@ -233,6 +237,7 @@ async def upload_and_validate(file: UploadFile = File(...)):
                     entity_name=aifm_name,
                     entity_index=0,
                     nca_codes=aifm_nca_list,
+                    nca_national_codes=aifm_nca_national,
                     fields_json=aifm_fields,
                     groups_json=aifm_groups,
                     history_json={},
@@ -250,35 +255,70 @@ async def upload_and_validate(file: UploadFile = File(...)):
             log.warning("Could not extract AIFM fields from XML: %s", e)
 
         # Save AIF reports — extract fields from generated AIF XMLs
+        # IMPORTANT: The orchestrator generates one XML per (AIF, NCA) pair.
+        # With N AIFs and M NCAs this produces N*M XMLs.  We must deduplicate:
+        # one ReviewReport per unique AIF, using fields from ONE XML per AIF
+        # (preferring the AIFM home RMS so Q1/Q17 reflect the primary NCA).
         try:
             aif_xmls = result.get("aif_xmls", [])
-            for idx, aif_xml_path in enumerate(aif_xmls):
-                aif_fields, aif_groups = extract_aif_fields(aif_xml_path)
 
+            # Step 1: Extract fields from each XML, group by AIF name.
+            # Key = AIF name (field 18), Value = {rms → (fields, groups)}
+            _aif_by_name: dict[str, dict[str, tuple]] = {}
+            for aif_xml_path in aif_xmls:
+                try:
+                    _fields, _groups = extract_aif_fields(aif_xml_path)
+                except Exception as _e:
+                    log.debug("Skipping AIF XML %s: %s", aif_xml_path, _e)
+                    continue
+                _name = (_fields.get("18", {}).get("value", "") or "").strip()
+                _xml_rms = (_fields.get("1", {}).get("value", "") or "").strip()
+                if not _name:
+                    continue
+                if _name not in _aif_by_name:
+                    _aif_by_name[_name] = {}
+                if _xml_rms not in _aif_by_name[_name]:
+                    _aif_by_name[_name][_xml_rms] = (_fields, _groups)
+
+            log.info("Extracted AIF XMLs: %d files → %d unique AIFs",
+                     len(aif_xmls), len(_aif_by_name))
+
+            # Step 2: Create one ReviewReport per adapter AIF, matching by name.
+            num_aifs = len(adapter.aifs) if hasattr(adapter, "aifs") else 0
+            for idx in range(num_aifs):
+                aif_obj = adapter.aifs[idx]
                 aif_name = ""
-                if hasattr(adapter, "aifs") and idx < len(adapter.aifs):
-                    aif = adapter.aifs[idx]
-                    aif_name = getattr(aif, "name", "") or getattr(aif, "aif_name", "")
-                # Prefer AIF Name from extracted XML fields (field 18)
-                if not aif_name and aif_fields:
-                    aif_name = (aif_fields.get("18", {}).get("value", "") or "")
+                if isinstance(aif_obj, dict):
+                    aif_name = (aif_obj.get("AIF Name", "") or "").strip()
+                else:
+                    aif_name = str(getattr(aif_obj, "aif_name", "") or "").strip()
                 if not aif_name:
                     aif_name = f"AIF {idx + 1}"
 
-                # Collect NCA codes for this AIF from aif_national_codes
-                nca_list = [rms] if rms else []
+                # Find extracted fields for this AIF
+                rms_map = _aif_by_name.get(aif_name, {})
+                if not rms_map:
+                    log.warning("No extracted XML found for AIF '%s' (idx %d)", aif_name, idx)
+                    continue
+
+                # Prefer home RMS, fall back to first available
+                if rms in rms_map:
+                    aif_fields, aif_groups = rms_map[rms]
+                else:
+                    aif_fields, aif_groups = next(iter(rms_map.values()))
+
+                # Collect NCA codes + national codes for this AIF
+                nca_list: list[str] = []
+                nca_national: dict[str, str] = {}
                 if hasattr(adapter, "aif_national_codes"):
-                    # Get AIF ID to match national code records
                     aif_id = ""
-                    if hasattr(adapter, "aifs") and idx < len(adapter.aifs):
-                        aif_obj = adapter.aifs[idx]
+                    if isinstance(aif_obj, dict):
                         aif_id = str(
                             aif_obj.get("Custom AIF Identification", "") or
                             aif_obj.get("AIF ID", "") or ""
-                        ).strip() if isinstance(aif_obj, dict) else str(
-                            getattr(aif_obj, "aif_id", "") or ""
                         ).strip()
-                    # Also try field 14 from extracted XML (AIF national code)
+                    else:
+                        aif_id = str(getattr(aif_obj, "aif_id", "") or "").strip()
                     if not aif_id and aif_fields:
                         aif_id = str(aif_fields.get("14", {}).get("value", "") or "").strip()
                     for nc in adapter.aif_national_codes:
@@ -287,10 +327,18 @@ async def upload_and_validate(file: UploadFile = File(...)):
                             nc.get("AIF ID", "") or ""
                         ).strip()
                         nc_rms = str(nc.get("AIF Reporting Member State", "") or "").strip()
+                        nc_code = str(nc.get("AIF National Code", "") or "").strip()
                         if nc_rms and nc_rms not in nca_list:
-                            # Include if AIF ID matches OR if no AIF ID to match
-                            if not aif_id or nc_aif == aif_id:
+                            if aif_id and nc_aif == aif_id:
                                 nca_list.append(nc_rms)
+                                if nc_code:
+                                    nca_national[nc_rms] = nc_code
+                            elif not aif_id and not nc_aif:
+                                nca_list.append(nc_rms)
+                                if nc_code:
+                                    nca_national[nc_rms] = nc_code
+                if not nca_list and rms:
+                    nca_list = [rms]
 
                 aif_report = ReviewReport(
                     session_id=session.session_id,
@@ -298,6 +346,7 @@ async def upload_and_validate(file: UploadFile = File(...)):
                     entity_name=aif_name,
                     entity_index=idx,
                     nca_codes=nca_list,
+                    nca_national_codes=nca_national,
                     fields_json=aif_fields,
                     groups_json=aif_groups,
                     history_json={},
@@ -305,14 +354,13 @@ async def upload_and_validate(file: UploadFile = File(...)):
                 fcount = len(aif_fields)
                 aif_report.filled_count = fcount
                 aif_report.field_count = 302
-                # Completeness = (required fields - errors) / required fields
                 aif_report.completeness = _calc_completeness(
                     "AIF", filing_type, _val_errors["AIF"], aif_fields)
                 store.save_report(aif_report)
                 log.info("Saved AIF report %d (%s) from XML: %d fields, %d groups, %.1f%% complete",
                          idx, aif_name, fcount, len(aif_groups), aif_report.completeness)
         except Exception as e:
-            log.warning("Could not extract AIF fields from XML: %s", e)
+            log.warning("Could not extract AIF fields from XML: %s\n%s", e, traceback.format_exc())
 
         # ── Store real validation results from generate_and_validate() ──
         # The pipeline validator (validate_aifmd_xml.py) already ran above.
@@ -437,6 +485,7 @@ async def get_session(session_id: str):
             entity_name=r.entity_name,
             entity_index=r.entity_index,
             nca_codes=r.nca_codes,
+            nca_national_codes=r.nca_national_codes,
             completeness=r.completeness,
             field_count=r.field_count,
             filled_count=r.filled_count,
@@ -476,6 +525,7 @@ async def get_active_session():
             "entity_name": r.entity_name,
             "entity_index": r.entity_index,
             "nca_codes": r.nca_codes,
+            "nca_national_codes": r.nca_national_codes,
             "completeness": r.completeness,
             "field_count": r.field_count,
             "filled_count": r.filled_count,

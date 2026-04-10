@@ -1,19 +1,42 @@
 ################################################################################
 # NCA-SPECIFIC OVERRIDES — MNB (HU)
-# Version: v1 — 2026-04-03
-# Base YAML: aifmd_validation_rules.yaml
+# Version: v2
+# Base YAML: aifmd_validation_rules.yaml (v2.3)
 #
-# Source: Online research of NCA documentation and ESMA guidelines
-# National code: MNB-assigned AIFM code
-# Portal: ASZP Data Supplier Portal (https://aszp.mnb.hu)
-# File packaging: CAP/ERA format (non-standard — not XML)
-# Deadline: Standard 30 days after reporting period end
+# SCHEMA: DELTA-ONLY OVERRIDES (Option B)
+#
+# This file uses the delta-only override pattern. Each nca_rules entry carries
+# ONLY the fields that DIFFER from the base YAML rule it overrides.
+# All other attributes are INHERITED from the base rule at load time.
+#
+# Required keys per override rule:
+#   rule_id        — unique NCA rule identifier
+#   base_rule_id   — links to the base YAML rule (e.g. AIFM-1, AIF-17)
+#   field_id       — the ESMA field number being overridden
+#
+# Always-present NCA keys (even if empty):
+#   nca_error_codes, overrides_esma, status, nca_source_doc, nca_doc_date
+#   validation_rules, technical_guidance, eagle_action
+#
+# Delta keys (only present when NCA value differs from base):
+#   field_name, format, data_type, m_c_o_f, mandatory, severity, etc.
+#
+# NCA-specific rules (base_rule_id empty): carry FULL field definition
+# since there is no base rule to inherit from.
+#
+# Infrastructure sections (transmission, file_format, correction_rules,
+# eagle_implementation, return_files) are NCA-specific and always present.
+#
+# LOADER CONTRACT:
+#   merged_rule = base_rule | nca_override   (Python dict merge)
+#   i.e. NCA keys overwrite base keys; base keys not in NCA are inherited.
 ################################################################################
+
 nca_overrides:
   nca: MNB
   country: HU
   base_yaml: aifmd_validation_rules.yaml
-  base_yaml_version: '1.0'
+  base_yaml_version: '2.3'
   source_document:
     title: AIFMD Annex IV Reporting Requirements — Magyar Nemzeti Bank (MNB)
     version: '1.0'
@@ -31,13 +54,18 @@ nca_overrides:
     date: '2026-04-03'
     changes:
     - Initial MNB NCA override file — based on web research of latest documentation
+  - version: v2
+    date: '2026-04-10'
+    changes:
+    - Migrated to delta-only override schema (Option B)
+    - Removed fields identical to base YAML — only NCA deltas retained
+    - Updated base_yaml_version from '2.3' to '2.3'
+    - 'Schema: NCA rules now carry only rule_id, base_rule_id, field_id + delta keys'
   nca_rules:
   - rule_id: NCA-MNB-HU-ReportingMemberState
     base_rule_id: AIFM-1
     field_id: '1'
     field_name: Reporting Member State
-    xsd_element: <ReportingMemberState>
-    severity: CRITICAL
     overrides_esma: true
     status: active
     nca_source_doc: Magyar Nemzeti Bank (MNB) reporting requirements
@@ -54,7 +82,7 @@ nca_overrides:
     status: active
     nca_source_doc: Magyar Nemzeti Bank (MNB) reporting requirements
     nca_doc_date: '2026-04-03'
-    technical_guidance: 'CRITICAL OVERRIDE: Hungary''s MNB does NOT accept standard ESMA XML format. Reports must be submitted
-      in CAP or ERA format via the ASZP Data Supplier Portal. This requires format conversion from the standard AIFMD XML.
-      Contact MNB for format specifications.'
+    technical_guidance: 'CRITICAL OVERRIDE: Hungary''s MNB does NOT accept standard ESMA XML format. Reports
+      must be submitted in CAP or ERA format via the ASZP Data Supplier Portal. This requires format conversion
+      from the standard AIFMD XML. Contact MNB for format specifications.'
     validation_rules: MNB requires CAP or ERA format instead of standard ESMA XML

@@ -30,6 +30,7 @@ Output:
 """
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -126,17 +127,30 @@ def run_adapter(adapter: dict, run_dir: Path, compliance: bool = False) -> dict:
 
     start = datetime.now()
     try:
-        result = subprocess.run(
+        # Stream output live so the user sees progress, while also
+        # capturing it for the log file.
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+        proc = subprocess.Popen(
             cmd,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
-            timeout=600,
+            bufsize=1,           # line-buffered
             cwd=str(adapter["cwd"]),
+            env=env,
         )
+        output_lines = []
+        for line in proc.stdout:
+            print(f"    {line}", end="", flush=True)
+            output_lines.append(line)
+        proc.wait(timeout=600)
         duration = (datetime.now() - start).total_seconds()
-        output = result.stdout + result.stderr
-        exit_code = result.returncode
+        output = "".join(output_lines)
+        exit_code = proc.returncode
     except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
         duration = 600
         output = "TIMEOUT: regression suite exceeded 10 minute limit"
         exit_code = -1
@@ -245,7 +259,7 @@ def main():
         print(f"\n{'_'*60}")
         print(f"  Adapter: {adapter['name']}")
         print(f"  {adapter['description']}")
-        print(f"  Running...", end="", flush=True)
+        print(f"  Running...", flush=True)
 
         result = run_adapter(adapter, run_dir, compliance=args.compliance)
         all_results[adapter["name"]] = result
@@ -256,7 +270,7 @@ def main():
             "ERROR": "[ERR ]", "TIMEOUT": "[TIME]",
         }.get(status, "[????]")
 
-        print(f"\r  {icon} {adapter['name']}  ({result['duration_s']}s)")
+        print(f"\n  {icon} {adapter['name']}  ({result['duration_s']}s)")
 
         if result.get("evidence_files"):
             print(f"     Evidence: {', '.join(result['evidence_files'])}")

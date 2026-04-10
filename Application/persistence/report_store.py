@@ -68,6 +68,7 @@ class ReviewReportRow(Base):
     entity_name = Column(String)
     entity_index = Column(Integer)
     nca_codes = Column(String)  # JSON array
+    nca_national_codes = Column(String, default="{}")  # JSON dict: country_code → national_code
     fields_json = Column(Text, nullable=False, default="{}")
     groups_json = Column(Text, nullable=False, default="{}")
     history_json = Column(Text, default="{}")
@@ -143,6 +144,7 @@ class ReviewReport:
     entity_name: str = ""
     entity_index: int = 0
     nca_codes: list[str] = field(default_factory=list)
+    nca_national_codes: dict[str, str] = field(default_factory=dict)  # country_code → national_code
     fields_json: dict = field(default_factory=dict)
     groups_json: dict = field(default_factory=dict)
     history_json: dict = field(default_factory=dict)
@@ -229,6 +231,17 @@ class ReportStore:
 
         self._SessionFactory = sessionmaker(bind=self._engine)
         Base.metadata.create_all(self._engine)
+        # Auto-migrate: add nca_national_codes column if missing (existing DBs)
+        try:
+            with self._engine.connect() as conn:
+                conn.execute(
+                    __import__("sqlalchemy").text(
+                        "ALTER TABLE review_reports ADD COLUMN nca_national_codes TEXT DEFAULT '{}'"
+                    )
+                )
+                conn.commit()
+        except Exception:
+            pass  # Column already exists
         log.info("ReportStore initialized: %s", "PostgreSQL" if not self._is_sqlite else "SQLite")
 
     def _db(self) -> DBSession:
@@ -354,6 +367,7 @@ class ReportStore:
                     entity_name=report.entity_name,
                     entity_index=report.entity_index,
                     nca_codes=json.dumps(report.nca_codes),
+                    nca_national_codes=json.dumps(report.nca_national_codes),
                     fields_json=json.dumps(report.fields_json),
                     groups_json=json.dumps(report.groups_json),
                     history_json=json.dumps(report.history_json),
@@ -372,6 +386,7 @@ class ReportStore:
                 row.field_count = report.field_count
                 row.filled_count = report.filled_count
                 row.nca_codes = json.dumps(report.nca_codes)
+                row.nca_national_codes = json.dumps(report.nca_national_codes)
                 row.updated_at = now
             db.commit()
         return report.report_id
@@ -421,6 +436,7 @@ class ReportStore:
             entity_name=row.entity_name or "",
             entity_index=row.entity_index or 0,
             nca_codes=json.loads(row.nca_codes) if row.nca_codes else [],
+            nca_national_codes=json.loads(row.nca_national_codes) if getattr(row, "nca_national_codes", None) else {},
             fields_json=json.loads(row.fields_json) if row.fields_json else {},
             groups_json=json.loads(row.groups_json) if row.groups_json else {},
             history_json=json.loads(row.history_json) if row.history_json else {},

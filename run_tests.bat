@@ -29,6 +29,9 @@ if "%SCOPE%"=="synthetic" (
 if "%SCOPE%"=="all" (
     python "%LOCAL%\Application\Adapters\Input adapters\M adapter\run_regression_suite.py"
 )
+if "%SCOPE%"=="review" (
+    python "%LOCAL%\Testing\test_review_api.py"
+)
 
 REM ── Sync evidence to Google Drive ──────────────────────────
 echo.

@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS review_reports (
     entity_name         TEXT,
     entity_index        INTEGER,
     nca_codes           TEXT,
+    nca_national_codes  TEXT DEFAULT '{}',
 
     -- Report canonical data (JSON)
     fields_json         TEXT NOT NULL DEFAULT '{}',

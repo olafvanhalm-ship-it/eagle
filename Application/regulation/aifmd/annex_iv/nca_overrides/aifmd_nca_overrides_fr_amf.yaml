@@ -1,34 +1,58 @@
 ################################################################################
-# NCA-SPECIFIC OVERRIDES — AMF (France)
-# Version: v2 — 2026-04-03
-# Base YAML: aifmd_validation_rules.yaml (v1.0)
+# NCA-SPECIFIC OVERRIDES — AMF (FR)
+# Version: v3
+# Base YAML: aifmd_validation_rules.yaml (v2.3)
 #
-# Source: AMF ROSA Migration Technique Reporting AIFM v1.4 (11/2023),
-#         AMF Position DOC-2014-09 (last amended 26 June 2018),
-#         ESMA IT Technical Guidance Rev 6.
+# SCHEMA: DELTA-ONLY OVERRIDES (Option B)
+#
+# This file uses the delta-only override pattern. Each nca_rules entry carries
+# ONLY the fields that DIFFER from the base YAML rule it overrides.
+# All other attributes are INHERITED from the base rule at load time.
+#
+# Required keys per override rule:
+#   rule_id        — unique NCA rule identifier
+#   base_rule_id   — links to the base YAML rule (e.g. AIFM-1, AIF-17)
+#   field_id       — the ESMA field number being overridden
+#
+# Always-present NCA keys (even if empty):
+#   nca_error_codes, overrides_esma, status, nca_source_doc, nca_doc_date
+#   validation_rules, technical_guidance, eagle_action
+#
+# Delta keys (only present when NCA value differs from base):
+#   field_name, format, data_type, m_c_o_f, mandatory, severity, etc.
+#
+# NCA-specific rules (base_rule_id empty): carry FULL field definition
+# since there is no base rule to inherit from.
+#
+# Infrastructure sections (transmission, file_format, correction_rules,
+# eagle_implementation, return_files) are NCA-specific and always present.
+#
+# LOADER CONTRACT:
+#   merged_rule = base_rule | nca_override   (Python dict merge)
+#   i.e. NCA keys overwrite base keys; base keys not in NCA are inherited.
 ################################################################################
 
 nca_overrides:
   nca: AMF
   country: FR
   base_yaml: aifmd_validation_rules.yaml
-  base_yaml_version: '1.0'
+  base_yaml_version: '2.3'
   source_document:
-    title: 'Position DOC-2014-09 — Methods for meeting requirements to report to the AMF under the AIFM directive'
+    title: Position DOC-2014-09 — Methods for meeting requirements to report to the AMF under the AIFM
+      directive
     version: Amended 26 June 2018
     date: '2018-06-26'
     publisher: Autorité des marchés financiers (AMF)
     url: https://www.amf-france.org/en/regulation/policy/doc-2014-09
   additional_sources:
-    - title: 'ROSA — Migration Technique Reporting AIFM — Guide remettants'
-      version: '1.4'
-      date: '2023-11-01'
-      publisher: Autorité des marchés financiers (AMF)
-      url: https://www.amf-france.org
-      notes: >-
-        Describes technical migration from XFB Gateway to Secure Transport (ST)
-        platform for AIF/AIFM submission. Replaces GECO file upload with SFTP-based
-        Secure Transport and ROSA extranet for manual form entry.
+  - title: ROSA — Migration Technique Reporting AIFM — Guide remettants
+    version: '1.4'
+    date: '2023-11-01'
+    publisher: Autorité des marchés financiers (AMF)
+    url: https://www.amf-france.org
+    notes: Describes technical migration from XFB Gateway to Secure Transport (ST) platform for AIF/AIFM
+      submission. Replaces GECO file upload with SFTP-based Secure Transport and ROSA extranet for manual
+      form entry.
   changelog:
   - version: v1
     date: '2026-04-03'
@@ -46,28 +70,20 @@ nca_overrides:
     - Added connection identifier patterns (AIF-PRO-IDAMF, AIFM-PRO-IDAMF)
     - Added processing hours and validation flow details
     - Updated feedback mechanism (ESMA feedback now unmodified pass-through)
-
+  - version: v3
+    date: '2026-04-10'
+    changes:
+    - Migrated to delta-only override schema (Option B)
+    - Removed fields identical to base YAML — only NCA deltas retained
+    - Updated base_yaml_version from '2.3' to '2.3'
+    - 'Schema: NCA rules now carry only rule_id, base_rule_id, field_id + delta keys'
   nca_rules:
-
-  # ── Section: Header — ReportingMemberState ─────────────────────────────────
-
   - rule_id: NCA-AMF-ReportingMemberState
     base_rule_id: AIFM-1
     field_id: '1'
     field_name: Reporting Member State
-    xsd_element: <ReportingMemberState>
-    xml_type: CountryCodeType
-    format: 2 [A-Z]+
-    data_type: A
-    m_c_o_f: M
-    repetition: '[1..1]'
-    mandatory: true
-    conditional: false
-    section: AIFM - Header file
     report_type: AIF+AIFM
-    severity: CRITICAL
     rule_source: AMF Position DOC-2014-09
-    esma_doc: ESMA/2013/1358 Rev.6
     nca_error_codes: []
     overrides_esma: true
     status: active
@@ -77,14 +93,9 @@ nca_overrides:
     base_rule_path:
       aifm_report: aifm_report.envelope.ReportingMemberState
       aif_report: aif_report.envelope.ReportingMemberState
-    technical_guidance: >-
-      For reports submitted to the AMF the value must always be "FR".
+    technical_guidance: For reports submitted to the AMF the value must always be "FR".
     eagle_action: ''
-    validation_rules: >-
-      ReportingMemberState = "FR"
-
-  # ── Section: File format — XML only (no ZIP) ──────────────────────────────
-
+    validation_rules: ReportingMemberState = "FR"
   - rule_id: NCA-AMF-FileFormat
     base_rule_id: ''
     field_id: ''
@@ -101,7 +112,6 @@ nca_overrides:
     report_type: AIF+AIFM
     severity: CRITICAL
     rule_source: ROSA Migration Technique v1.4
-    esma_doc: ''
     nca_error_codes: []
     overrides_esma: true
     status: active
@@ -109,22 +119,17 @@ nca_overrides:
     nca_source_doc: ROSA Migration Technique Reporting AIFM v1.4
     nca_doc_date: '2023-11-01'
     base_rule_path: {}
-    technical_guidance: >-
-      Only .XML format is accepted. Compressed file formats (ZIP, GZIP, etc.)
-      are no longer accepted since migration to Secure Transport. Before
-      submission, the filer must verify that the file name follows ESMA naming
-      conventions and that the file conforms to the ESMA XSD schema (FIA or
-      Gestionnaire). Non-compliant files will be rejected by the AMF.
-    eagle_action: >-
-      Do NOT compress XML files for FR/AMF submissions. Submit plain .XML files
-      directly. This overrides the previous ZIP packaging requirement.
+    technical_guidance: Only .XML format is accepted. Compressed file formats (ZIP, GZIP, etc.) are no
+      longer accepted since migration to Secure Transport. Before submission, the filer must verify that
+      the file name follows ESMA naming conventions and that the file conforms to the ESMA XSD schema
+      (FIA or Gestionnaire). Non-compliant files will be rejected by the AMF.
+    eagle_action: Do NOT compress XML files for FR/AMF submissions. Submit plain .XML files directly.
+      This overrides the previous ZIP packaging requirement.
     validation_rules:
     - Only .XML format accepted (no ZIP, no compressed files)
     - Filename must follow ESMA naming conventions
     - File must validate against ESMA XSD before submission
-
-  # ── Section: Submission deadline ───────────────────────────────────────────
-
+    esma_doc: ''
   - rule_id: NCA-AMF-SubmissionDeadline
     base_rule_id: ''
     field_id: ''
@@ -141,7 +146,6 @@ nca_overrides:
     report_type: AIF+AIFM
     severity: HIGH
     rule_source: AMF Position DOC-2014-09
-    esma_doc: ''
     nca_error_codes: []
     overrides_esma: false
     status: active
@@ -149,17 +153,14 @@ nca_overrides:
     nca_source_doc: AMF Position DOC-2014-09
     nca_doc_date: '2018-06-26'
     base_rule_path: {}
-    technical_guidance: >-
-      Standard deadline is 30 calendar days from end of reporting period. Fund-of-funds receive 45 calendar
-      days (additional 15 days). Reporting frequency (semi-annual or quarterly) depends on AUM, leverage
-      usage, asset types, and registration/authorization status.
+    technical_guidance: Standard deadline is 30 calendar days from end of reporting period. Fund-of-funds
+      receive 45 calendar days (additional 15 days). Reporting frequency (semi-annual or quarterly) depends
+      on AUM, leverage usage, asset types, and registration/authorization status.
     eagle_action: ''
     validation_rules:
     - Standard deadline: 30 calendar days from period end
     - Fund-of-funds deadline: 45 calendar days from period end
-
-  # ── Section: Validation and feedback ──────────────────────────────────────
-
+    esma_doc: ''
   - rule_id: NCA-AMF-ValidationFeedback
     base_rule_id: ''
     field_id: ''
@@ -176,7 +177,6 @@ nca_overrides:
     report_type: AIF+AIFM
     severity: MEDIUM
     rule_source: ROSA Migration Technique v1.4
-    esma_doc: ''
     nca_error_codes: []
     overrides_esma: true
     status: active
@@ -184,107 +184,91 @@ nca_overrides:
     nca_source_doc: ROSA Migration Technique Reporting AIFM v1.4
     nca_doc_date: '2023-11-01'
     base_rule_path: {}
-    technical_guidance: >-
-      Validation is dual: files are validated by both ESMA and the AMF. Both
-      validations must pass for the file to be accepted. The ESMA feedback file
-      (compte-rendu) is now available unmodified on the ROSA extranet and
-      Secure Transport platform — the AMF no longer modifies it. Filers whose
-      existing processes parse AMF-modified feedback must adapt to the raw ESMA
-      format. Additionally, the AMF performs its own quality control and
-      publishes the result as a separate feedback on ROSA extranet.
-    eagle_action: >-
-      Parse ESMA feedback files in their raw format (no AMF modifications).
-      Also monitor AMF-specific quality control feedback on ROSA.
+    technical_guidance: 'Validation is dual: files are validated by both ESMA and the AMF. Both validations
+      must pass for the file to be accepted. The ESMA feedback file (compte-rendu) is now available unmodified
+      on the ROSA extranet and Secure Transport platform — the AMF no longer modifies it. Filers whose
+      existing processes parse AMF-modified feedback must adapt to the raw ESMA format. Additionally,
+      the AMF performs its own quality control and publishes the result as a separate feedback on ROSA
+      extranet.'
+    eagle_action: Parse ESMA feedback files in their raw format (no AMF modifications). Also monitor AMF-specific
+      quality control feedback on ROSA.
     validation_rules:
     - Dual validation: ESMA + AMF must both pass
     - ESMA feedback is now passed through unmodified (raw format)
     - AMF publishes separate quality control feedback on ROSA extranet
     - Corrections must be resubmitted with fixes applied
     - AIFM must be registered with AMF for submission to be accepted
-
+    esma_doc: ''
   transmission:
-    note: >-
-      The AMF has migrated AIFM/AIF reporting from the XFB Gateway to the new
-      Secure Transport (ST) platform accessible via ROSA extranet. The old XFB
-      Gateway is deprecated; GECO extranet no longer supports file upload.
-      Manual form entry (AIF/AIFM questionnaires) remains available via ROSA.
+    note: The AMF has migrated AIFM/AIF reporting from the XFB Gateway to the new Secure Transport (ST)
+      platform accessible via ROSA extranet. The old XFB Gateway is deprecated; GECO extranet no longer
+      supports file upload. Manual form entry (AIF/AIFM questionnaires) remains available via ROSA.
     overrides_esma: true
     channels:
       secure_transport:
         name: Secure Transport (ST)
-        description: >-
-          Primary submission channel for AIF/AIFM XML files. Files are deposited
-          via SFTP using SSH public key authentication. Two submission methods
-          are available: (1) automated machine-to-machine SFTP deposit, and
-          (2) manual upload via an SFTP client such as WinSCP or FileZilla.
-          Note: some SFTP clients add a .filepart extension to large files during
-          upload — this setting must be disabled to avoid rejection.
+        description: 'Primary submission channel for AIF/AIFM XML files. Files are deposited via SFTP
+          using SSH public key authentication. Two submission methods are available: (1) automated machine-to-machine
+          SFTP deposit, and (2) manual upload via an SFTP client such as WinSCP or FileZilla. Note: some
+          SFTP clients add a .filepart extension to large files during upload — this setting must be disabled
+          to avoid rejection.'
         protocol: SFTP
         host: hub-st.amf-france.org
         ip: 80.75.156.158
         port: 6321
         authentication: SSH public key (RSA 2048-bit minimum)
         supported_key_algorithms:
-          - ssh-rsa
-          - x509v3-rsa2048-sha256
-          - rsa-sha2-256
-          - rsa-sha2-512
+        - ssh-rsa
+        - x509v3-rsa2048-sha256
+        - rsa-sha2-256
+        - rsa-sha2-512
         supported_ciphers:
-          - aes128-ctr
-          - aes192-ctr
-          - aes256-ctr
-          - aes128-gcm@openssh.com
-          - aes256-gcm@openssh.com
+        - aes128-ctr
+        - aes192-ctr
+        - aes256-ctr
+        - aes128-gcm@openssh.com
+        - aes256-gcm@openssh.com
         supported_kex:
-          - diffie-hellman-group-exchange-sha256
-          - diffie-hellman-group14-sha256
-          - ecdh-sha2-nistp384
+        - diffie-hellman-group-exchange-sha256
+        - diffie-hellman-group14-sha256
+        - ecdh-sha2-nistp384
         supported_mac:
-          - hmac-sha256
-          - hmac-sha2-256
-          - hmac-sha512
-          - hmac-sha2-512
+        - hmac-sha256
+        - hmac-sha2-256
+        - hmac-sha512
+        - hmac-sha2-512
         connection_identifiers:
           aif: AIF-PRO-IDAMF
           aifm: AIFM-PRO-IDAMF
-        identifier_notes: >-
-          One unique identifier per filer per report type. Each identifier
-          is linked to a specific SSH public key and IP address. Identifiers
-          are created via ROSA extranet under "Administration > Gérer mes
-          certificats". A technical contact per report type is mandatory.
-        processing_hours: '08:00-20:00 CET (business days)'
-        processing_notes: >-
-          Files deposited outside processing hours are queued and processed
-          at the first run of the next business day. Feedback files are only
-          generated during processing hours.
+        identifier_notes: One unique identifier per filer per report type. Each identifier is linked to
+          a specific SSH public key and IP address. Identifiers are created via ROSA extranet under "Administration
+          > Gérer mes certificats". A technical contact per report type is mandatory.
+        processing_hours: 08:00-20:00 CET (business days)
+        processing_notes: Files deposited outside processing hours are queued and processed at the first
+          run of the next business day. Feedback files are only generated during processing hours.
         response_time: 1 hour to 1 business day
         support:
           functional: ROSA extranet support section
           platform: MFT@amf-france.org
-          hours: '09:00-18:00 CET (business days)'
+          hours: 09:00-18:00 CET (business days)
       rosa_extranet:
         name: ROSA Extranet (manual form entry)
-        description: >-
-          Manual form entry for AIF and AIFM reports via the ROSA web interface.
-          Available under QUESTIONNAIRES > FLUX menu. Supports draft saving,
-          field validation ("Vérifier"), and direct submission ("Soumettre").
-          File upload via extranet is no longer available — only form entry
-          or SFTP via Secure Transport.
+        description: Manual form entry for AIF and AIFM reports via the ROSA web interface. Available
+          under QUESTIONNAIRES > FLUX menu. Supports draft saving, field validation ("Vérifier"), and
+          direct submission ("Soumettre"). File upload via extranet is no longer available — only form
+          entry or SFTP via Secure Transport.
         url: https://rosa.amf-france.org
-        notes: >-
-          The ROSA extranet replaced the GECO extranet for products repository
-          as of March 2024. AIFM reporting forms are now integrated into ROSA.
+        notes: The ROSA extranet replaced the GECO extranet for products repository as of March 2024.
+          AIFM reporting forms are now integrated into ROSA.
       geco_extranet:
         name: GECO Extranet (deprecated)
         status: deprecated
-        description: >-
-          Legacy portal. File upload via GECO is no longer available. The XFB
-          Gateway that powered GECO file submissions has been decommissioned
-          and replaced by Secure Transport. Manual form submission has moved
-          to ROSA extranet.
+        description: Legacy portal. File upload via GECO is no longer available. The XFB Gateway that
+          powered GECO file submissions has been decommissioned and replaced by Secure Transport. Manual
+          form submission has moved to ROSA extranet.
   file_format:
     encoding: UTF-8
-    container: 'XML only (no ZIP, no compression)'
+    container: XML only (no ZIP, no compression)
     xml_format:
     - Must conform to ESMA XSD schema version 1.2 (Rev 6)
     - AIFM reports use AIFMD_DATMAN_V1.2.xsd
@@ -293,25 +277,23 @@ nca_overrides:
   correction_rules:
     submission_deadlines:
       schedule:
-      - reporting_date: '31-03'
-        due_date: '30-04'
-      - reporting_date: '30-06'
-        due_date: '31-07'
-      - reporting_date: '30-09'
-        due_date: '31-10'
-      - reporting_date: '31-12'
-        due_date: '31-01'
+      - reporting_date: 31-03
+        due_date: 30-04
+      - reporting_date: 30-06
+        due_date: 31-07
+      - reporting_date: 30-09
+        due_date: 31-10
+      - reporting_date: 31-12
+        due_date: 31-01
       fund_of_funds_extension:
         description: Additional 15 days for fund-of-funds.
         extension_days: 15
     amendment_rules:
-      note: >-
-        For a given submission, amendments must be submitted via the same channel
-        as the original (either SFTP or ROSA extranet form entry). Mixing
-        channels for the same report is not permitted.
+      note: For a given submission, amendments must be submitted via the same channel as the original
+        (either SFTP or ROSA extranet form entry). Mixing channels for the same report is not permitted.
   eagle_implementation:
     pre_submission_checks:
-    - 'Verify ReportingMemberState = "FR"'
+    - Verify ReportingMemberState = "FR"
     - 'CRITICAL: Submit plain XML files only — do NOT wrap in ZIP'
     - Validate filename against ESMA naming conventions
     - Validate against ESMA XSD v1.2 Rev 6
@@ -326,7 +308,6 @@ nca_overrides:
       rosa_extranet: https://rosa.amf-france.org
       amf_aifmd: https://www.amf-france.org/en/regulation/policy/doc-2014-09
       platform_support: MFT@amf-france.org
-    update_trigger: >-
-      Monitor https://www.amf-france.org for updates. Current guidance: DOC-2014-09 amended 26 June 2018
-      and ROSA Migration Technique v1.4 (November 2023).
-      AIFMD 2.0 transposition deadline: 16 April 2026; new reporting from April 2027.
+    update_trigger: 'Monitor https://www.amf-france.org for updates. Current guidance: DOC-2014-09 amended
+      26 June 2018 and ROSA Migration Technique v1.4 (November 2023). AIFMD 2.0 transposition deadline:
+      16 April 2026; new reporting from April 2027.'

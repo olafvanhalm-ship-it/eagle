@@ -171,14 +171,18 @@ class FieldRegistry:
         # Reference tables
         self._reference_tables = raw.get("reference_tables", {})
 
-        # Parse AIFM rules
+        # Parse AIFM rules — skip cross-field rules, they are NOT fields
         for rule in raw.get("aifm_rules", []):
+            if self._is_cross_field_rule(rule):
+                continue
             fdef = self._parse_rule(rule, ReportType.AIFM)
             self._aifm_fields[fdef.field_id] = fdef
             self._aifm_sections.setdefault(fdef.section, []).append(fdef)
 
-        # Parse AIF rules
+        # Parse AIF rules — skip cross-field rules, they are NOT fields
         for rule in raw.get("aif_rules", []):
+            if self._is_cross_field_rule(rule):
+                continue
             fdef = self._parse_rule(rule, ReportType.AIF)
             self._aif_fields[fdef.field_id] = fdef
             self._aif_sections.setdefault(fdef.section, []).append(fdef)
@@ -190,6 +194,20 @@ class FieldRegistry:
             "Field registry loaded: %d AIFM fields, %d AIF fields, %d repeating groups",
             len(self._aifm_fields), len(self._aif_fields), len(self._repeating_groups),
         )
+
+    @staticmethod
+    def _is_cross_field_rule(rule: dict) -> bool:
+        """Cross-field rules validate a relationship between two or more
+        XSD elements and do NOT correspond to a single renderable field.
+        They are detected by ``field_id`` == "CROSS-FIELD" or by an
+        ``xsd_element`` that contains "/" (multiple elements)."""
+        fid = str(rule.get("field_id", "")).strip().upper()
+        if fid.startswith("CROSS"):
+            return True
+        xsd = str(rule.get("xsd_element", "")).strip().strip("<>")
+        if "/" in xsd:
+            return True
+        return False
 
     @staticmethod
     def _parse_rule(rule: dict, report_type: ReportType) -> FieldDef:
@@ -335,11 +353,16 @@ class FieldRegistry:
     # ------------------------------------------------------------------
     # Content-type applicability (AIFMD Annex IV reporting obligations)
     # ------------------------------------------------------------------
-    # CT=1: header only (no-reporting)
-    # CT=2: header + Art 24(1)           (registered / light)
-    # CT=3: header + Art 24(1) + 24(2)   (authorised / full)
-    # CT=4: header + Art 24(1) + 24(2) + 24(4)  (leveraged EU)
-    # CT=5: header + Art 24(1) + 24(4)   (leveraged non-EU)
+    # AIF Content Types (Field 5) — field visibility per reporting obligation
+    #
+    # CT=1: Art 24(1)              fields 1-120
+    # CT=2: Art 24(1) + 24(2)     fields 1-295 + Q302
+    # CT=3: Art 3(3)(d)           fields 1-120  (same scope as CT1)
+    # CT=4: Art 24(1) + 24(2) + 24(4)  fields 1-301 + Q302
+    # CT=5: Art 24(1) + 24(4)    fields 1-120, 281-301
+    #
+    # Source: ESMA reporting obligation matrix (aifmd_validation_rules.yaml)
+    # See also: reporting_obligations reference table in the base YAML
 
     _HEADER_SECTIONS = {
         "AIF - Header Section",
@@ -347,66 +370,78 @@ class FieldRegistry:
         "AIF Cancellation Record",
     }
 
+    # 24(1) sections: fields 1-120 → visible in CT {1,2,3,4,5}
     _SECTIONS_24_1 = {
-        "AIF - Header Section",
-        "AIF - Header file",
-        "AIF Cancellation Record",
-        "AIF type",
-        "Fund identification codes",
-        "Share class identification codes",
-        "Base currency information",
-        "Master feeder structure",
-        "Breakdown of investment strategies",
-        "Principal markets in which AIF trades",
-        "Identification of prime broker(s) of the AIF",
-        "Geographical focus",
-        "Main instruments in which the AIF is trading",
-        "Five most important portfolio concentrations",
-        "Top Five Counterparty Exposures (excluding CCPs)",
-        "Direct clearing through central clearing counterparties (CCPs)",
-        "Trading and clearing mechanisms",
-        "Breakdown of the ownership of units in the AIF by investor group",
-        "Total number of open positions",
-        "Typical deal/position size",
-        "Dominant Influence [see Article 1 of Directive 83/349/EEC]",
-        "Individual Exposures in which it is trading and the main categories of assets in which the AIF invested as at the reporting date",
-        "Value of turnover in each asset class over the reporting months",
-        "Investor Concentration",
+        "AIF - Header Section",                          # Q4-Q23
+        "AIF - Header file",                             # Q1-Q3
+        "AIF Cancellation Record",                       # CANC fields
+        "AIF type",                                      # Q57
+        "Fund identification codes",                     # Q24-Q32
+        "Share class identification codes",              # Q33-Q40
+        "Base currency information",                     # Q48-Q53
+        "Master feeder structure",                       # Q41-Q44
+        "Breakdown of investment strategies",            # Q58-Q63
+        "Principal markets in which AIF trades",         # Q114-Q117
+        "Identification of prime broker(s) of the AIF",  # Q45-Q47
+        "Geographical focus",                            # Q78-Q102
+        "Main instruments in which the AIF is trading",  # Q64-Q77
+        "Five most important portfolio concentrations",  # Q103-Q112
+        "Typical deal/position size",                    # Q113
+        "Investor Concentration",                        # Q118-Q120
+        "Jurisdictions of the three main funding sources",  # Q54-Q56
     }
 
+    # 24(2) sections: fields 121-295 + Q302 → visible in CT {2,4}
     _SECTIONS_24_2 = {
-        "Historical risk profile",
-        "Measure of risks",
-        "Portfolio Liquidity Profile",
-        "Investor Liquidity Profile",
-        "Investor redemptions",
-        "Special arrangements and preferential treatment",
-        "Financing liquidity",
-        "Five largest sources of borrowed cash or securities (short positions)",
-        "Jurisdictions of the three main funding sources",
-        "Value of borrowings of cash or securities represented by:",
-        "Value of borrowing embedded in financial instruments",
-        "Value of collateral and other credit support that the AIF has posted to all counterparties",
-        "Of the amount of collateral and other credit support that the reporting fund has posted to counterparties: what percentage has been re-hypothecated by counterparties?",
-        "Results of stress tests",
-        "Currency of Exposures",
+        "Individual Exposures in which it is trading and the main categories of assets in which the AIF invested as at the reporting date",  # Q121-Q124
+        "Value of turnover in each asset class over the reporting months",  # Q125-Q127
+        "Currency of Exposures",                         # Q128-Q130
+        "Dominant Influence [see Article 1 of Directive 83/349/EEC]",  # Q131-Q136
+        "Measure of risks",                              # Q137-Q302 (spans into 24(4) range)
+        "Trading and clearing mechanisms",               # Q148-Q156
+        "Value of collateral and other credit support that the AIF has posted to all counterparties",  # Q157-Q159
+        "Top Five Counterparty Exposures (excluding CCPs)",  # Q160-Q171
+        "Direct clearing through central clearing counterparties (CCPs)",  # Q172-Q177
+        "Portfolio Liquidity Profile",                   # Q178-Q185
+        "Investor Liquidity Profile",                    # Q186-Q192
+        "Investor redemptions",                          # Q193-Q196
+        "Special arrangements and preferential treatment",  # Q197-Q207
+        "Breakdown of the ownership of units in the AIF by investor group",  # Q208-Q209
+        "Financing liquidity",                           # Q210-Q217
+        "Total number of open positions",                # Q218
+        "Historical risk profile",                       # Q219-Q278
+        "Results of stress tests",                       # Q279-Q280
+        "Of the amount of collateral and other credit support that the reporting fund has posted to counterparties: what percentage has been re-hypothecated by counterparties?",  # Q281-Q282
+        "Value of borrowings of cash or securities represented by:",  # Q283-Q286
+        "Value of borrowing embedded in financial instruments",  # Q287-Q289
+        "Gross exposure of financial and, as the case may be, or legal structures controlled by the AIF as defined in Recital 78 of the AIFMD",  # Q290-Q293
+        "AIF - 24.2 - Item 30: Leverage of the AIF",    # Q294-Q295
     }
 
+    # 24(4) sections: fields 281-301 → visible in CT {4,5}
     _SECTIONS_24_4 = {
-        "AIF - 24.2 - Item 30: Leverage of the AIF",
-        "Gross exposure of financial and, as the case may be, or legal structures controlled by the AIF as defined in Recital 78 of the AIFMD",
+        "Of the amount of collateral and other credit support that the reporting fund has posted to counterparties: what percentage has been re-hypothecated by counterparties?",  # Q281-Q282
+        "Value of borrowings of cash or securities represented by:",  # Q283-Q286
+        "Value of borrowing embedded in financial instruments",  # Q287-Q289
+        "Gross exposure of financial and, as the case may be, or legal structures controlled by the AIF as defined in Recital 78 of the AIFMD",  # Q290-Q293
+        "AIF - 24.2 - Item 30: Leverage of the AIF",    # Q294-Q295
+        "Five largest sources of borrowed cash or securities (short positions)",  # Q296-Q301
     }
 
     @classmethod
     def section_applicable_cts(cls, section: str) -> set[int]:
-        """Return content types for which a section is applicable."""
+        """Return AIF content types for which a section is applicable.
+
+        CT1=24(1), CT2=24(1)+(2), CT3=3(3d)=same scope as 24(1),
+        CT4=24(1)+(2)+(4), CT5=24(1)+(4).
+        """
         cts: set[int] = set()
         if section in cls._HEADER_SECTIONS:
             cts = {1, 2, 3, 4, 5}
         if section in cls._SECTIONS_24_1:
-            cts |= {2, 3, 4, 5}
+            cts |= {1, 2, 3, 4, 5}      # CT1 and CT3 include 24(1) scope
         if section in cls._SECTIONS_24_2:
-            cts |= {3, 4}
+            cts |= {2, 4}                # only CT2 and CT4 include 24(2)
         if section in cls._SECTIONS_24_4:
             cts |= {4, 5}
         return cts

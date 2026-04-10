@@ -36,6 +36,7 @@ class ReportSummary(BaseModel):
     entity_name: str
     entity_index: int
     nca_codes: list[str]
+    nca_national_codes: dict[str, str] = {}  # country_code → national_code
     completeness: float
     field_count: int
     filled_count: int
@@ -99,12 +100,14 @@ class ReportDetailResponse(BaseModel):
     entity_name: str
     entity_index: int
     nca_codes: list[str]
+    nca_national_codes: dict[str, str] = {}  # country_code → national_code
     completeness: float
     field_count: int
     filled_count: int
     sections: dict[str, list[ReportFieldResponse]]
     groups: dict[str, list[dict[str, Any]]]
     group_columns: dict[str, dict[str, str]] = {}  # group_name → {field_id: field_name}
+    group_obligations: dict[str, dict[str, str]] = {}  # group_name → {field_id: M/C/O/F}
     empty_section_count: int
     validation_run: bool = False
     no_reporting: bool = False

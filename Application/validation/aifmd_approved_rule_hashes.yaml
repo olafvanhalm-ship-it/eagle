@@ -1,9 +1,10 @@
-approved_at: '2026-04-03T13:11:41.410333'
+approved_at: '2026-04-10T10:22:26'
 approved_by: Olaf van Halm
-reason: Added 25 new NCA override files for full EU/EEA coverage (31 total)
+reason: Screen audit 2026-04-10 — added reporting_obligations matrix, fixed registry
+  CT sections, fixed report.py gates, removed frontend validations
 base_rules:
   path: aifmd_validation_rules.yaml
-  hash: c74fda1d66202d054a8b09fc678e63a670ab72d4ff7159c20214833b5b686afb
+  hash: 4bcff2c6b589b5ba5b8d7e8c9e84ea624ddb938da102d7d42e3008e85e76b149
 nca_overrides:
   aifmd_nca_overrides_at_fma.yaml:
     hash: 15c915dc54efd42a5297f250285868149594aeddc30d1ee6c61483987e7b45eb
@@ -68,6 +69,10 @@ nca_overrides:
   aifmd_nca_overrides_sk_nbs.yaml:
     hash: e6c2a7d0e87a126848f6a80b17eeae9ad81503b59468aa19e20a2edeb493ce02
 changes:
+- date: '2026-04-10'
+  description: Screen audit — base YAML v2.3 updated with reporting_obligations matrix
+    (49 rows), registry CT sections fixed, report.py gates corrected, frontend validations
+    moved to backend
 - date: '2026-04-03'
   description: Added AT, BG, CY, CZ, DK, EE, ES, FI, FR, GR, HR, HU, IS, IT, LI, LT,
     LV, MT, NO, PL, PT, RO, SE, SI, SK NCA overrides

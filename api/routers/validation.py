@@ -101,14 +101,23 @@ async def validate_session(session_id: str):
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
-    # Store validation run
+    # Store validation run — but strip field-level findings (MAN-/FMT-/TYP-)
+    # because the GET /report endpoint regenerates those on every request
+    # from the live field state. Keeping them in storage would cause FAILs
+    # from a previous state (e.g. before an inline edit) to persist and
+    # turn previously-green fields red on the next viewer load.
+    _auto_prefixes = ("MAN-", "FMT-", "TYP-")
+    persisted_findings = [
+        f for f in findings
+        if not str(f.get("rule_id", "")).startswith(_auto_prefixes)
+    ]
     val_run = ReviewValidationRun(
         session_id=session_id,
         xsd_valid=xsd_invalid_count == 0,
         dqf_pass=dqf_pass,
         dqf_fail=dqf_fail,
         has_critical=has_critical,
-        findings_json=findings,
+        findings_json=persisted_findings,
     )
     store.save_validation_run(val_run)
 
@@ -198,7 +207,10 @@ def _field_level_validation(reports: list, registry) -> list[dict]:
 
             # Check format constraints
             if fdef.format and isinstance(value, str):
-                format_ok = _check_format(value, fdef.format)
+                dt_val = ""
+                if fdef.data_type is not None:
+                    dt_val = fdef.data_type.value if hasattr(fdef.data_type, "value") else str(fdef.data_type)
+                format_ok = _check_format(value, fdef.format, dt_val)
                 if not format_ok:
                     findings.append({
                         "rule_id": f"FMT-{report_type}-{fid}",
@@ -236,20 +248,36 @@ def _field_level_validation(reports: list, registry) -> list[dict]:
     return findings
 
 
-def _check_format(value: str, fmt: str) -> bool:
+def _check_format(value: str, fmt: str, data_type: str = "") -> bool:
     """Check if a value matches the ESMA format specification.
 
     ESMA Annex IV uses several format notations (after YAML loading):
-    - Bare number: "4" or "1" → max-length constraint (YAML strips quotes)
+    - Bare number: "4" → max-length constraint (YAML strips quotes)
+    - "X (max)": "300 (max)" → max-length X
+    - "X (max) Y (min)": "30 (max) 1 (min)" → length in [Y..X]
+    - "X totalDigits Y fractionDigits Z minInclusive W": numeric precision — skip regex
     - Length + regex: "2 [A-Z]+" → 2-char country code
     - Digit-group: "4(n)-2(n)-2(n)" → date as digits-dash pattern
     - Datetime: "4(n)-2(n)-2(n)T2(n):2(n):2(n)" → ISO 8601 datetime
     - Pure regex: "([0-9])+\\.([0-9])+" → direct regex match
+
+    When data_type == "B" (boolean) the field carries a BooleanType whose
+    XML wire value is literally "true"/"false"; the numeric format (e.g.
+    "1") describes the enum position, NOT the string length. In that case
+    we only check membership in the true/false set.
     """
     import re
 
     if not fmt:
         return True
+
+    str_val = str(value)
+
+    # ── Boolean special case ───────────────────────────────────────
+    # XML BooleanType is serialised as "true"/"false" — any numeric
+    # format key (e.g. "1") must not be interpreted as a length cap.
+    if data_type and data_type.upper() in ("B", "BOOL", "BOOLEAN"):
+        return str_val.strip().lower() in ("true", "false", "0", "1")
 
     stripped = fmt.strip()
 
@@ -258,7 +286,47 @@ def _check_format(value: str, fmt: str) -> bool:
     # This means "maximum 4 characters", not the literal "4"
     if stripped.isdigit():
         max_len = int(stripped)
-        return len(str(value)) <= max_len
+        return len(str_val) <= max_len
+
+    # ── ESMA explicit min/max notation ─────────────────────────────
+    # Examples: "300 (max)", "30 (max) 1 (min)", "1000 (max) 1 (min)"
+    max_match = re.search(r"(\d+)\s*\(\s*max\s*\)", stripped, re.IGNORECASE)
+    min_match = re.search(r"(\d+)\s*\(\s*min\s*\)", stripped, re.IGNORECASE)
+    if max_match or min_match:
+        if max_match and len(str_val) > int(max_match.group(1)):
+            return False
+        if min_match and len(str_val) < int(min_match.group(1)):
+            return False
+        return True
+
+    # ── ESMA numeric precision notation ────────────────────────────
+    # Examples: "3 totalDigits 3 fractionDigits 0 minInclusive 1"
+    #           "22 totalDigits 5 fractionDigits"
+    # Treat as "value must be numeric and within totalDigits precision".
+    if "totalDigits" in stripped or "fractionDigits" in stripped:
+        try:
+            float(str_val)
+        except (TypeError, ValueError):
+            return False
+        td_match = re.search(r"(\d+)\s+totalDigits", stripped)
+        fd_match = re.search(r"(\d+)\s+fractionDigits", stripped)
+        min_incl_match = re.search(r"(-?\d+)\s+minInclusive", stripped)
+        max_incl_match = re.search(r"(-?\d+)\s+maxInclusive", stripped)
+        digits_only = str_val.lstrip("-+").replace(".", "")
+        if td_match and len(digits_only) > int(td_match.group(1)):
+            return False
+        if fd_match and "." in str_val:
+            frac = str_val.split(".", 1)[1]
+            if len(frac) > int(fd_match.group(1)):
+                return False
+        try:
+            if min_incl_match and float(str_val) < float(min_incl_match.group(1)):
+                return False
+            if max_incl_match and float(str_val) > float(max_incl_match.group(1)):
+                return False
+        except ValueError:
+            return False
+        return True
 
     # ── ESMA digit-group notation: X(n) means X digits ─────────────
     # e.g. "4(n)-2(n)-2(n)T2(n):2(n):2(n)" = datetime
@@ -267,34 +335,38 @@ def _check_format(value: str, fmt: str) -> bool:
         esma_regex = re.sub(r"(\d+)\(n\)", lambda m: r"\d{" + m.group(1) + "}", stripped)
         try:
             # Date-only: accept date value even if format wants datetime
-            if "T" in esma_regex and "T" not in str(value):
+            if "T" in esma_regex and "T" not in str_val:
                 date_regex = esma_regex.split("T")[0]
-                return bool(re.fullmatch(date_regex, str(value)))
-            return bool(re.fullmatch(esma_regex, str(value)))
+                return bool(re.fullmatch(date_regex, str_val))
+            return bool(re.fullmatch(esma_regex, str_val))
         except re.error:
             return True
 
     # ── Length-prefix notation: "2 [A-Z]+" ─────────────────────────
+    # e.g. "2 [A-Z]+" for a 2-char country code. The length prefix is a
+    # HARD constraint — even if the regex pattern uses quantifiers like
+    # "+" or "*", the value still has to be exactly `expected_len` chars.
     parts = stripped.split(" ", 1)
     if len(parts) == 2 and parts[0].isdigit():
         expected_len = int(parts[0])
         pattern = parts[1]
-        if len(value) != expected_len and not any(c in pattern for c in ".*+?"):
-            return False
-        stripped = pattern
+        if any(c in pattern for c in "[].*+?\\^$"):
+            if len(str_val) != expected_len:
+                return False
+            stripped = pattern
 
     # ── Common date format check ───────────────────────────────────
     if "YYYY-MM-DD" in stripped:
         try:
             from datetime import datetime
-            datetime.strptime(value[:10], "%Y-%m-%d")
+            datetime.strptime(str_val[:10], "%Y-%m-%d")
             return True
         except ValueError:
             return False
 
     # ── Try regex match ────────────────────────────────────────────
     try:
-        return bool(re.fullmatch(stripped, str(value)))
+        return bool(re.fullmatch(stripped, str_val))
     except re.error:
         return True
 

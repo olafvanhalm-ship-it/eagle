@@ -1,21 +1,42 @@
 ################################################################################
-# NCA-SPECIFIC OVERRIDES — CMVM (Portugal)
-# Version: v1 — 2026-04-03
-# Base YAML: aifmd_validation_rules.yaml (v1.0)
+# NCA-SPECIFIC OVERRIDES — CMVM (PT)
+# Version: v2
+# Base YAML: aifmd_validation_rules.yaml (v2.3)
 #
-# Source: CMVM Regulation 1/2020, Regulation 3/2025, Regulation 7/2023,
-#         Decree-Law 27/2023, ESMA IT Technical Guidance Rev 6.
+# SCHEMA: DELTA-ONLY OVERRIDES (Option B)
 #
-# Note: Limited publicly available Portugal-specific AIFMD reporting
-#       documentation. CMVM follows ESMA harmonized standards closely.
-#       Direct CMVM contact recommended for detailed technical specs.
+# This file uses the delta-only override pattern. Each nca_rules entry carries
+# ONLY the fields that DIFFER from the base YAML rule it overrides.
+# All other attributes are INHERITED from the base rule at load time.
+#
+# Required keys per override rule:
+#   rule_id        — unique NCA rule identifier
+#   base_rule_id   — links to the base YAML rule (e.g. AIFM-1, AIF-17)
+#   field_id       — the ESMA field number being overridden
+#
+# Always-present NCA keys (even if empty):
+#   nca_error_codes, overrides_esma, status, nca_source_doc, nca_doc_date
+#   validation_rules, technical_guidance, eagle_action
+#
+# Delta keys (only present when NCA value differs from base):
+#   field_name, format, data_type, m_c_o_f, mandatory, severity, etc.
+#
+# NCA-specific rules (base_rule_id empty): carry FULL field definition
+# since there is no base rule to inherit from.
+#
+# Infrastructure sections (transmission, file_format, correction_rules,
+# eagle_implementation, return_files) are NCA-specific and always present.
+#
+# LOADER CONTRACT:
+#   merged_rule = base_rule | nca_override   (Python dict merge)
+#   i.e. NCA keys overwrite base keys; base keys not in NCA are inherited.
 ################################################################################
 
 nca_overrides:
   nca: CMVM
   country: PT
   base_yaml: aifmd_validation_rules.yaml
-  base_yaml_version: '1.0'
+  base_yaml_version: '2.3'
   source_document:
     title: CMVM AIFMD Reporting Requirements (Regulation 1/2020, 3/2025, 7/2023)
     version: Regulation 3/2025 (18 April 2025)
@@ -29,28 +50,20 @@ nca_overrides:
     - Initial CMVM/Portugal override file based on web research
     - 'Covers: ReportingMemberState, national code format, ZIP packaging, deadlines'
     - 'Note: limited public documentation — direct CMVM contact recommended'
-
+  - version: v2
+    date: '2026-04-10'
+    changes:
+    - Migrated to delta-only override schema (Option B)
+    - Removed fields identical to base YAML — only NCA deltas retained
+    - Updated base_yaml_version from '2.3' to '2.3'
+    - 'Schema: NCA rules now carry only rule_id, base_rule_id, field_id + delta keys'
   nca_rules:
-
-  # ── Section: Header — ReportingMemberState ─────────────────────────────────
-
   - rule_id: NCA-CMVM-ReportingMemberState
     base_rule_id: AIFM-1
     field_id: '1'
     field_name: Reporting Member State
-    xsd_element: <ReportingMemberState>
-    xml_type: CountryCodeType
-    format: 2 [A-Z]+
-    data_type: A
-    m_c_o_f: M
-    repetition: '[1..1]'
-    mandatory: true
-    conditional: false
-    section: AIFM - Header file
     report_type: AIF+AIFM
-    severity: CRITICAL
     rule_source: CMVM AIFMD Reporting
-    esma_doc: ESMA/2013/1358 Rev.6
     nca_error_codes: []
     overrides_esma: true
     status: active
@@ -60,31 +73,16 @@ nca_overrides:
     base_rule_path:
       aifm_report: aifm_report.envelope.ReportingMemberState
       aif_report: aif_report.envelope.ReportingMemberState
-    technical_guidance: >-
-      For reports submitted to the CMVM the value must always be "PT".
+    technical_guidance: For reports submitted to the CMVM the value must always be "PT".
     eagle_action: ''
-    validation_rules: >-
-      ReportingMemberState = "PT"
-
-  # ── Section: AIF National Code format ──────────────────────────────────────
-
+    validation_rules: ReportingMemberState = "PT"
   - rule_id: NCA-CMVM-AIFNationalCode
     base_rule_id: AIF-17
     field_id: '17'
     field_name: AIF National Code
-    xsd_element: <AIFNationalCode>
-    xml_type: AIFNationalCodeType
-    format: 'ANNNNNNNN (A + 8-digit number)'
-    data_type: Z
-    m_c_o_f: M
-    repetition: '[1..1]'
-    mandatory: true
-    conditional: false
+    format: ANNNNNNNN (A + 8-digit number)
     section: AIF - Identifiers
-    report_type: AIF
-    severity: CRITICAL
     rule_source: CMVM AIFMD Reporting
-    esma_doc: ESMA/2013/1358 Rev.6
     nca_error_codes: []
     overrides_esma: true
     status: active
@@ -93,18 +91,14 @@ nca_overrides:
     nca_doc_date: '2025-04-18'
     base_rule_path:
       aif_report: aif_report.identification.AIFNationalCode
-    technical_guidance: >-
-      CMVM assigns AIF national identifiers in the format ANNNNNNNN: fixed letter "A" followed by exactly
-      8 digits. This identifier must match the CMVM register.
+    technical_guidance: 'CMVM assigns AIF national identifiers in the format ANNNNNNNN: fixed letter "A"
+      followed by exactly 8 digits. This identifier must match the CMVM register.'
     eagle_action: ''
     validation_rules:
     - Must match pattern A[0-9]{8}
     - Total length: 9 characters (A + 8 digits)
     - Must exist in CMVM register
     example: A12345678
-
-  # ── Section: File packaging — ZIP required ─────────────────────────────────
-
   - rule_id: NCA-CMVM-FilePackaging
     base_rule_id: ''
     field_id: ''
@@ -121,7 +115,6 @@ nca_overrides:
     report_type: AIF+AIFM
     severity: HIGH
     rule_source: CMVM AIFMD Reporting
-    esma_doc: ''
     nca_error_codes: []
     overrides_esma: true
     status: active
@@ -129,17 +122,13 @@ nca_overrides:
     nca_source_doc: CMVM regulatory framework
     nca_doc_date: '2025-04-18'
     base_rule_path: {}
-    technical_guidance: >-
-      Per ESMA standard, XML files must be compressed as .ZIP for transmission. Single .xml file compressed
-      as .zip with the same filename.
-    eagle_action: >-
-      Adapter must compress each XML into ZIP.
+    technical_guidance: Per ESMA standard, XML files must be compressed as .ZIP for transmission. Single
+      .xml file compressed as .zip with the same filename.
+    eagle_action: Adapter must compress each XML into ZIP.
     validation_rules:
     - XML files must be wrapped in ZIP format
     - Filename extension: .zip (replacing .xml)
-
-  # ── Section: Submission deadline ───────────────────────────────────────────
-
+    esma_doc: ''
   - rule_id: NCA-CMVM-SubmissionDeadline
     base_rule_id: ''
     field_id: ''
@@ -156,7 +145,6 @@ nca_overrides:
     report_type: AIF+AIFM
     severity: HIGH
     rule_source: CMVM AIFMD Reporting
-    esma_doc: ''
     nca_error_codes: []
     overrides_esma: false
     status: active
@@ -164,17 +152,14 @@ nca_overrides:
     nca_source_doc: CMVM regulatory framework
     nca_doc_date: '2025-04-18'
     base_rule_path: {}
-    technical_guidance: >-
-      Standard EU deadline of 30 calendar days from end of reporting period. Fund-of-funds receive
-      additional 15-day extension. Frequency (annual, semi-annual, quarterly) depends on AuM, leverage,
-      asset types, and AIFM authorisation status.
+    technical_guidance: Standard EU deadline of 30 calendar days from end of reporting period. Fund-of-funds
+      receive additional 15-day extension. Frequency (annual, semi-annual, quarterly) depends on AuM,
+      leverage, asset types, and AIFM authorisation status.
     eagle_action: ''
     validation_rules:
     - Standard deadline: 30 calendar days from period end
     - Fund-of-funds deadline: additional 15 days
-
-  # ── Section: Quarterly prudential reporting ────────────────────────────────
-
+    esma_doc: ''
   - rule_id: NCA-CMVM-PrudentialReporting
     base_rule_id: ''
     field_id: ''
@@ -191,7 +176,6 @@ nca_overrides:
     report_type: AIFM
     severity: MEDIUM
     rule_source: CMVM Regulation 1/2020
-    esma_doc: ''
     nca_error_codes: []
     overrides_esma: true
     status: active
@@ -199,30 +183,26 @@ nca_overrides:
     nca_source_doc: CMVM Regulation 1/2020 and 3/2025
     nca_doc_date: '2025-04-18'
     base_rule_path: {}
-    technical_guidance: >-
-      In addition to AIFMD Annex IV reporting, AIFMs authorised by CMVM have quarterly prudential reporting
-      obligations under CMVM Regulation 1/2020 (as amended by Regulation 3/2025). This includes compliance
-      reporting on prudential requirements. This is an additional obligation on top of Annex IV, not a
-      replacement.
-    eagle_action: >-
-      Track CMVM prudential reporting deadlines separately from Annex IV deadlines. Alert users of
-      additional Portuguese obligations.
+    technical_guidance: In addition to AIFMD Annex IV reporting, AIFMs authorised by CMVM have quarterly
+      prudential reporting obligations under CMVM Regulation 1/2020 (as amended by Regulation 3/2025).
+      This includes compliance reporting on prudential requirements. This is an additional obligation
+      on top of Annex IV, not a replacement.
+    eagle_action: Track CMVM prudential reporting deadlines separately from Annex IV deadlines. Alert
+      users of additional Portuguese obligations.
     validation_rules:
     - Quarterly prudential reporting required under CMVM Regulation 1/2020
     - Separate from and in addition to AIFMD Annex IV returns
     - Annual financial reporting also required (accounts + general meeting minutes)
-
+    esma_doc: ''
   transmission:
-    note: >-
-      CMVM has its own submission portal. Limited public documentation available on the exact submission
+    note: CMVM has its own submission portal. Limited public documentation available on the exact submission
       channel. Direct CMVM contact recommended for portal access details.
     overrides_esma: true
     channels:
       cmvm_portal:
         name: CMVM Submission Portal
-        description: >-
-          Reports submitted electronically to CMVM. Specific portal access and registration details
-          should be obtained directly from CMVM.
+        description: Reports submitted electronically to CMVM. Specific portal access and registration
+          details should be obtained directly from CMVM.
         url: https://www.cmvm.pt
   file_format:
     encoding: UTF-8
@@ -234,26 +214,25 @@ nca_overrides:
   correction_rules:
     submission_deadlines:
       schedule:
-      - reporting_date: '31-03'
-        due_date: '30-04'
-      - reporting_date: '30-06'
-        due_date: '31-07'
-      - reporting_date: '30-09'
-        due_date: '31-10'
-      - reporting_date: '31-12'
-        due_date: '31-01'
+      - reporting_date: 31-03
+        due_date: 30-04
+      - reporting_date: 30-06
+        due_date: 31-07
+      - reporting_date: 30-09
+        due_date: 31-10
+      - reporting_date: 31-12
+        due_date: 31-01
       fund_of_funds_extension:
         description: Additional 15 days for fund-of-funds.
         extension_days: 15
   eagle_implementation:
     pre_submission_checks:
-    - 'Verify ReportingMemberState = "PT"'
-    - 'Validate AIFNationalCode matches pattern A[0-9]{8}'
+    - Verify ReportingMemberState = "PT"
+    - Validate AIFNationalCode matches pattern A[0-9]{8}
     - Ensure XML is wrapped in ZIP
     - Validate against ESMA XSD v1.2 Rev 6
     - Track additional CMVM prudential reporting obligations
     contact:
       cmvm_portal: https://www.cmvm.pt
-    update_trigger: >-
-      Monitor https://www.cmvm.pt for updates. Latest regulation: 3/2025 (18 April 2025).
-      Direct CMVM contact recommended for detailed technical specifications.
+    update_trigger: 'Monitor https://www.cmvm.pt for updates. Latest regulation: 3/2025 (18 April 2025).
+      Direct CMVM contact recommended for detailed technical specifications.'

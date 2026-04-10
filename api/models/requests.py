@@ -14,6 +14,17 @@ class FieldEditRequest(BaseModel):
     note: Optional[str] = Field(None, description="Optional edit note")
 
 
+class GroupCellEditRequest(BaseModel):
+    """Edit a single cell in a repeating group table."""
+    group_name: str = Field(..., description="Programmatic group name, e.g. aifm_principal_markets")
+    row_index: int = Field(..., description="0-based row index within the group")
+    column_id: str = Field(..., description="Column key (field_id or synthetic key)")
+    value: Any = Field(..., description="New cell value")
+    report_type: str = Field("AIFM", description="Report type: AIFM or AIF")
+    fund_index: int = Field(0, description="Fund index (0 for AIFM, 0-N for AIF)")
+    note: Optional[str] = Field(None, description="Optional edit note")
+
+
 class SourceEntityEditRequest(BaseModel):
     """Edit a source entity field (e.g. position market_value)."""
     field: str = Field(..., description="Entity field name")
@@ -24,6 +35,7 @@ class SourceEntityEditRequest(BaseModel):
 class SourceEntityAddRequest(BaseModel):
     """Add a new row to a source entity collection."""
     values: dict[str, Any] = Field(default_factory=dict, description="Field name → value pairs")
+    fund_index: int = Field(0, description="Fund index (0 for AIFM-level)")
 
 
 class SourceEntityDeleteRequest(BaseModel):

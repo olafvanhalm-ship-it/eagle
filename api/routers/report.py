@@ -9,7 +9,18 @@ from typing import Any, Optional
 from fastapi import APIRouter, HTTPException, Query
 
 from api.deps import get_store, get_field_registry, get_field_classification
-from api.models.requests import FieldEditRequest, SourceEntityEditRequest
+from api.models.requests import FieldEditRequest, GroupCellEditRequest, SourceEntityEditRequest
+try:
+    from api.models.requests import SourceEntityAddRequest
+    print("[Eagle] SourceEntityAddRequest imported OK")
+except ImportError:
+    # Fallback: define inline if requests.py hasn't been synced yet
+    from pydantic import BaseModel, Field as PydField
+    class SourceEntityAddRequest(BaseModel):
+        values: dict = PydField(default_factory=dict)
+        fund_index: int = PydField(0)
+    print("[Eagle] WARNING: SourceEntityAddRequest not found in requests.py — using inline fallback")
+
 from api.models.responses import (
     ReportDetailResponse, ReportFieldResponse, FieldValidationResponse,
     FieldValidationFinding,
@@ -19,6 +30,28 @@ from persistence.report_store import ReviewEdit
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["report"])
+
+# ISO-2 country codes in the EEA — used to auto-derive AIFM EEA Flag (AFM20)
+# and AIF EEA Flag (Q19) when the XML extractor didn't emit a value
+# (e.g. FCA-format reports, or templates that don't include the field).
+_EEA_COUNTRY_CODES = {
+    "AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FR",
+    "GR", "HR", "HU", "IE", "IS", "IT", "LI", "LT", "LU", "LV", "MT",
+    "NL", "NO", "PL", "PT", "RO", "SE", "SI", "SK",
+}
+
+
+def _derive_eea_flag(country_code: str | None) -> str:
+    return "true" if (country_code or "").strip().upper() in _EEA_COUNTRY_CODES else "false"
+
+# ── Startup diagnostic ──────────────────────────────────────────────────────
+print("[Eagle] report.py loaded — version: session-10 (source add/delete endpoints)")
+
+
+@router.get("/version")
+async def get_version():
+    """Test endpoint — open http://localhost:8000/api/v1/version in your browser."""
+    return {"version": "session-10", "endpoints": ["POST source add", "DELETE source delete"]}
 
 
 def _field_level_validation(reports: list, registry) -> list[dict]:
@@ -165,7 +198,9 @@ def _build_field_response(
             fdef = registry.aif_field(field_id)
 
     # Get classification (entity, composite, report)
-    category = classification.get(field_id, {}).get("category", "report")
+    # MUST use namespaced key "AIFM.33" / "AIF.33" — field IDs are NOT
+    # globally unique (e.g., field 33 = AuM in AIFM, share class in AIF).
+    category = classification.get(f"{report_type}.{field_id}", {}).get("category", "report")
     has_value = field_value.get("value") is not None and field_value.get("value") != ""
 
     # Editable: entity fields and non-system report fields WITH data, or mandatory/conditional
@@ -193,13 +228,37 @@ def _build_field_response(
     if fdef and fdef.allowed_values_ref and registry:
         ref_values = registry.reference_table(fdef.allowed_values_ref)
 
+    # Determine source/priority: if manually overridden keep that;
+    # otherwise, composite/derived fields get DERIVED, directly-mapped fields get IMPORTED.
+    raw_priority = field_value.get("priority", "")
+    raw_source = field_value.get("source", "unknown")
+    if raw_priority == "MANUALLY_OVERRIDDEN":
+        priority = "MANUALLY_OVERRIDDEN"
+        source = raw_source
+    elif category == "composite":
+        priority = "DERIVED"
+        source = "Calculated from source data"
+    elif is_system:
+        priority = "IMPORTED"
+        source = "Imported from source file"
+    else:
+        # Non-system, non-composite fields: check if it's a repeating/calculated field
+        # Fields in header sections are imported; others may be derived
+        is_header_section = fdef and ("Header" in (fdef.section or "") or "Identifier" in (fdef.section or ""))
+        if is_header_section:
+            priority = "IMPORTED"
+            source = "Imported from source file"
+        else:
+            priority = raw_priority or "IMPORTED"
+            source = raw_source
+
     return ReportFieldResponse(
         field_id=field_id,
         field_name=fdef.field_name if fdef else f"Field {field_id}",
         section=fdef.section if fdef else "Unknown",
         value=field_value.get("value"),
-        source=field_value.get("source", "unknown"),
-        priority=field_value.get("priority", "IMPORTED"),
+        source=source,
+        priority=priority,
         data_type=fdef.data_type.value if fdef else "A",
         obligation=fdef.obligation.value if fdef else "O",
         format=fdef.format if fdef else "",
@@ -217,10 +276,21 @@ def _build_field_response(
 
 
 def _is_system_field(field_id: str, report_type: str) -> bool:
-    """Check if a report field is system-generated (not user-editable)."""
+    """Check if a report field is system-generated (not user-editable).
+
+    Fields driven by enumerated values (4, 5, 8, 13, 16 for both AIFM and AIF)
+    are deliberately NOT listed here — they must be editable so the user can
+    pick from the dropdown rendered by `EditableCell`. Purely derived-from-
+    metadata fields (reporting dates, version, creation date) stay system.
+    """
     system_fields = {
-        "AIFM": {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "16"},
-        "AIF": {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "16", "17"},
+        # Keep: 1 = Member state (derived from NCA), 2 = Version,
+        #       3 = Creation date (auto-updated), 6/7 = Period start/end,
+        #       9 = Period year, 10/11/12 = Change metadata
+        "AIFM": {"1", "2", "3", "6", "7", "9", "10", "11", "12"},
+        # Same principle for AIF. 17 stays system (AIF national code comes
+        # from the NCA override block).
+        "AIF": {"1", "2", "3", "6", "7", "9", "10", "11", "12", "17"},
     }
     return field_id in system_fields.get(report_type, set())
 
@@ -262,6 +332,64 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
 
     # Determine content type from extracted field data (field 5 = AIFContentType / AIFMContentType)
     fields_data_raw = report.fields_json or {}
+
+    # ── Migrate old AIFM field IDs if needed ───────────────────────────
+    # The XML extractor previously assigned wrong ESMA field IDs for AIFM
+    # currency (24-30 instead of 33-38) and principal markets/instruments
+    # (31-37 instead of 26-32).  Detect and remap on load.
+    if report_type == "AIFM" and fields_data_raw:
+        _needs_migration = False
+        # Detection: if field "24" has a numeric value > 1000, it's AuM data
+        # (under correct mapping, field 24 is a country code or empty)
+        f24_val = str(fields_data_raw.get("24", {}).get("value", "") or "")
+        if f24_val.isdigit() and int(f24_val) > 1000:
+            _needs_migration = True
+
+        if _needs_migration:
+            _AIFM_FIELD_MIGRATION = {
+                # Old currency IDs → correct ESMA IDs
+                "24": "33",  # AUMAmountInEuro
+                "27": "34",  # AUMAmountInBaseCurrency
+                "26": "35",  # BaseCurrency
+                "28": "36",  # FXEURReferenceRateType
+                "29": "37",  # FXEURRate
+                "30": "38",  # FXEUROtherReferenceRateDescription
+                # Old principal markets IDs → correct ESMA IDs
+                "31": "26",  # Ranking (markets)
+                "32": "27",  # MarketCodeType
+                "33": "28",  # MarketCode
+                "34": "29",  # AggregatedValueAmount (markets)
+                # Old principal instruments IDs → correct ESMA IDs
+                "35": "30",  # Ranking (instruments)
+                "36": "31",  # SubAssetType
+                "37": "32",  # AggregatedValueAmount (instruments)
+            }
+            # Two-pass remap to avoid key collisions
+            migrated: dict = {}
+            for old_id, data in fields_data_raw.items():
+                new_id = _AIFM_FIELD_MIGRATION.get(old_id, old_id)
+                migrated[new_id] = data
+            report.fields_json = migrated
+            fields_data_raw = migrated
+
+            # Also remap groups_json column keys
+            _groups = report.groups_json or {}
+            for gname in ("aifm_principal_markets", "aifm_principal_instruments"):
+                if gname in _groups:
+                    new_rows = []
+                    for row in _groups[gname]:
+                        new_row = {}
+                        for k, v in row.items():
+                            new_key = _AIFM_FIELD_MIGRATION.get(k, k)
+                            new_row[new_key] = v
+                        new_rows.append(new_row)
+                    _groups[gname] = new_rows
+            report.groups_json = _groups
+
+            # Persist the migration so it only happens once
+            store.save_report(report)
+            log.info("Migrated AIFM field IDs for session %s", session_id)
+
     ct_val = fields_data_raw.get("5", {}).get("value", "2")
     try:
         content_type = int(ct_val)
@@ -283,12 +411,25 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
     validation_map: dict[str, FieldValidationResponse] = {}
 
     # Step 1: run canonical field-level validation (mandatory, format, type)
+    # This is the *authoritative* source for MAN-/FMT-/TYP- findings because
+    # it always reflects the current state of the report after any inline
+    # edits the user has made.
     auto_findings = _field_level_validation([report], registry)
-    # Step 2: merge any previously-stored validation run (YAML business rules)
+    _auto_rule_prefixes = ("MAN-", "FMT-", "TYP-")
+
+    # Step 2: merge any previously-stored validation run (YAML business rules,
+    # XSD findings) — but DROP any field-level findings from storage because
+    # `auto_findings` already regenerated those from the live state. Keeping
+    # stored field-level findings would re-surface FAILs from before the
+    # user fixed a value, or from a prior buggy version of _check_format.
     latest_val = store.get_latest_validation(session_id)
     stored_findings: list[dict] = []
     if latest_val and latest_val.findings_json:
-        stored_findings = latest_val.findings_json
+        for f in latest_val.findings_json:
+            rid = str(f.get("rule_id", ""))
+            if rid.startswith(_auto_rule_prefixes):
+                continue
+            stored_findings.append(f)
 
     # Combine auto + stored findings into per-field lists
     _all_findings: dict[str, list[dict]] = {}
@@ -354,10 +495,23 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
         all_fields = {}
 
     # Fields that only apply to AMND/CANCEL filings (change codes, obligation changes)
-    # These should be hidden for INIT filings even if mandatory in schema
+    # These should be hidden for INIT filings even if mandatory in schema.
+    #
+    # NOTE: AIFM fields 10/11/12 (AIFM reporting obligation change codes +
+    # change quarter) were previously hidden for INIT filings. They belong
+    # to the AIFM header section and must be visible so the user can
+    # populate them during normal reviews. Keeping them in this list hid
+    # them entirely for INIT — removed.
     amnd_only_fields = {
-        "AIFM": {"10", "11", "12", "CANC-AIFM-1", "CANC-AIFM-2", "CANC-AIFM-3", "CANC-AIFM-4"},
+        "AIFM": {"CANC-AIFM-1", "CANC-AIFM-2", "CANC-AIFM-3", "CANC-AIFM-4"},
         "AIF": {"10", "11", "12", "CANC-AIF-1", "CANC-AIF-2", "CANC-AIF-3", "CANC-AIF-4", "CANC-AIF-5"},
+    }
+
+    # Header-section fields that must always be shown even when empty and
+    # optional (default view would otherwise hide them).
+    _always_show = {
+        "AIFM": {"10", "11", "12"},
+        "AIF": set(),
     }
 
     # Sections that should be hidden entirely when empty for INIT filings
@@ -418,25 +572,19 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
             except ValueError:
                 fid_num = -1
 
-            # Q33 (ShareClassFlag) → share class identifiers (Q34-Q41)
-            if 34 <= fid_num <= 41 and _gate_is_false_or_empty("33"):
+            # Q33 (ShareClassFlag) → share class identifiers (Q34-Q40)
+            # Q41 is not gated by Q33 per ESMA guidelines
+            if 34 <= fid_num <= 40 and _gate_is_false_or_empty("33"):
                 continue
 
-            # Q57 (PredominantAIFType) → dominant influence (Q131-Q138)
-            if 131 <= fid_num <= 138 and _gate_val("57") != "peqf":
+            # Q57 (PredominantAIFType) → dominant influence (Q131-Q136)
+            # Q137-Q138 are not gated by Q57 per ESMA guidelines
+            if 131 <= fid_num <= 136 and _gate_val("57") != "peqf":
                 continue
 
-            # Q57 (PredominantAIFType) → controlled structures (Q286-Q296)
-            if 286 <= fid_num <= 296 and _gate_val("57") != "peqf":
-                continue
-
-            # Q203 (InvestorPreferentialTreatment) → details (Q204-Q213)
-            if 204 <= fid_num <= 213 and _gate_is_false_or_empty("203"):
-                continue
-
-            # Content type → stress test results (Q279-Q280), only CT 4/5
-            if 279 <= fid_num <= 280 and content_type not in (4, 5):
-                continue
+            # REMOVED: Q57→Q286-Q296 gate — ESMA does not gate these fields on Q57
+            # REMOVED: Q203→Q204-Q213 gate — independent optional flags per ESMA
+            # REMOVED: CT→Q279-Q280 gate — redundant with CT section filtering
 
             # Q172 (DirectClearingFlag) → CCP details (Q173-Q177)
             if 173 <= fid_num <= 177 and _gate_is_false_or_empty("172"):
@@ -468,6 +616,8 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
             if not has_value and not has_failure:
                 if fdef.obligation.value == "M":
                     pass  # Always show mandatory even when empty
+                elif fid in _always_show.get(report_type, set()):
+                    pass  # Always show header-section fields
                 else:
                     continue  # Hide all empty non-mandatory (C, O, F)
 
@@ -562,6 +712,27 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
             # Hide dominant_influence group and the section
             groups_data.pop("dominant_influence", None)
             sections.pop("Dominant Influence [see Article 1 of Directive 83/349/EEC]", None)
+        else:
+            # PEQF: ensure dominant_influence always appears as a group table,
+            # even when there's no data yet (so users can fill it in).
+            _DOM_INF_FIELDS = [
+                ("131", "company_name"), ("132", "lei_code"), ("133", "bic_code"),
+                ("134", "transaction_type"), ("135", "other_transaction_desc"), ("136", "voting_rights_pct"),
+            ]
+            if "dominant_influence" not in groups_data:
+                # Build from scalar fields if any have values
+                row: dict[str, Any] = {}
+                has_any = False
+                for fid, col_name in _DOM_INF_FIELDS:
+                    val = fields_data.get(fid, {}).get("value")
+                    row[col_name] = val
+                    if val is not None:
+                        has_any = True
+                # Always create at least an empty row for the table structure
+                groups_data["dominant_influence"] = [row]
+                _synthetic_field_ids.update(fid for fid, _ in _DOM_INF_FIELDS)
+            # Remove the section so fields aren't shown both as section AND group
+            sections.pop("Dominant Influence [see Article 1 of Directive 83/349/EEC]", None)
 
         # Q57: controlled_structures group only for PEQF
         if _predominant_type != "peqf":
@@ -615,10 +786,12 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
             del sections[sec_name]
 
     group_columns: dict[str, dict[str, str]] = {}
+    group_obligations: dict[str, dict[str, str]] = {}
     for gname, rows in groups_data.items():
         if not rows:
             continue
         col_map: dict[str, str] = {}
+        ob_map: dict[str, str] = {}
         for col_id in rows[0]:
             fdef_col = None
             if registry:
@@ -628,10 +801,13 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
                 )
             if fdef_col:
                 col_map[col_id] = fdef_col.field_name
+                ob_map[col_id] = fdef_col.obligation.value
             else:
                 # Synthetic columns (region, nav_pct, etc.) — prettify
                 col_map[col_id] = col_id.replace("_", " ").title()
         group_columns[gname] = col_map
+        if ob_map:
+            group_obligations[gname] = ob_map
 
     # Compute completeness dynamically:
     # (applicable required fields − errors) / applicable required fields × 100
@@ -676,7 +852,87 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
 
     # ── Apply NCA-specific overrides when nca parameter is set ──────────
     if nca:
-        _apply_nca_overrides(sections, validation_map, nca, report_type, fields_data)
+        _apply_nca_overrides(sections, validation_map, nca, report_type, fields_data, registry)
+        # Override NCA-specific fields with the selected NCA's values.
+        # The stored fields come from whichever NCA XML was extracted during
+        # upload; when the user switches NCA in the sidebar, these must
+        # reflect the selected NCA.
+        #
+        # Report-type-aware mapping (field IDs are NOT globally unique):
+        #   AIF  field 1  = Reporting Member State      → NCA country code
+        #   AIF  field 17 = AIF National Code           → NCA national code
+        #   AIFM field 1  = Reporting Member State      → NCA country code
+        #   AIFM field 17 = AIFM Jurisdiction            → preserve from upload
+        #   AIFM field 18 = AIFM National Code          → NCA national code
+        #
+        # NOTE: AIFM field 17 is the AIFM's home/establishment jurisdiction —
+        # a property of the firm itself, NOT of the filing relationship. For
+        # EU-authorised AIFMs it is their home member state (may differ from
+        # the filing NCA if they use a passport). For non-EU AIFMs filing via
+        # NPPR it is their actual non-EU country (e.g. 747 Capital → US). It
+        # must NEVER be overwritten with the filing NCA code.
+        _nca_nc = report.nca_national_codes.get(nca, "")
+
+        def _clear_validation(_fr):
+            """Reset validation for an overridden field so stale failures
+            from a previously extracted NCA XML don't turn the cell red."""
+            _fr.validation = FieldValidationResponse(
+                status="PASS", findings=[], rule_id="", message="",
+                fix_suggestion="", severity="",
+            )
+            validation_map.pop(_fr.field_id, None)
+
+        for _sec_fields in sections.values():
+            for fr in _sec_fields:
+                if fr.field_id == "1":
+                    fr.value = nca
+                    _clear_validation(fr)
+                elif report_type == "AIF" and fr.field_id == "17" and _nca_nc:
+                    fr.value = _nca_nc
+                    _clear_validation(fr)
+                # AIFM field 17 is intentionally NOT overridden — see note above.
+                elif report_type == "AIFM" and fr.field_id == "18" and _nca_nc:
+                    fr.value = _nca_nc
+                    _clear_validation(fr)
+
+    # ── Auto-derive EEA flags when empty ────────────────────────────────
+    # AFM20 (AIFM EEA Flag) is derivable from AFM17 (AIFM jurisdiction).
+    # Q19  (AIF EEA Flag)  is derivable from Q21 (AIF domicile) on AIF reports.
+    # The XML extractor doesn't always emit these (e.g. FCA format), so fill
+    # them in here and clear the stale "empty mandatory" validation error.
+    def _clear_validation_simple(_fr):
+        _fr.validation = FieldValidationResponse(
+            status="PASS", findings=[], rule_id="", message="",
+            fix_suggestion="", severity="",
+        )
+        validation_map.pop(_fr.field_id, None)
+
+    # Build a quick (field_id → field_response) lookup for this report
+    _field_lookup: dict[str, ReportFieldResponse] = {}
+    for _sec in sections.values():
+        for _fr in _sec:
+            _field_lookup[_fr.field_id] = _fr
+
+    if report_type == "AIFM":
+        jurisdiction_fr = _field_lookup.get("17")
+        eea_fr = _field_lookup.get("20")
+        if eea_fr and (eea_fr.value is None or str(eea_fr.value).strip() == ""):
+            derived = _derive_eea_flag(jurisdiction_fr.value if jurisdiction_fr else None)
+            eea_fr.value = derived
+            eea_fr.source = "Derived from AIFM jurisdiction"
+            eea_fr.priority = "DERIVED"
+            _clear_validation_simple(eea_fr)
+
+    if report_type == "AIF":
+        # AIF domicile lives at Q21 in the AIF schema; Q19 is the flag.
+        domicile_fr = _field_lookup.get("21")
+        eea_fr = _field_lookup.get("19")
+        if eea_fr and (eea_fr.value is None or str(eea_fr.value).strip() == ""):
+            derived = _derive_eea_flag(domicile_fr.value if domicile_fr else None)
+            eea_fr.value = derived
+            eea_fr.source = "Derived from AIF domicile"
+            eea_fr.priority = "DERIVED"
+            _clear_validation_simple(eea_fr)
 
     return ReportDetailResponse(
         report_id=report.report_id,
@@ -685,12 +941,14 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
         entity_name=report.entity_name,
         entity_index=report.entity_index,
         nca_codes=report.nca_codes,
+        nca_national_codes=report.nca_national_codes,
         completeness=completeness,
         field_count=required_count,
         filled_count=required_count - error_count,
         sections=sections,
         groups=groups_data,
         group_columns=group_columns,
+        group_obligations=group_obligations,
         empty_section_count=empty_section_count,
         validation_run=validation_run,
         no_reporting=is_no_reporting,
@@ -737,6 +995,7 @@ def _apply_nca_overrides(
     nca_code: str,
     report_type: str,
     fields_data: dict,
+    registry=None,
 ) -> None:
     """Apply NCA-specific overrides to field responses in-place.
 
@@ -786,24 +1045,52 @@ def _apply_nca_overrides(
         if nca_guidance:
             fr.technical_guidance = f"[NCA {nca_key}] {nca_guidance}"
 
-        # Run NCA-specific format validation
-        nca_format = rule.get("format", "")
+        # Run NCA-specific validation.
+        #
+        # Skip the format regex check when the field is an enumerated value
+        # (has `allowed_values_ref` at the base level, OR the override itself
+        # supplies an `allowed_values` list/dict). In that case the base YAML
+        # enum check already validated membership, and re-interpreting
+        # `format: '1'` ("exactly 1 character") as a regex pattern would
+        # spuriously reject every code except literal '1'.
         value = fields_data.get(fid, {}).get("value")
-        if nca_format and value is not None and str(value).strip():
+        override_allowed = rule.get("allowed_values")
+        base_fdef = None
+        if registry:
+            base_fdef = (
+                registry.aifm_field(fid) if report_type == "AIFM"
+                else registry.aif_field(fid)
+            )
+        base_has_enum = bool(base_fdef and base_fdef.allowed_values_ref)
+
+        nca_format = rule.get("format", "")
+        format_ok = True
+
+        if override_allowed is not None and value is not None and str(value).strip():
+            # Override declares its own enum — validate membership.
             val_str = str(value).strip()
-            format_ok = True
+            if isinstance(override_allowed, dict):
+                allowed_set = {str(k) for k in override_allowed.keys()}
+            elif isinstance(override_allowed, (list, tuple, set)):
+                allowed_set = {str(v) for v in override_allowed}
+            else:
+                allowed_set = set()
+            if allowed_set and val_str not in allowed_set:
+                format_ok = False
+                nca_format = f"one of {sorted(allowed_set)}"
+        elif nca_format and not base_has_enum and value is not None and str(value).strip():
+            val_str = str(value).strip()
             try:
-                # Try as regex pattern
                 if not re.fullmatch(nca_format, val_str):
                     format_ok = False
             except re.error:
-                # If not a valid regex, try as max-length
                 try:
                     if len(val_str) > int(nca_format):
                         format_ok = False
                 except ValueError:
                     pass
 
+        if nca_format or override_allowed is not None:
             if not format_ok:
                 nca_finding = FieldValidationFinding(
                     rule_id=rule.get("rule_id", f"NCA-{nca_key}-{fid}"),
@@ -960,7 +1247,8 @@ async def edit_field(session_id: str, req: FieldEditRequest):
     """
     store = get_store()
     classification = get_field_classification()
-    cat = classification.get(req.field_id, {}).get("category", "report")
+    # Use namespaced key to avoid AIF/AIFM field ID collisions (e.g., field 33)
+    cat = classification.get(f"{req.report_type}.{req.field_id}", {}).get("category", "report")
 
     if cat == "composite":
         raise HTTPException(
@@ -985,14 +1273,29 @@ async def edit_field(session_id: str, req: FieldEditRequest):
 
     # Update field
     from datetime import datetime, timezone
+    _now = datetime.now(timezone.utc)
     report.fields_json[req.field_id] = {
         "value": req.value,
         "source": "client_review",
         "priority": "MANUALLY_OVERRIDDEN",
         "confidence": 1.0,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": _now.isoformat(),
         "note": req.note,
     }
+
+    # Field 3 (CreationDateAndTime) must reflect the most recent save.
+    # Format: 4(n)-2(n)-2(n)T2(n):2(n):2(n) — no timezone suffix.
+    if req.field_id != "3":
+        _creation_ts = _now.strftime("%Y-%m-%dT%H:%M:%S")
+        report.fields_json["3"] = {
+            "value": _creation_ts,
+            "source": "system",
+            "priority": "SYSTEM",
+            "confidence": 1.0,
+            "timestamp": _now.isoformat(),
+            "note": "Auto-updated on save",
+        }
+
     report.filled_count = len([v for v in report.fields_json.values() if v.get("value") is not None])
     report.completeness = round(100.0 * report.filled_count / max(report.field_count, 1), 1)
     store.save_report(report)
@@ -1013,6 +1316,121 @@ async def edit_field(session_id: str, req: FieldEditRequest):
         edit_id=edit_id,
         updated_fields=[req.field_id],
         field_snapshots={req.field_id: {"old": old_value, "new": req.value}},
+    )
+
+
+@router.put("/session/{session_id}/group")
+async def edit_group_cell(session_id: str, req: GroupCellEditRequest):
+    """Edit a single cell in a repeating group table.
+
+    Updates groups_json[group_name][row_index][column_id].
+    If row_index == 0 and column_id is a numeric field_id, also
+    updates fields_json[column_id] to keep both stores in sync.
+    """
+    store = get_store()
+    session = store.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    report = store.get_report_by_type_and_index(session_id, req.report_type, req.fund_index)
+    if report is None:
+        raise HTTPException(status_code=404, detail=f"{req.report_type} report index {req.fund_index} not found")
+
+    groups = report.groups_json or {}
+
+    # ── Synthetic group handling ───────────────────────────────────────
+    # nav_geographical_focus, aum_geographical_focus, and monthly_data are
+    # built on-the-fly from scalar fields in fields_json. They don't exist
+    # in groups_json, so edits must be mapped back to the underlying field.
+    _SYNTHETIC_GEO = {
+        "nav_geographical_focus": {
+            "field_ids": [str(i) for i in range(78, 86)],
+            "value_col": "nav_pct",
+        },
+        "aum_geographical_focus": {
+            "field_ids": [str(i) for i in range(86, 94)],
+            "value_col": "aum_pct",
+        },
+    }
+    _MONTHLY_METRICS = {
+        "gross_return": 219, "net_return": 231, "nav_change": 243,
+        "subscriptions": 255, "redemptions": 267,
+    }
+
+    # Groups derived from source data — reject edits with a clear message
+    _DERIVED_GROUPS = {
+        "main_instruments", "principal_exposures", "portfolio_concentrations",
+        "asset_type_exposures", "currency_exposures",
+        "nav_geographical_focus", "aum_geographical_focus",
+        "asset_type_turnovers", "aif_principal_markets",
+        "investor_groups", "strategies", "market_risk_measures",
+        "monthly_data",
+        # AIFM groups (aggregated across all AIFs)
+        "aifm_principal_markets", "aifm_principal_instruments",
+    }
+    if req.group_name in _DERIVED_GROUPS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Group '{req.group_name}' is derived from source data and cannot be edited directly. Edit the underlying source records instead.",
+        )
+
+    # ── Regular (non-synthetic) group edit ─────────────────────────────
+    if req.group_name not in groups:
+        raise HTTPException(status_code=404, detail=f"Group '{req.group_name}' not found")
+
+    rows = groups[req.group_name]
+    if req.row_index < 0 or req.row_index >= len(rows):
+        raise HTTPException(status_code=400, detail=f"Row index {req.row_index} out of range (0..{len(rows)-1})")
+
+    old_value = rows[req.row_index].get(req.column_id)
+    rows[req.row_index][req.column_id] = req.value
+    report.groups_json = groups
+
+    # Sync to fields_json for row 0 (first item is also stored as scalar)
+    if req.row_index == 0:
+        try:
+            int(req.column_id)  # Only sync numeric field IDs
+            from datetime import datetime, timezone
+            report.fields_json[req.column_id] = {
+                "value": req.value,
+                "source": "client_review",
+                "priority": "MANUALLY_OVERRIDDEN",
+                "confidence": 1.0,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "note": req.note,
+            }
+        except ValueError:
+            pass  # Synthetic columns (region, month) — no field_json sync
+
+    # Always refresh field 3 (CreationDateAndTime) on any save
+    from datetime import datetime as _dt2, timezone as _tz2
+    _now2 = _dt2.now(_tz2.utc)
+    report.fields_json["3"] = {
+        "value": _now2.strftime("%Y-%m-%dT%H:%M:%S"),
+        "source": "system",
+        "priority": "SYSTEM",
+        "confidence": 1.0,
+        "timestamp": _now2.isoformat(),
+        "note": "Auto-updated on save",
+    }
+
+    store.save_report(report)
+
+    edit = ReviewEdit(
+        session_id=session_id,
+        report_id=report.report_id,
+        edit_type="group",
+        target=f"{req.group_name}[{req.row_index}].{req.column_id}",
+        old_value=old_value,
+        new_value=req.value,
+        cascaded_fields=[],
+    )
+    edit_id = store.log_edit(edit)
+
+    return EditResultResponse(
+        edit_id=edit_id,
+        updated_fields=[f"{req.group_name}[{req.row_index}].{req.column_id}"],
+        field_snapshots={req.column_id: {"old": old_value, "new": req.value}},
     )
 
 
@@ -1156,6 +1574,112 @@ async def edit_source_entity(
         updated_fields=cascaded_fields,
         field_snapshots=snapshots,
     )
+
+
+@router.post("/session/{session_id}/source/{entity_type}")
+async def add_source_entity(
+    session_id: str,
+    entity_type: str,
+    req: SourceEntityAddRequest,
+):
+    """Add a new row to a source entity collection (positions, transactions, etc.)."""
+    print(f"[Eagle] POST add_source_entity called: session={session_id}, entity={entity_type}, req={req}")
+    store = get_store()
+    session = store.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    sc = session.source_canonical
+    if sc is None:
+        sc = {}
+        session.source_canonical = sc
+
+    fund_index = req.fund_index
+
+    aifs = sc.get("aifs", [])
+    if not aifs:
+        # Initialise a minimal aifs list so we can store data
+        aifs = [{}]
+        sc["aifs"] = aifs
+    if fund_index >= len(aifs):
+        raise HTTPException(status_code=404, detail="Fund index out of range")
+
+    aif = aifs[fund_index]
+    collection = aif.get(entity_type)
+    if collection is None:
+        collection = []
+        aif[entity_type] = collection
+
+    # Build new item — copy field structure from first existing item if possible
+    from datetime import datetime, timezone
+    ts = datetime.now(timezone.utc).isoformat()
+    new_item: dict = {}
+    if collection:
+        # Use field names from the first existing item as template
+        for field_name in collection[0]:
+            if field_name.startswith("_"):
+                continue  # skip internal fields like _fund
+            val = req.values.get(field_name, "")
+            new_item[field_name] = {
+                "value": val,
+                "source": "client_review",
+                "priority": "MANUALLY_OVERRIDDEN",
+                "confidence": 1.0,
+                "timestamp": ts,
+            }
+    else:
+        # No template — just use whatever was provided
+        for field_name, value in req.values.items():
+            new_item[field_name] = {
+                "value": value,
+                "source": "client_review",
+                "priority": "MANUALLY_OVERRIDDEN",
+                "confidence": 1.0,
+                "timestamp": ts,
+            }
+
+    collection.append(new_item)
+
+    session.source_canonical = sc
+    store.save_session(session)
+
+    return {"status": "ok", "new_index": len(collection) - 1, "total": len(collection)}
+
+
+@router.delete("/session/{session_id}/source/{entity_type}/{index}")
+async def delete_source_entity(
+    session_id: str,
+    entity_type: str,
+    index: int,
+    fund_index: int = Query(0),
+):
+    """Delete a row from a source entity collection."""
+    print(f"[Eagle] DELETE delete_source_entity called: session={session_id}, entity={entity_type}, index={index}, fund_index={fund_index}")
+    store = get_store()
+    session = store.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    sc = session.source_canonical or {}
+
+    aifs = sc.get("aifs", [])
+    if not aifs:
+        raise HTTPException(status_code=404, detail="No fund data in source canonical")
+    if fund_index >= len(aifs):
+        raise HTTPException(status_code=404, detail="Fund index out of range")
+
+    aif = aifs[fund_index]
+    collection = aif.get(entity_type, [])
+    if index < 0 or index >= len(collection):
+        raise HTTPException(status_code=404, detail=f"{entity_type}[{index}] not found")
+
+    collection.pop(index)
+    aif[entity_type] = collection
+
+    session.source_canonical = sc
+    store.save_session(session)
+
+    return {"status": "ok", "deleted_index": index, "total": len(collection)}
 
 
 @router.get("/session/{session_id}/diff")
