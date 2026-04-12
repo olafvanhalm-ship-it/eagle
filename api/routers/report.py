@@ -8,11 +8,22 @@ from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
-from api.deps import get_store, get_field_registry, get_field_classification
+from api.deps import get_store, get_field_registry, get_field_classification, get_nca_overrides
+
+try:
+    from api.version import BUILD_NUMBER as _BUILD_NUMBER
+except ImportError:
+    _BUILD_NUMBER = 0
+try:
+    from canonical.gate_evaluator import evaluate_gate
+except ImportError:
+    # Fallback: if gate_evaluator hasn't been synced yet, disable gate evaluation
+    def evaluate_gate(condition, field_values):
+        return True
+    print("[Eagle] WARNING: gate_evaluator not found — run sync_to_local.bat")
 from api.models.requests import FieldEditRequest, GroupCellEditRequest, SourceEntityEditRequest
 try:
     from api.models.requests import SourceEntityAddRequest
-    print("[Eagle] SourceEntityAddRequest imported OK")
 except ImportError:
     # Fallback: define inline if requests.py hasn't been synced yet
     from pydantic import BaseModel, Field as PydField
@@ -205,7 +216,7 @@ def _build_field_response(
 
     # Editable: entity fields and non-system report fields WITH data, or mandatory/conditional
     # Empty optional/conditional fields that are derived/calculated should not be editable
-    is_system = _is_system_field(field_id, report_type)
+    is_system = _is_system_field(field_value)
     if category == "entity":
         editable = True
     elif is_system:
@@ -239,8 +250,8 @@ def _build_field_response(
         priority = "DERIVED"
         source = "Calculated from source data"
     elif is_system:
-        priority = "IMPORTED"
-        source = "Imported from source file"
+        priority = str(raw_priority).upper() if raw_priority else "SYSTEM"
+        source = raw_source or "Auto-generated"
     else:
         # Non-system, non-composite fields: check if it's a repeating/calculated field
         # Fields in header sections are imported; others may be derived
@@ -275,24 +286,15 @@ def _build_field_response(
     )
 
 
-def _is_system_field(field_id: str, report_type: str) -> bool:
+def _is_system_field(field_value: dict) -> bool:
     """Check if a report field is system-generated (not user-editable).
 
-    Fields driven by enumerated values (4, 5, 8, 13, 16 for both AIFM and AIF)
-    are deliberately NOT listed here — they must be editable so the user can
-    pick from the dropdown rendered by `EditableCell`. Purely derived-from-
-    metadata fields (reporting dates, version, creation date) stay system.
+    Single source of truth: the adapter sets priority=SYSTEM or DERIVED for
+    fields that should not be editable in the review UI. No hardcoded field
+    lists — the adapter owns this knowledge.
     """
-    system_fields = {
-        # Keep: 1 = Member state (derived from NCA), 2 = Version,
-        #       3 = Creation date (auto-updated), 6/7 = Period start/end,
-        #       9 = Period year, 10/11/12 = Change metadata
-        "AIFM": {"1", "2", "3", "6", "7", "9", "10", "11", "12"},
-        # Same principle for AIF. 17 stays system (AIF national code comes
-        # from the NCA override block).
-        "AIF": {"1", "2", "3", "6", "7", "9", "10", "11", "12", "17"},
-    }
-    return field_id in system_fields.get(report_type, set())
+    p = str(field_value.get("priority", "")).upper()
+    return p in ("SYSTEM", "DERIVED")
 
 
 @router.get("/session/{session_id}/report/manager")
@@ -390,6 +392,38 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
             store.save_report(report)
             log.info("Migrated AIFM field IDs for session %s", session_id)
 
+    # ── Migrate old priority values ──────────────────────────────────
+    # Sessions created before SourcePriority.SYSTEM was introduced have
+    # all metadata fields as "IMPORTED".  This block patches them to match
+    # what the adapter now sets for new uploads.  Mirrors m_adapter.py.
+    _SYSTEM_FIELDS = {
+        "AIFM": {"1", "2", "3", "6", "7", "9", "10", "11", "12"},
+        "AIF":  {"1", "2", "3", "6", "7", "9", "10", "11", "12"},
+    }
+    _DERIVED_FIELDS = {
+        "AIFM": {"5", "16", "20"},  # AIFM content type, reporting code, EEA flag
+        "AIF":  {"19"},              # EEA flag (derived from domicile)
+    }
+    _priority_migrated = False
+    for fid, fdata in fields_data_raw.items():
+        old_p = str(fdata.get("priority", "")).upper()
+        if fid in _SYSTEM_FIELDS.get(report_type, set()) and old_p != "SYSTEM":
+            fdata["priority"] = "SYSTEM"
+            _priority_migrated = True
+        elif fid in _DERIVED_FIELDS.get(report_type, set()) and old_p not in ("SYSTEM", "DERIVED"):
+            fdata["priority"] = "DERIVED"
+            _priority_migrated = True
+    # AIF field 16 (AIFM National Code): SYSTEM when AIFM report exists
+    if report_type == "AIF" and "16" in fields_data_raw:
+        has_aifm = any(r.report_type == "AIFM" for r in store.get_reports_for_session(session_id))
+        target_p = "SYSTEM" if has_aifm else "IMPORTED"
+        if str(fields_data_raw["16"].get("priority", "")).upper() != target_p:
+            fields_data_raw["16"]["priority"] = target_p
+            _priority_migrated = True
+    if _priority_migrated:
+        report.fields_json = fields_data_raw
+        store.save_report(report)
+
     ct_val = fields_data_raw.get("5", {}).get("value", "2")
     try:
         content_type = int(ct_val)
@@ -415,19 +449,46 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
     # it always reflects the current state of the report after any inline
     # edits the user has made.
     auto_findings = _field_level_validation([report], registry)
-    _auto_rule_prefixes = ("MAN-", "FMT-", "TYP-")
+
+    # Step 1b: NCA inline format checks (run on every load, not just Validate)
+    # Single source of truth: field 1 (ReportingMemberState) from the report.
+    _field1_val = str(fields_data_raw.get("1", {}).get("value", "") or "").strip()
+    nca_code_for_val = _field1_val
+    if nca_code_for_val and registry:
+        _nca_rules = get_nca_overrides(nca_code_for_val)
+        if _nca_rules:
+            from api.routers.validation import _nca_override_validation
+            nca_inline = _nca_override_validation([report], nca_code_for_val, _nca_rules, registry)
+            auto_findings.extend(nca_inline)
+
+    _auto_rule_prefixes = ("MAN-", "FMT-", "TYP-", "NCA-")
 
     # Step 2: merge any previously-stored validation run (YAML business rules,
     # XSD findings) — but DROP any field-level findings from storage because
     # `auto_findings` already regenerated those from the live state. Keeping
     # stored field-level findings would re-surface FAILs from before the
     # user fixed a value, or from a prior buggy version of _check_format.
+    # Build set of fields that have been edited since the last validation.
+    # Stored findings for these fields are stale — the user changed the
+    # value, so any old PASS/FAIL no longer reflects reality.  Auto-
+    # validation (Step 1 + 1b) already re-checks from the live state;
+    # stored YAML-rule findings (e.g. "AIFM-18") must not override that.
+    _edited_fields: set[str] = set()
+    for fid, fdata in fields_data_raw.items():
+        if isinstance(fdata, dict) and fdata.get("source") == "client_review":
+            _edited_fields.add(f"{report_type}.{fid}")
+
     latest_val = store.get_latest_validation(session_id)
     stored_findings: list[dict] = []
     if latest_val and latest_val.findings_json:
         for f in latest_val.findings_json:
             rid = str(f.get("rule_id", ""))
             if rid.startswith(_auto_rule_prefixes):
+                continue
+            # Drop stored findings for fields the user has edited — the
+            # auto-validation in Step 1/1b already checked the new value.
+            fp = f.get("field_path", "")
+            if fp in _edited_fields:
                 continue
             stored_findings.append(f)
 
@@ -493,6 +554,42 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
         all_fields = registry.aifm_fields() if report_type == "AIFM" else registry.aif_fields()
     else:
         all_fields = {}
+
+    # ── NCA format overrides ──────────────────────────────────────────
+    # Build lookup: field_id → NCA format string, so the field tooltip
+    # shows the NCA-required format (e.g. "B[A-Z]{2}[0-9]{3}") instead
+    # of the generic ESMA format ("30 (max) 1 (min)").
+    _nca_format_override: dict[str, str] = {}
+    _nca_guidance_override: dict[str, str] = {}
+    # Single source of truth: field 1 (ReportingMemberState) from the report.
+    nca_code = _field1_val
+    if nca_code and registry:
+        nca_rules = get_nca_overrides(nca_code)
+
+        for rule in nca_rules:
+            fmt = rule.get("format", "")
+            if not fmt:
+                continue
+
+            # Determine report type: explicit field, else infer from
+            # base_rule_id prefix (e.g. "AIFM-18" → "AIFM").
+            rule_rtype = rule.get("report_type", "")
+            if not rule_rtype:
+                base_rule_id = rule.get("base_rule_id", "")
+                parts = base_rule_id.split("-", 1)
+                rule_rtype = parts[0] if len(parts) == 2 else ""
+
+            if rule_rtype != report_type and report_type not in rule_rtype.split("+"):
+                continue  # Rule targets the other report type
+
+            fid = str(rule.get("field_id", ""))
+            if not fid:
+                continue
+
+            _nca_format_override[fid] = fmt
+            guidance = rule.get("technical_guidance", "")
+            if guidance:
+                _nca_guidance_override[fid] = guidance
 
     # Fields that only apply to AMND/CANCEL filings (change codes, obligation changes)
     # These should be hidden for INIT filings even if mandatory in schema.
@@ -566,7 +663,8 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
         # ── Dynamic field-level visibility gates (AIF) ─────────────────
         # Hide empty fields whose gate condition is not met.
         # Fields WITH values are always shown (the user entered them).
-        if report_type == "AIF" and not has_value:
+        # When show_all ("All Fields" view), skip gates — user wants everything visible.
+        if report_type == "AIF" and not has_value and not show_all:
             try:
                 fid_num = int(fid)
             except ValueError:
@@ -623,6 +721,12 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
 
         field_value = fields_data.get(fid, {"value": None, "source": "", "priority": "IMPORTED"})
         field_resp = _build_field_response(fid, field_value, registry, classification, report_type, validation_map)
+
+        # Override format + guidance with NCA-specific values if applicable
+        if fid in _nca_format_override:
+            field_resp.format = _nca_format_override[fid]
+        if fid in _nca_guidance_override:
+            field_resp.technical_guidance = _nca_guidance_override[fid]
 
         section_name = field_resp.section
         if section_name not in sections:
@@ -701,7 +805,8 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
             _synthetic_field_ids.update(monthly_field_ids)
 
     # ── Dynamic visibility gates (group-level) ──────────────────────────
-    if report_type == "AIF":
+    # When show_all ("All Fields" view), skip group-level gates too.
+    if report_type == "AIF" and not show_all:
         # Q33 (ShareClassFlag): if false/empty, hide the share_classes group
         if _gate_is_false_or_empty("33"):
             groups_data.pop("share_classes", None)
@@ -809,6 +914,41 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
         if ob_map:
             group_obligations[gname] = ob_map
 
+    # ── Gate conditions: per-row obligation overrides for group fields ──
+    # Fields with gate_condition in the YAML are conditionally visible based
+    # on other field values in the same row.  The gate evaluator reads the
+    # condition from the registry (single source of truth) and sets per-row
+    # _row_obligations so the frontend can grey out forbidden cells.
+    if registry:
+        for gname, rows in groups_data.items():
+            # Find which columns in this group have gate conditions
+            _gated_cols: dict[str, tuple[str, str]] = {}  # col_id → (gate_field, gate_condition)
+            for col_id in (group_columns.get(gname, {}).keys()):
+                fdef = all_fields.get(col_id)
+                if fdef and fdef.gate_condition:
+                    _gated_cols[col_id] = (fdef.gate_field, fdef.gate_condition)
+            if not _gated_cols:
+                continue
+            for row in rows:
+                # Build a field_values dict from this row's data
+                row_values: dict[str, str] = {}
+                for col_id in group_columns.get(gname, {}).keys():
+                    raw = row.get(col_id, "")
+                    row_values[col_id] = str(raw).strip() if raw else ""
+                # Also include flat field values for cross-references
+                for fid, fdata in fields_data.items():
+                    if fid not in row_values:
+                        row_values[fid] = str(fdata.get("value", "") or "").strip()
+                for col_id, (_gf, _gc) in _gated_cols.items():
+                    gate_met = evaluate_gate(_gc, row_values)
+                    if not gate_met:
+                        row.setdefault("_row_obligations", {})[col_id] = "F"
+                    else:
+                        # Gate is met: use the field's default obligation
+                        fdef = all_fields.get(col_id)
+                        if fdef:
+                            row.setdefault("_row_obligations", {})[col_id] = fdef.obligation.value
+
     # Compute completeness dynamically:
     # (applicable required fields − errors) / applicable required fields × 100
     #
@@ -852,7 +992,7 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
 
     # ── Apply NCA-specific overrides when nca parameter is set ──────────
     if nca:
-        _apply_nca_overrides(sections, validation_map, nca, report_type, fields_data, registry)
+        _apply_nca_overrides(sections, nca, report_type)
         # Override NCA-specific fields with the selected NCA's values.
         # The stored fields come from whichever NCA XML was extracted during
         # upload; when the user switches NCA in the sidebar, these must
@@ -934,6 +1074,33 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
             eea_fr.priority = "DERIVED"
             _clear_validation_simple(eea_fr)
 
+    # ── Final pass: reconcile editable with priority + gate conditions ─
+    # Post-processing (NCA overrides, EEA derivation, migration) may have
+    # changed a field's priority to SYSTEM/DERIVED after editable was set.
+    # Two authoritative rules applied here:
+    # 1. SYSTEM or DERIVED priority → never editable
+    # 2. Gate conditions from YAML → field becomes Forbidden (not editable)
+    #    when the gate evaluates to False
+    _all_fields: dict[str, "ReportFieldResponse"] = {}
+    # Build a flat value map for gate evaluation
+    _flat_values: dict[str, str] = {}
+    for _sec_fields in sections.values():
+        for _fr in _sec_fields:
+            _all_fields[_fr.field_id] = _fr
+            _flat_values[_fr.field_id] = str(_fr.value or "").strip()
+            if str(_fr.priority).upper() in ("SYSTEM", "DERIVED"):
+                _fr.editable = False
+
+    # Evaluate gate conditions from the registry (single source of truth)
+    if registry:
+        for _fid, _fr in _all_fields.items():
+            fdef = all_fields.get(_fid)
+            if fdef and fdef.gate_condition:
+                gate_met = evaluate_gate(fdef.gate_condition, _flat_values)
+                if not gate_met:
+                    _fr.editable = False
+                    _fr.obligation = "F"
+
     return ReportDetailResponse(
         report_id=report.report_id,
         session_id=report.session_id,
@@ -952,6 +1119,7 @@ async def _get_report(session_id: str, report_type: str, index: int, show_all: b
         empty_section_count=empty_section_count,
         validation_run=validation_run,
         no_reporting=is_no_reporting,
+        build=_BUILD_NUMBER,
     )
 
 
@@ -991,21 +1159,20 @@ def _load_nca_overrides(nca_code: str) -> list[dict]:
 
 def _apply_nca_overrides(
     sections: dict[str, list[ReportFieldResponse]],
-    validation_map: dict[str, FieldValidationResponse],
     nca_code: str,
     report_type: str,
-    fields_data: dict,
-    registry=None,
 ) -> None:
-    """Apply NCA-specific overrides to field responses in-place.
+    """Apply NCA-specific metadata overrides to field responses in-place.
 
     For each NCA override rule that applies to the given report_type:
     - Update nca_deviations with the NCA-specific values
-    - If the NCA has a different format/validation_rules, run NCA validation
-      and add findings to the field's validation
+    - Override format with the NCA-required pattern
     - Override technical_guidance with NCA-specific guidance
+
+    NOTE: This function does NOT perform validation. All NCA validation
+    is handled by Step 1b (_nca_override_validation) to maintain a single
+    source of truth for validation findings.
     """
-    import re
 
     rules = _load_nca_overrides(nca_code)
     if not rules:
@@ -1018,11 +1185,17 @@ def _apply_nca_overrides(
             field_map[fr.field_id] = fr
 
     for rule in rules:
-        # Check if rule applies to this report type
+        # Check if rule applies to this report type.
+        # Rules without report_type are matched via their base_rule_id prefix
+        # (e.g. "AIFM-17" → applies to AIFM).
         rule_report_type = rule.get("report_type", "")
-        if rule_report_type not in (report_type, f"AIF+AIFM", "AIF+AIFM"):
-            if rule_report_type != report_type:
-                continue
+        if not rule_report_type:
+            # Infer from base_rule_id prefix (e.g. "AIFM-17" → "AIFM")
+            base_rid = rule.get("base_rule_id", "")
+            parts = base_rid.split("-", 1)
+            rule_report_type = parts[0] if len(parts) == 2 else ""
+        if rule_report_type not in (report_type, "AIF+AIFM"):
+            continue
 
         fid = str(rule.get("field_id", ""))
         fr = field_map.get(fid)
@@ -1040,87 +1213,27 @@ def _apply_nca_overrides(
             "severity": rule.get("severity", "HIGH"),
         }
 
+        # Override format with NCA-specific format so the tooltip shows the
+        # NCA-required pattern (e.g. "B[A-Z]{2}[0-9]{3}") instead of the
+        # generic ESMA format ("30 (max) 1 (min)").
+        nca_fmt = rule.get("format", "")
+        if nca_fmt:
+            fr.format = nca_fmt
+
         # Override technical_guidance with NCA-specific guidance
         nca_guidance = rule.get("technical_guidance", "")
         if nca_guidance:
             fr.technical_guidance = f"[NCA {nca_key}] {nca_guidance}"
 
-        # Run NCA-specific validation.
-        #
-        # Skip the format regex check when the field is an enumerated value
-        # (has `allowed_values_ref` at the base level, OR the override itself
-        # supplies an `allowed_values` list/dict). In that case the base YAML
-        # enum check already validated membership, and re-interpreting
-        # `format: '1'` ("exactly 1 character") as a regex pattern would
-        # spuriously reject every code except literal '1'.
-        value = fields_data.get(fid, {}).get("value")
-        override_allowed = rule.get("allowed_values")
-        base_fdef = None
-        if registry:
-            base_fdef = (
-                registry.aifm_field(fid) if report_type == "AIFM"
-                else registry.aif_field(fid)
-            )
-        base_has_enum = bool(base_fdef and base_fdef.allowed_values_ref)
-
-        nca_format = rule.get("format", "")
-        format_ok = True
-
-        if override_allowed is not None and value is not None and str(value).strip():
-            # Override declares its own enum — validate membership.
-            val_str = str(value).strip()
-            if isinstance(override_allowed, dict):
-                allowed_set = {str(k) for k in override_allowed.keys()}
-            elif isinstance(override_allowed, (list, tuple, set)):
-                allowed_set = {str(v) for v in override_allowed}
-            else:
-                allowed_set = set()
-            if allowed_set and val_str not in allowed_set:
-                format_ok = False
-                nca_format = f"one of {sorted(allowed_set)}"
-        elif nca_format and not base_has_enum and value is not None and str(value).strip():
-            val_str = str(value).strip()
-            try:
-                if not re.fullmatch(nca_format, val_str):
-                    format_ok = False
-            except re.error:
-                try:
-                    if len(val_str) > int(nca_format):
-                        format_ok = False
-                except ValueError:
-                    pass
-
-        if nca_format or override_allowed is not None:
-            if not format_ok:
-                nca_finding = FieldValidationFinding(
-                    rule_id=rule.get("rule_id", f"NCA-{nca_key}-{fid}"),
-                    status="FAIL",
-                    severity=rule.get("severity", "HIGH"),
-                    message=f"NCA {nca_key}: value '{val_str}' does not match required format '{nca_format}'",
-                    fix_suggestion=f"Value must match NCA format: {nca_format}",
-                )
-
-                # Update field validation
-                if fid in validation_map:
-                    existing = validation_map[fid]
-                    existing.findings.append(nca_finding)
-                    if nca_finding.status == "FAIL":
-                        existing.status = "FAIL"
-                        existing.rule_id = nca_finding.rule_id
-                        existing.message = nca_finding.message
-                        existing.fix_suggestion = nca_finding.fix_suggestion
-                        existing.severity = nca_finding.severity
-                else:
-                    validation_map[fid] = FieldValidationResponse(
-                        status="FAIL",
-                        findings=[nca_finding],
-                        rule_id=nca_finding.rule_id,
-                        message=nca_finding.message,
-                        fix_suggestion=nca_finding.fix_suggestion,
-                        severity=nca_finding.severity,
-                    )
-                # Update the field's validation reference
-                fr.validation = validation_map[fid]
+        # ── NO validation here ──────────────────────────────────────────
+        # NCA validation is handled exclusively in Step 1b (inline NCA
+        # format checks via _nca_override_validation) which runs on every
+        # load and always reflects the current field values.  Keeping a
+        # second validation path here would break the single-source-of-
+        # truth principle: after a user edits a field to a valid NCA
+        # value, this function would re-add a FAIL that Step 1b correctly
+        # omitted.  This function only handles metadata: nca_deviations,
+        # format override, and technical_guidance override.
 
 
 def _sort_key(field_id: str) -> tuple:
@@ -1300,6 +1413,40 @@ async def edit_field(session_id: str, req: FieldEditRequest):
     report.completeness = round(100.0 * report.filled_count / max(report.field_count, 1), 1)
     store.save_report(report)
 
+    # ── Cascade rules ───────────────────────────────────────────────────
+    # When a field is the source of truth for another field in a different
+    # report type, propagate the edit automatically.
+    #   AIFM.18 (AIFMNationalCode)  → AIF.16 (AIFM National Code)
+    #   AIFM.1  (ReportingMemberState) → AIF.1  (ReportingMemberState)
+    _CASCADE_MAP = {
+        # (source_report_type, source_field_id): (target_report_type, target_field_id)
+        ("AIFM", "18"): ("AIF", "16"),
+        ("AIFM", "1"):  ("AIF", "1"),
+    }
+    cascaded: list[str] = []
+    cascade_key = (report_type, req.field_id)
+    if cascade_key in _CASCADE_MAP:
+        tgt_rtype, tgt_fid = _CASCADE_MAP[cascade_key]
+        # Apply to all reports of the target type in this session
+        all_reports = store.get_reports_for_session(session_id)
+        for tgt_report in all_reports:
+            if tgt_report.report_type != tgt_rtype:
+                continue
+            tgt_old = tgt_report.fields_json.get(tgt_fid, {}).get("value")
+            tgt_report.fields_json[tgt_fid] = {
+                "value": req.value,
+                "source": "cascade",
+                "priority": "SYSTEM",
+                "confidence": 1.0,
+                "timestamp": _now.isoformat(),
+                "note": f"Cascaded from {report_type}.{req.field_id}",
+            }
+            tgt_report.filled_count = len([v for v in tgt_report.fields_json.values() if v.get("value") is not None])
+            tgt_report.completeness = round(100.0 * tgt_report.filled_count / max(tgt_report.field_count, 1), 1)
+            store.save_report(tgt_report)
+            cascaded.append(f"{tgt_rtype}.{tgt_fid}")
+            print(f"[CASCADE] {report_type}.{req.field_id}={req.value!r} → {tgt_rtype}[{tgt_report.entity_index}].{tgt_fid} (was {tgt_old!r})")
+
     # Log edit
     edit = ReviewEdit(
         session_id=session_id,
@@ -1308,13 +1455,13 @@ async def edit_field(session_id: str, req: FieldEditRequest):
         target=req.field_id,
         old_value=old_value,
         new_value=req.value,
-        cascaded_fields=[],
+        cascaded_fields=cascaded,
     )
     edit_id = store.log_edit(edit)
 
     return EditResultResponse(
         edit_id=edit_id,
-        updated_fields=[req.field_id],
+        updated_fields=[req.field_id] + cascaded,
         field_snapshots={req.field_id: {"old": old_value, "new": req.value}},
     )
 

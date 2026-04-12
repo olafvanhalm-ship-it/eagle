@@ -1,37 +1,3 @@
-################################################################################
-# NCA-SPECIFIC OVERRIDES — BaFin (DE)
-# Version: v3
-# Base YAML: aifmd_validation_rules.yaml (v2.3)
-#
-# SCHEMA: DELTA-ONLY OVERRIDES (Option B)
-#
-# This file uses the delta-only override pattern. Each nca_rules entry carries
-# ONLY the fields that DIFFER from the base YAML rule it overrides.
-# All other attributes are INHERITED from the base rule at load time.
-#
-# Required keys per override rule:
-#   rule_id        — unique NCA rule identifier
-#   base_rule_id   — links to the base YAML rule (e.g. AIFM-1, AIF-17)
-#   field_id       — the ESMA field number being overridden
-#
-# Always-present NCA keys (even if empty):
-#   nca_error_codes, overrides_esma, status, nca_source_doc, nca_doc_date
-#   validation_rules, technical_guidance, eagle_action
-#
-# Delta keys (only present when NCA value differs from base):
-#   field_name, format, data_type, m_c_o_f, mandatory, severity, etc.
-#
-# NCA-specific rules (base_rule_id empty): carry FULL field definition
-# since there is no base rule to inherit from.
-#
-# Infrastructure sections (transmission, file_format, correction_rules,
-# eagle_implementation, return_files) are NCA-specific and always present.
-#
-# LOADER CONTRACT:
-#   merged_rule = base_rule | nca_override   (Python dict merge)
-#   i.e. NCA keys overwrite base keys; base keys not in NCA are inherited.
-################################################################################
-
 nca_overrides:
   nca: BaFin
   country: DE
@@ -69,11 +35,11 @@ nca_overrides:
     - Updated base_yaml_version from '2.3' to '2.3'
     - 'Schema: NCA rules now carry only rule_id, base_rule_id, field_id + delta keys'
   nca_rules:
-  - rule_id: NCA-BaFin-ReportingMemberState
+  - rule_id: NCA-BaFin-ReportingMemberState-AIFM
     base_rule_id: AIFM-1
     field_id: '1'
     field_name: Reporting Member State
-    report_type: AIF+AIFM
+    report_type: AIFM
     rule_source: BaFin AIFMD Reporting Requirements
     nca_error_codes:
     - BaFin-001
@@ -84,17 +50,34 @@ nca_overrides:
     nca_doc_date: '2026-04-01'
     base_rule_path:
       aifm_report: aifm_report.envelope.ReportingMemberState
+    technical_guidance: For reports submitted to BaFin the value must always be the constant "DE".
+    eagle_action: ''
+    validation_rules: ReportingMemberState = "DE"
+  - rule_id: NCA-BaFin-ReportingMemberState-AIF
+    base_rule_id: AIF-1
+    field_id: '1'
+    field_name: Reporting Member State
+    report_type: AIF
+    rule_source: BaFin AIFMD Reporting Requirements
+    nca_error_codes:
+    - BaFin-001
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: BaFin AIFMD Reporting Requirements
+    nca_doc_date: '2026-04-01'
+    base_rule_path:
       aif_report: aif_report.envelope.ReportingMemberState
     technical_guidance: For reports submitted to BaFin the value must always be the constant "DE".
     eagle_action: ''
     validation_rules: ReportingMemberState = "DE"
-  - rule_id: NCA-BaFin-AIFMNationalCode
+  - rule_id: NCA-BaFin-AIFMNationalCode-AIFM
     base_rule_id: AIFM-18
     field_id: '18'
     format: '[0-9]{8}'
     data_type: N
     section: AIFM - Identifiers
-    report_type: AIF+AIFM
+    report_type: AIFM
     rule_source: BaFin AIFMD Reporting Requirements
     nca_error_codes:
     - BaFin-002
@@ -105,7 +88,6 @@ nca_overrides:
     nca_doc_date: '2026-04-01'
     base_rule_path:
       aifm_report: aifm_report.identification.AIFMNationalCode
-      aif_report: aif_report.identification.AIFMNationalCode
     technical_guidance: 'BaFin assigns AIFM national identifiers as 8-digit numeric codes. Example: 40031432.'
     eagle_action: ''
     validation_rules:
@@ -129,15 +111,16 @@ nca_overrides:
     nca_doc_date: '2026-04-01'
     base_rule_path:
       aif_report: aif_report.identification.AIFNationalCode
-    technical_guidance: BaFin assigns AIF national identifiers as 8-digit numeric codes. A single AIF
-      may have multiple BaFin national codes (e.g. one per sub-fund compartment or registration). Each
-      code results in a separate AIF XML filing with identical content but different AIFNationalCode values.
-    eagle_action: Adapter must generate one AIF XML per national code. When the AIF_NATIONAL_CODE records
-      in the template contain multiple DE entries for the same AIF, each produces a separate filing.
+    technical_guidance: BaFin assigns AIF national identifiers as 8-digit numeric codes. A single AIF may have multiple BaFin
+      national codes (e.g. one per sub-fund compartment or registration). Each code results in a separate AIF XML filing with
+      identical content but different AIFNationalCode values.
+    eagle_action: Adapter must generate one AIF XML per national code. When the AIF_NATIONAL_CODE records in the template
+      contain multiple DE entries for the same AIF, each produces a separate filing.
     validation_rules:
     - Must match regex ^[0-9]{8}$
     - Total length must be exactly 8 digits
     example: '70148498'
+    report_type: AIF
   - rule_id: NCA-BaFin-HFTFieldsOmitted
     base_rule_id: AIF-24
     field_id: 24-25
@@ -160,12 +143,13 @@ nca_overrides:
     nca_doc_date: '2026-04-01'
     base_rule_path:
       aif_report: aif_report.principal_info.description.HFTTransactionNumber
-    technical_guidance: BaFin does NOT require HFTTransactionNumber and HFTBuySellMarketValue in AIF reports.
-      These fields must be omitted from DE filings (unlike BE/FSMA which requires them).
+    technical_guidance: BaFin does NOT require HFTTransactionNumber and HFTBuySellMarketValue in AIF reports. These fields
+      must be omitted from DE filings (unlike BE/FSMA which requires them).
     eagle_action: Adapter must NOT include HFT fields in DE filings.
     validation_rules:
     - HFTTransactionNumber must NOT be present in DE filings
     - HFTBuySellMarketValue must NOT be present in DE filings
+    report_type: AIF
   - rule_id: NCA-BaFin-ShortValueOmitted
     base_rule_id: ''
     field_id: ATE-SHORT
@@ -191,11 +175,9 @@ nca_overrides:
     nca_doc_date: '2026-04-01'
     base_rule_path:
       aif_report: aif_report.risk_profile.asset_type_exposures.ShortValue
-    technical_guidance: BaFin does NOT require ShortValue in AssetTypeExposure elements when there are
-      no short positions. Unlike FSMA (BE) which always requires it, BaFin expects the field to be omitted
-      when zero.
-    eagle_action: Adapter omits <ShortValue> from AssetTypeExposure in DE filings when the value is 0
-      or not provided.
+    technical_guidance: BaFin does NOT require ShortValue in AssetTypeExposure elements when there are no short positions.
+      Unlike FSMA (BE) which always requires it, BaFin expects the field to be omitted when zero.
+    eagle_action: Adapter omits <ShortValue> from AssetTypeExposure in DE filings when the value is 0 or not provided.
     validation_rules:
     - ShortValue may be omitted when zero
     - If present, must be a non-negative integer
@@ -227,15 +209,14 @@ nca_overrides:
       aif_report: aif_report.risk_profile.market_risk_measures
     technical_guidance: 'BaFin requires only the base ESMA set of MarketRiskMeasure types:
 
-      1. NET_EQTY_DELTA — Net equity delta (always) 2. NET_DV01 — Net DV01 / interest rate sensitivity
-      (always) 3. NET_CS01 — Net CS01 / credit spread sensitivity (always) 4. VAR — Value at Risk (always)
+      1. NET_EQTY_DELTA — Net equity delta (always) 2. NET_DV01 — Net DV01 / interest rate sensitivity (always) 3. NET_CS01
+      — Net CS01 / credit spread sensitivity (always) 4. VAR — Value at Risk (always)
 
-      The additional measures required by FSMA (NET_FX_DELTA, NET_CTY_DELTA, VEGA_EXPO) must NOT be included
-      in DE filings.
+      The additional measures required by FSMA (NET_FX_DELTA, NET_CTY_DELTA, VEGA_EXPO) must NOT be included in DE filings.
 
       Order in DE filings: NET_EQTY_DELTA, NET_DV01, NET_CS01, VAR'
-    eagle_action: Adapter must only include NET_EQTY_DELTA, NET_DV01, NET_CS01, VAR for DE filings. Omit
-      NET_FX_DELTA, NET_CTY_DELTA, VEGA_EXPO.
+    eagle_action: Adapter must only include NET_EQTY_DELTA, NET_DV01, NET_CS01, VAR for DE filings. Omit NET_FX_DELTA, NET_CTY_DELTA,
+      VEGA_EXPO.
     validation_rules:
     - NET_EQTY_DELTA must be present
     - NET_DV01 must be present
@@ -269,8 +250,8 @@ nca_overrides:
     nca_source_doc: BaFin AIFMD Reporting Requirements
     nca_doc_date: '2026-04-01'
     base_rule_path: {}
-    technical_guidance: 'AIFM report XML filename must follow the pattern AIFM_DE_{AIFMNationalCode}_{YYYYMMDD}.xml
-      where YYYYMMDD is the reporting period end date. The XML file must be compressed using GZIP: AIFM_DE_{AIFMNationalCode}_{YYYYMMDD}.gz
+    technical_guidance: 'AIFM report XML filename must follow the pattern AIFM_DE_{AIFMNationalCode}_{YYYYMMDD}.xml where
+      YYYYMMDD is the reporting period end date. The XML file must be compressed using GZIP: AIFM_DE_{AIFMNationalCode}_{YYYYMMDD}.gz
       (note: the .gz replaces .xml, not appended).'
     eagle_action: Adapter generates AIFM XML, then compresses with gzip.
     validation_rules:
@@ -301,10 +282,9 @@ nca_overrides:
     nca_source_doc: BaFin AIFMD Reporting Requirements
     nca_doc_date: '2026-04-01'
     base_rule_path: {}
-    technical_guidance: 'AIF report XML filename must follow the pattern AIF_DE_{AIFNationalCode}_{YYYYMMDD}.xml.
-      The XML file must be compressed using GZIP: AIF_DE_{AIFNationalCode}_{YYYYMMDD}.gz. When the same
-      AIF has multiple BaFin national codes, each code produces a separate .gz file with identical XML
-      content except for the AIFNationalCode value.'
+    technical_guidance: 'AIF report XML filename must follow the pattern AIF_DE_{AIFNationalCode}_{YYYYMMDD}.xml. The XML
+      file must be compressed using GZIP: AIF_DE_{AIFNationalCode}_{YYYYMMDD}.gz. When the same AIF has multiple BaFin national
+      codes, each code produces a separate .gz file with identical XML content except for the AIFNationalCode value.'
     eagle_action: Adapter generates one AIF XML per national code, then compresses each with gzip.
     validation_rules:
     - XML filename must match regex ^AIF_DE_[0-9]{8}_[0-9]{8}\.xml$
@@ -334,9 +314,8 @@ nca_overrides:
     nca_source_doc: BaFin AIFMD Reporting Requirements
     nca_doc_date: '2026-04-01'
     base_rule_path: {}
-    technical_guidance: All files submitted to BaFin must be compressed as GZIP. The .gz file directly
-      contains the XML (not wrapped in a tar or other archive). The filename uses .gz extension, replacing
-      the .xml extension of the contained file.
+    technical_guidance: All files submitted to BaFin must be compressed as GZIP. The .gz file directly contains the XML (not
+      wrapped in a tar or other archive). The filename uses .gz extension, replacing the .xml extension of the contained file.
     eagle_action: Adapter compresses each generated XML with gzip for DE filings.
     validation_rules:
     - Must be valid GZIP format
@@ -366,11 +345,11 @@ nca_overrides:
     nca_source_doc: M adapter FAQ - BaFin inception date exception
     nca_doc_date: '2026-04-01'
     base_rule_path: aif_report.record_info.InceptionDate
-    technical_guidance: 'BaFin requires InceptionDate to be STRICTLY BEFORE the reporting period start
-      date (not equal). ESMA allows equal. Example: inception 2022-07-01 with H2 period (start 2022-07-01)
-      is valid for ESMA but rejected by BaFin. BaFin would require Q4.'
-    eagle_action: Adapter validates that InceptionDate < reporting_period_start_date (strict less-than)
-      for DE filings. Raises warning if equal.
+    technical_guidance: 'BaFin requires InceptionDate to be STRICTLY BEFORE the reporting period start date (not equal). ESMA
+      allows equal. Example: inception 2022-07-01 with H2 period (start 2022-07-01) is valid for ESMA but rejected by BaFin.
+      BaFin would require Q4.'
+    eagle_action: Adapter validates that InceptionDate < reporting_period_start_date (strict less-than) for DE filings. Raises
+      warning if equal.
     validation_rules:
     - InceptionDate must be strictly before ReportingPeriodStartDate for BaFin
     - IF InceptionDate == ReportingPeriodStartDate THEN CRITICAL for BaFin (ESMA allows it)
@@ -401,27 +380,26 @@ nca_overrides:
     nca_source_doc: BaFin Merkblatt Meldepflichten §35 KAGB
     nca_doc_date: '2026-04-01'
     base_rule_path: {}
-    technical_guidance: BaFin requires an annual nil return (Nullmeldung) due on 31 January even if the
-      fund has no assets under management (e.g. no first close yet). All mandatory fields must be completed
-      even for nil returns. This applies to both AIFM and AIF returns.
-    eagle_action: Track nil return deadline (31 January annually). Generate nil returns for AIFMs/AIFs
-      with no AUM.
+    technical_guidance: BaFin requires an annual nil return (Nullmeldung) due on 31 January even if the fund has no assets
+      under management (e.g. no first close yet). All mandatory fields must be completed even for nil returns. This applies
+      to both AIFM and AIF returns.
+    eagle_action: Track nil return deadline (31 January annually). Generate nil returns for AIFMs/AIFs with no AUM.
     validation_rules:
     - Annual nil return required even with zero AUM
     - Due date: 31 January
     - All mandatory fields must be completed
     esma_doc: ''
   transmission:
-    note: BaFin exclusively accepts submissions via the MVP Portal (Melde- und Veröffentlichungssystem).
-      Email and online form entry are not permissible.
+    note: BaFin exclusively accepts submissions via the MVP Portal (Melde- und Veröffentlichungssystem). Email and online
+      form entry are not permissible.
     overrides_esma: true
     channels:
       mvp_portal:
         name: MVP Portal (Melde- und Veröffentlichungssystem)
-        description: Electronic submission via MVP Portal only. Companies must register and apply for
-          the "AIFMD-Berichtswesen" specialized procedure. Each AIF management company needs a separate
-          application. A test environment is available for test submissions before production. If submission
-          is done by someone other than the AIFM, a valid power of attorney is required.
+        description: Electronic submission via MVP Portal only. Companies must register and apply for the "AIFMD-Berichtswesen"
+          specialized procedure. Each AIF management company needs a separate application. A test environment is available
+          for test submissions before production. If submission is done by someone other than the AIFM, a valid power of attorney
+          is required.
         url: https://www.bafin.de/EN/DieBaFin/Service/MVPportal/MVPportal_node_en.html
   file_format:
     encoding: UTF-8
@@ -462,5 +440,5 @@ nca_overrides:
     contact:
       support: Support-AIFMD-Report@bafin.de
       mvp_portal: https://www.bafin.de/EN/DieBaFin/Service/MVPportal/MVPportal_node_en.html
-    update_trigger: 'Monitor https://www.bafin.de for updates. AIFMD 2.0 national implementation deadline:
-      16 April 2026. New AIFMD II reporting provisions apply from 16 April 2027.'
+    update_trigger: 'Monitor https://www.bafin.de for updates. AIFMD 2.0 national implementation deadline: 16 April 2026.
+      New AIFMD II reporting provisions apply from 16 April 2027.'

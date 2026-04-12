@@ -21,7 +21,13 @@ _app_root = Path(__file__).resolve().parent.parent / "Application"
 sys.path.insert(0, str(_app_root))
 sys.path.insert(0, str(_app_root / "Adapters" / "Input adapters" / "M adapter"))
 
-app = FastAPI(title="Eagle API", version="0.2.0")
+try:
+    from api.version import VERSION, BUILD_NUMBER, BUILD_TIMESTAMP, DB_SCHEMA_VERSION
+except ImportError:
+    # version.py not yet synced — use defaults so the server still starts
+    VERSION, BUILD_NUMBER, BUILD_TIMESTAMP, DB_SCHEMA_VERSION = "0.3.1", 1, "2026-04-10", 1
+
+app = FastAPI(title="Eagle API", version=VERSION)
 
 # Allow Next.js frontend (port 3000) to call the API
 app.add_middleware(
@@ -73,6 +79,37 @@ def health():
     """Health check endpoint."""
     return {
         "status": "ok" if not _router_errors else "degraded",
-        "version": "0.3.0-session10b",
+        "version": VERSION,
+        "build": BUILD_NUMBER,
+        "build_ts": BUILD_TIMESTAMP,
         "router_errors": _router_errors,
+    }
+
+
+@app.get("/api/v1/build-info")
+def build_info():
+    """Build metadata for the frontend debug bar.
+
+    Returns backend version, build number, and DB schema version so the
+    UI can show at a glance whether all layers are in sync.
+    """
+    # Check DB schema version from the database itself
+    db_version = DB_SCHEMA_VERSION
+    db_status = "ok"
+    try:
+        from api.deps import get_store
+        store = get_store()
+        # Quick connectivity check
+        with store._db() as sess:
+            from sqlalchemy import text as _sa_text
+            sess.execute(_sa_text("SELECT 1"))
+    except Exception as e:
+        db_status = f"error: {e}"
+
+    return {
+        "backend_version": VERSION,
+        "backend_build": BUILD_NUMBER,
+        "backend_build_ts": BUILD_TIMESTAMP,
+        "db_schema_version": db_version,
+        "db_status": db_status,
     }

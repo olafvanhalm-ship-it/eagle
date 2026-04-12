@@ -87,11 +87,13 @@ def fetch_recent(store: ReferenceStore) -> dict:
     return {"mode": "recent", "rates_stored": len(rates), "date_count": len(dates)}
 
 
-def fetch_backfill(store: ReferenceStore) -> dict:
-    """Fetch full ECB history (1999–present). ~200KB XML, ~170K rows."""
-    logger.info("Fetching ECB full history from %s (this may take a moment)", ECB_HIST_URL)
+def fetch_backfill(store: ReferenceStore, since: str = "2020-01-01") -> dict:
+    """Fetch ECB history from `since` date to present. Downloads full XML but only stores rates >= since."""
+    logger.info("Fetching ECB history from %s (filtering >= %s)", ECB_HIST_URL, since)
     root = _fetch_xml(ECB_HIST_URL)
-    rates = _parse_rates(root)
+    all_rates = _parse_rates(root)
+    rates = [r for r in all_rates if r["rate_date"] >= since]
+    logger.info("Filtered %d → %d rates (since %s)", len(all_rates), len(rates), since)
     # Batch upsert in chunks of 5000 for memory efficiency
     chunk_size = 5000
     for i in range(0, len(rates), chunk_size):

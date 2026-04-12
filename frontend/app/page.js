@@ -4,6 +4,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
 const API = "http://localhost:8000/api/v1";
 
+// ── Build metadata (bump on every frontend deploy) ──────────────────
+const FE_BUILD_NUMBER = 17;
+const FE_VERSION = "0.3.1";
+
 // ============================================================================
 // API Client
 // ============================================================================
@@ -45,39 +49,49 @@ function ProvenanceIcon({ priority, source }) {
 // Validation background color for value cells — (1) traffic light in value
 // ============================================================================
 
+// Cell background color: green/orange/red/gray — black text always
 function validationBg(validation) {
-  if (!validation) return "bg-gray-50";
-  // Brighter traffic-light colors for higher contrast in dense grids
+  if (!validation) return "bg-gray-100";
   if (validation.status === "PASS") return "bg-green-200";
   if (validation.status === "WARNING") return "bg-orange-200";
   if (validation.status === "FAIL") return "bg-red-200";
-  return "bg-gray-50";
+  return "bg-gray-100";
 }
 
-// (1) Build hover text from ALL findings, not just one
-function validationTitle(validation) {
-  if (!validation) return "";
-  if (validation.status === "PASS") return "Validation passed";
-  // Use the findings array if available (multi-finding support)
-  const findings = validation.findings || [];
-  if (findings.length > 0) {
-    return findings
-      .filter((f) => f.status !== "PASS")
-      .map((f) => {
-        const parts = [];
-        if (f.rule_id) parts.push(`[${f.rule_id}]`);
-        if (f.message) parts.push(f.message);
-        if (f.fix_suggestion) parts.push(`Fix: ${f.fix_suggestion}`);
-        return parts.join(" ");
-      })
-      .join("\n\n");
+// Build rich tooltip for value cell — no duplicate text
+function validationTitle(validation, field) {
+  const lines = [];
+
+  // Line 1: Validation status (bold label)
+  if (validation) {
+    if (validation.status === "PASS") lines.push("\u2705 VALIDATION PASSED");
+    else if (validation.status === "WARNING") lines.push("\u26a0\ufe0f WARNING");
+    else if (validation.status === "FAIL") lines.push("\u274c VALIDATION FAILED");
   }
-  // Fallback to legacy single-finding fields
-  const parts = [];
-  if (validation.rule_id) parts.push(`[${validation.rule_id}]`);
-  if (validation.message) parts.push(validation.message);
-  if (validation.fix_suggestion) parts.push(`Fix: ${validation.fix_suggestion}`);
-  return parts.join("\n");
+
+  // Line 2: Format (already NCA-overridden by backend when applicable)
+  if (field && field.format) lines.push(`Format: ${field.format}`);
+
+  // Findings detail (FAIL/WARNING only)
+  const findings = validation?.findings || [];
+  const nonPass = findings.filter((f) => f.status !== "PASS");
+  if (nonPass.length > 0) {
+    lines.push("");
+    for (const f of nonPass) {
+      if (f.message) lines.push(f.message);
+      // Show fix_suggestion only if it differs from technical_guidance
+      // (avoids repeating the same NCA guidance text twice)
+      if (f.fix_suggestion && (!field || f.fix_suggestion !== field.technical_guidance)) {
+        lines.push(`Fix: ${f.fix_suggestion}`);
+      }
+    }
+  } else if (field && field.technical_guidance) {
+    // Only show guidance when there are no findings (PASS or no validation)
+    lines.push("");
+    lines.push(field.technical_guidance);
+  }
+
+  return lines.join("\n");
 }
 
 // ============================================================================
@@ -143,8 +157,10 @@ function EditableCell({ value, field, onSave, editable, dataType, format: fmt, a
   // When the cell is `locked` (dependency rule or derived field), suppress
   // the validation traffic-light and use a neutral gray so the read-only
   // state is visually obvious even for cells that carry a populated value.
-  const vBg = locked ? "bg-gray-200 text-gray-500" : validationBg(validation);
-  const vTitle = validationTitle(validation);
+  const vBg = locked ? "bg-gray-200 text-gray-500 italic" : validationBg(validation);
+  // Suppress validation tooltip for system-generated (locked) fields —
+  // they can't be edited so showing "VALIDATION PASSED" / format is noise.
+  const vTitle = locked ? "" : validationTitle(validation, field);
 
   // (4) Unified save handler that prevents double-fire
   const doSave = useCallback((val) => {
@@ -171,7 +187,7 @@ function EditableCell({ value, field, onSave, editable, dataType, format: fmt, a
     const isComposite = field?.category === "composite";
     return (
       <span
-        className={`px-1.5 py-0.5 rounded text-sm ${vBg} ${locked ? "italic" : "text-gray-900"} ${isComposite ? "cursor-pointer underline decoration-dotted hover:bg-blue-50" : ""}`}
+        className={`px-1.5 py-0.5 rounded text-sm ${vBg} ${isComposite ? "cursor-pointer underline decoration-dotted hover:bg-blue-50" : ""}`}
         title={reasonText}
         onClick={isComposite && onDrillDown ? onDrillDown : undefined}
       >
@@ -315,12 +331,12 @@ function EditableCell({ value, field, onSave, editable, dataType, format: fmt, a
   }
 
   // Display mode — click to edit
-  // (1) Validation status as background color on the value
+  // (1) Validation status as bold colored text on the value
   return (
     <span
-      className={`text-gray-900 px-1.5 py-0.5 rounded text-sm cursor-pointer hover:brightness-95 border border-transparent hover:border-blue-200 transition ${vBg}`}
+      className={`px-1.5 py-0.5 rounded text-sm cursor-pointer hover:brightness-95 border border-transparent hover:border-blue-200 transition ${vBg}`}
       onClick={() => { setDraft(value ?? ""); setEditing(true); }}
-      title={vTitle ? `Click to edit\n\n${vTitle}` : "Click to edit"}
+      title={vTitle}
     >
       {value != null && value !== ""
         ? <>
@@ -356,21 +372,16 @@ function _nonEditableReason(field) {
 }
 
 function FieldRow({ field, onEdit, cascaded, onDrillDown, reportType }) {
-  // AIFM fields are prefixed AFM1..AFM38; AIF fields remain Q1..Qn
-  const idPrefix = reportType === "AIFM" ? "AFM" : "Q";
+  // AIFM fields are prefixed AIFM1..AIFM43; AIF fields are prefixed AIF1..AIF302
+  const idPrefix = reportType === "AIFM" ? "AIFM" : "AIF";
   const handleSave = (newValue) => {
     if (newValue !== field.value) {
       onEdit(field.field_id, newValue);
     }
   };
 
-  // Build hover tooltip: technical_guidance (ESMA definition) + obligation + XSD element
-  const guidanceLines = [];
-  if (field.technical_guidance) guidanceLines.push(field.technical_guidance);
-  guidanceLines.push(`${field.obligation === "M" ? "Mandatory" : field.obligation === "C" ? "Conditional" : "Optional"} | ${field.xsd_element || ""}`);
-  if (field.format) guidanceLines.push(`Format: ${field.format}`);
-  if (field.data_type) guidanceLines.push(`Type: ${field.data_type}`);
-  const guidanceText = guidanceLines.join("\n");
+  // Field name column: simple tooltip with obligation + XSD element (no format/guidance — that's on the value now)
+  const fieldIdTooltip = `${field.obligation === "M" ? "Mandatory" : field.obligation === "C" ? "Conditional" : "Optional"} | ${field.xsd_element || ""}`;
 
   // Obligation letter + colour
   const OB_LABELS = { M: "Mandatory", C: "Conditional", O: "Optional", F: "Forbidden" };
@@ -379,12 +390,8 @@ function FieldRow({ field, onEdit, cascaded, onDrillDown, reportType }) {
 
   return (
     <tr className={`border-b border-gray-100 hover:bg-gray-50 ${cascaded ? "cascade-highlight" : ""}`}>
-      <td className="px-2 py-1 text-xs font-mono text-gray-400 cursor-help" title={guidanceText}>{idPrefix}{field.field_id}</td>
-      <td className="px-2 py-1 text-sm text-gray-700">
-        <Tip text={guidanceText}>
-          {field.field_name}
-        </Tip>
-      </td>
+      <td className="px-2 py-1 text-xs font-mono text-gray-400 cursor-help" title={fieldIdTooltip}>{idPrefix}{field.field_id}</td>
+      <td className="px-2 py-1 text-sm text-gray-700">{field.field_name}</td>
       <td className="px-1 py-1 text-center">
         <span className={`text-xs cursor-help ${OB_COLORS[ob] || "text-gray-400"}`} title={OB_LABELS[ob] || ob}>
           {ob}
@@ -511,30 +518,30 @@ const GROUP_LABELS = {
   monthly_data: "Monthly data (returns, NAV, subscriptions, redemptions)",
 };
 
-// (5) Question number ranges for each group — aligned with ESMA Annex IV numbering
+// (5) Field number ranges for each group — aligned with ESMA Annex IV numbering
 const GROUP_QUESTION_RANGES = {
-  aifm_principal_markets: "Q26\u2013Q29",
-  aifm_principal_instruments: "Q30\u2013Q32",
-  share_classes: "Q34\u2013Q40",
-  strategies: "Q58\u2013Q61",
-  main_instruments: "Q64\u2013Q77",
-  nav_geographical_focus: "Q78\u2013Q85",
-  aum_geographical_focus: "Q86\u2013Q93",
-  principal_exposures: "Q94\u2013Q102",
-  portfolio_concentrations: "Q103\u2013Q112",
-  aif_principal_markets: "Q114\u2013Q117",
-  asset_type_exposures: "Q121\u2013Q124",
-  asset_type_turnovers: "Q125\u2013Q127",
-  currency_exposures: "Q128\u2013Q130",
-  dominant_influence: "Q131\u2013Q136",
-  market_risk_measures: "Q138\u2013Q147",
-  fund_to_counterparty: "Q160\u2013Q165",
-  counterparty_to_fund: "Q166\u2013Q171",
-  ccp_exposures: "Q173\u2013Q177",
-  investor_groups: "Q208\u2013Q209",
-  monthly_data: "Q219\u2013Q278",
-  controlled_structures: "Q290\u2013Q293",
-  borrowing_sources: "Q296\u2013Q301",
+  aifm_principal_markets: "AIFM26\u2013AIFM29",
+  aifm_principal_instruments: "AIFM30\u2013AIFM32",
+  share_classes: "AIF34\u2013AIF40",
+  strategies: "AIF58\u2013AIF61",
+  main_instruments: "AIF64\u2013AIF77",
+  nav_geographical_focus: "AIF78\u2013AIF85",
+  aum_geographical_focus: "AIF86\u2013AIF93",
+  principal_exposures: "AIF94\u2013AIF102",
+  portfolio_concentrations: "AIF103\u2013AIF112",
+  aif_principal_markets: "AIF114\u2013AIF117",
+  asset_type_exposures: "AIF121\u2013AIF124",
+  asset_type_turnovers: "AIF125\u2013AIF127",
+  currency_exposures: "AIF128\u2013AIF130",
+  dominant_influence: "AIF131\u2013AIF136",
+  market_risk_measures: "AIF138\u2013AIF147",
+  fund_to_counterparty: "AIF160\u2013AIF165",
+  counterparty_to_fund: "AIF166\u2013AIF171",
+  ccp_exposures: "AIF173\u2013AIF177",
+  investor_groups: "AIF208\u2013AIF209",
+  monthly_data: "AIF219\u2013AIF278",
+  controlled_structures: "AIF290\u2013AIF293",
+  borrowing_sources: "AIF296\u2013AIF301",
 };
 
 // Groups derived from source data — read-only, click opens source modal.
@@ -563,7 +570,7 @@ const DERIVED_GROUPS = {
 };
 
 function GroupTable({ groupName, rows, columnNames, obligations, onEditGroup, onDrillDown, reportType }) {
-  const idPrefix = reportType === "AIFM" ? "AFM" : "Q";
+  const idPrefix = reportType === "AIFM" ? "AIFM" : "AIF";
   const [open, setOpen] = useState(true);
   const [editCell, setEditCell] = useState(null); // { row, col }
   const [editValue, setEditValue] = useState("");
@@ -574,9 +581,9 @@ function GroupTable({ groupName, rows, columnNames, obligations, onEditGroup, on
 
   const label = GROUP_LABELS[groupName] || groupName.replace(/_/g, " ");
   const qRange = GROUP_QUESTION_RANGES[groupName] || "";
-  const columns = Object.keys(rows[0]).filter((k) => k !== "field_id");
+  const columns = Object.keys(rows[0]).filter((k) => k !== "field_id" && !k.startsWith("_"));
 
-  // (5) Use columnNames from backend (field_id -> human name), show Q# + name + obligation
+  // (5) Use columnNames from backend (field_id -> human name), show AIF#/AIFM# + name + obligation
   const OB_SHORT = { M: "Mandatory", C: "Conditional", O: "Optional", F: "Forbidden" };
   const colHeader = (col) => {
     const humanName = columnNames && columnNames[col] ? columnNames[col] : col.replace(/_/g, " ");
@@ -585,6 +592,12 @@ function GroupTable({ groupName, rows, columnNames, obligations, onEditGroup, on
     const obTag = ob ? ` [${ob}]` : "";
     if (isNumeric) return `${idPrefix}${col}: ${humanName}${obTag}`;
     return humanName;
+  };
+  // Per-cell obligation: row-level override (from gate conditions) takes precedence
+  const cellObligation = (col, row) => {
+    const rowOb = row && row._row_obligations && row._row_obligations[col];
+    if (rowOb) return rowOb;
+    return obligations && obligations[col] ? obligations[col] : "";
   };
   const colObligation = (col) => obligations && obligations[col] ? obligations[col] : "";
 
@@ -626,13 +639,13 @@ function GroupTable({ groupName, rows, columnNames, obligations, onEditGroup, on
   // column's obligation (Mandatory→red, Conditional→orange, Optional/unknown→neutral).
   // Empty rows short-circuit to neutral grey regardless of obligation — an
   // empty slot in a top-5 list is not a validation error.
-  const cellValidationBg = (col, val, rowIsEmpty) => {
+  const cellValidationBg = (col, val, rowIsEmpty, row) => {
     if (rowIsEmpty) return "bg-gray-50";
+    const ob = cellObligation(col, row);
+    if (ob === "F") return "bg-gray-100"; // forbidden — always grey, even if populated
     if (isCellPopulated(val)) return "bg-green-200";
-    const ob = colObligation(col);
     if (ob === "M") return "bg-red-200";
     if (ob === "C") return "bg-orange-200";
-    if (ob === "F") return "bg-gray-50"; // forbidden-empty is fine
     return "bg-gray-50";
   };
 
@@ -716,18 +729,21 @@ function GroupTable({ groupName, rows, columnNames, obligations, onEditGroup, on
                 <tr key={idx} className="border-b border-blue-50 hover:bg-gray-50">
                   {columns.map((col) => {
                     const cellVal = row[col];
-                    const vBg = cellValidationBg(col, cellVal, rowIsEmpty);
-                    const interactionCls = isDerived && derivedSource
-                      ? "cursor-pointer hover:brightness-95 text-gray-700"
-                      : onEditGroup
-                        ? "cursor-pointer hover:brightness-95 text-gray-900"
-                        : "text-gray-900";
+                    const vBg = cellValidationBg(col, cellVal, rowIsEmpty, row);
+                    const isForbidden = cellObligation(col, row) === "F";
+                    const interactionCls = isForbidden
+                      ? "cursor-default text-gray-400"
+                      : isDerived && derivedSource
+                        ? "cursor-pointer hover:brightness-95 text-gray-700"
+                        : onEditGroup
+                          ? "cursor-pointer hover:brightness-95 text-gray-900"
+                          : "text-gray-900";
                     return (
                     <td
                       key={col}
                       className={`px-2 py-1 ${vBg} ${interactionCls}`}
                       title={isDerived && derivedSource ? `Derived from ${derivedSource} — click to view source data` : undefined}
-                      onClick={() => handleCellClick(idx, col)}
+                      onClick={() => !isForbidden && handleCellClick(idx, col)}
                     >
                       {editCell && editCell.row === idx && editCell.col === col ? (
                         <input
@@ -2178,6 +2194,72 @@ function Toast({ message, onClose }) {
 }
 
 // ============================================================================
+// Debug Bar — shows build numbers for frontend, backend, and DB
+// ============================================================================
+
+function DebugBar() {
+  const [info, setInfo] = useState(null);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    fetch("http://localhost:8000/api/v1/build-info")
+      .then((r) => r.json())
+      .then(setInfo)
+      .catch(() => setInfo({ error: "backend unreachable" }));
+  }, []);
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="fixed bottom-2 left-2 z-50 bg-gray-700 text-gray-400 text-[10px] px-2 py-0.5 rounded opacity-50 hover:opacity-100 transition"
+        title="Show build info"
+      >
+        v{FE_VERSION}
+      </button>
+    );
+  }
+
+  const be = info || {};
+  const synced = !be.error && be.backend_build === FE_BUILD_NUMBER;
+
+  return (
+    <div className="fixed bottom-2 left-2 z-50 bg-gray-800 text-gray-300 text-[11px] px-3 py-2 rounded-lg shadow-lg font-mono space-y-0.5">
+      <div className="flex items-center justify-between gap-4 mb-1">
+        <span className="font-bold text-white text-xs">Build Info</span>
+        <button onClick={() => setOpen(false)} className="text-gray-500 hover:text-white">{"\u2715"}</button>
+      </div>
+      <div>
+        <span className="text-gray-500">FE: </span>
+        <span>v{FE_VERSION} build {FE_BUILD_NUMBER}</span>
+      </div>
+      <div>
+        <span className="text-gray-500">BE: </span>
+        {be.error
+          ? <span className="text-red-400">{be.error}</span>
+          : <span>v{be.backend_version} build {be.backend_build}</span>
+        }
+      </div>
+      <div>
+        <span className="text-gray-500">DB: </span>
+        {be.error
+          ? <span className="text-red-400">?</span>
+          : <>
+              <span>schema {be.db_schema_version}</span>
+              {be.db_status !== "ok" && <span className="text-red-400 ml-1">({be.db_status})</span>}
+            </>
+        }
+      </div>
+      {!be.error && (
+        <div className={`mt-1 text-[10px] font-bold ${synced ? "text-green-400" : "text-red-400"}`}>
+          {synced ? "IN SYNC" : `OUT OF SYNC (FE=${FE_BUILD_NUMBER} BE=${be.backend_build})`}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
 // Main App — (7) NCA display, (8) AIFM sidebar, (10) improved drill-down
 // ============================================================================
 
@@ -2335,7 +2417,7 @@ export default function EagleApp() {
     const fieldMap = tab === "manager" ? AIFM_FIELD_TO_SOURCE : AIF_FIELD_TO_SOURCE;
     const source = field._sourceEntity || fieldMap[field.field_id] || "positions";
     setSelectedSource(source);
-    const _prefix = tab === "manager" ? "AFM" : "Q";
+    const _prefix = tab === "manager" ? "AIFM" : "AIF";
     setToast(`Showing ${source.replace(/_/g, " ")} for derived field ${_prefix}${field.field_id}`);
   };
 
@@ -2383,6 +2465,7 @@ export default function EagleApp() {
 
   return (
     <div className="min-h-screen bg-gray-100">
+      <DebugBar />
       {/* Header */}
       <header className="bg-white border-b shadow-sm">
         <div className="max-w-full mx-auto px-4 py-3 flex items-center justify-between">

@@ -1,37 +1,3 @@
-################################################################################
-# NCA-SPECIFIC OVERRIDES — FSMA (BE)
-# Version: v2
-# Base YAML: aifmd_validation_rules.yaml (v2.3)
-#
-# SCHEMA: DELTA-ONLY OVERRIDES (Option B)
-#
-# This file uses the delta-only override pattern. Each nca_rules entry carries
-# ONLY the fields that DIFFER from the base YAML rule it overrides.
-# All other attributes are INHERITED from the base rule at load time.
-#
-# Required keys per override rule:
-#   rule_id        — unique NCA rule identifier
-#   base_rule_id   — links to the base YAML rule (e.g. AIFM-1, AIF-17)
-#   field_id       — the ESMA field number being overridden
-#
-# Always-present NCA keys (even if empty):
-#   nca_error_codes, overrides_esma, status, nca_source_doc, nca_doc_date
-#   validation_rules, technical_guidance, eagle_action
-#
-# Delta keys (only present when NCA value differs from base):
-#   field_name, format, data_type, m_c_o_f, mandatory, severity, etc.
-#
-# NCA-specific rules (base_rule_id empty): carry FULL field definition
-# since there is no base rule to inherit from.
-#
-# Infrastructure sections (transmission, file_format, correction_rules,
-# eagle_implementation, return_files) are NCA-specific and always present.
-#
-# LOADER CONTRACT:
-#   merged_rule = base_rule | nca_override   (Python dict merge)
-#   i.e. NCA keys overwrite base keys; base keys not in NCA are inherited.
-################################################################################
-
 nca_overrides:
   nca: FSMA
   country: BE
@@ -50,8 +16,7 @@ nca_overrides:
     - Initial FSMA NCA override file
     - 'NCA-FSMA-HFTFields: HFT transaction count and market value required'
     - 'NCA-FSMA-ShortValue: ShortValue required in AssetTypeExposures'
-    - 'NCA-FSMA-ExtraRiskMeasures: NET_FX_DELTA, NET_CTY_DELTA, VEGA_EXPO risk measures required in AIF
-      report'
+    - 'NCA-FSMA-ExtraRiskMeasures: NET_FX_DELTA, NET_CTY_DELTA, VEGA_EXPO risk measures required in AIF report'
     - 'NCA-FSMA-FilePackaging: XML files delivered as .zip'
   - version: v2
     date: '2026-04-10'
@@ -61,11 +26,11 @@ nca_overrides:
     - Updated base_yaml_version from '2.3' to '2.3'
     - 'Schema: NCA rules now carry only rule_id, base_rule_id, field_id + delta keys'
   nca_rules:
-  - rule_id: NCA-FSMA-ReportingMemberState
+  - rule_id: NCA-FSMA-ReportingMemberState-AIFM
     base_rule_id: AIFM-1
     field_id: '1'
     field_name: Reporting Member State
-    report_type: AIF+AIFM
+    report_type: AIFM
     rule_source: FSMA AIFMD Reporting Requirements
     nca_error_codes:
     - FSMA-001
@@ -76,17 +41,34 @@ nca_overrides:
     nca_doc_date: '2026-04-01'
     base_rule_path:
       aifm_report: aifm_report.envelope.ReportingMemberState
+    technical_guidance: For reports submitted to the FSMA the value must always be the constant "BE".
+    eagle_action: ''
+    validation_rules: ReportingMemberState = "BE"
+  - rule_id: NCA-FSMA-ReportingMemberState-AIF
+    base_rule_id: AIF-1
+    field_id: '1'
+    field_name: Reporting Member State
+    report_type: AIF
+    rule_source: FSMA AIFMD Reporting Requirements
+    nca_error_codes:
+    - FSMA-001
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: FSMA AIFMD Reporting Requirements
+    nca_doc_date: '2026-04-01'
+    base_rule_path:
       aif_report: aif_report.envelope.ReportingMemberState
     technical_guidance: For reports submitted to the FSMA the value must always be the constant "BE".
     eagle_action: ''
     validation_rules: ReportingMemberState = "BE"
-  - rule_id: NCA-FSMA-AIFMNationalCode
+  - rule_id: NCA-FSMA-AIFMNationalCode-AIFM
     base_rule_id: AIFM-18
     field_id: '18'
     format: '[0-9]{10}'
     data_type: N
     section: AIFM - Identifiers
-    report_type: AIF+AIFM
+    report_type: AIFM
     rule_source: FSMA AIFMD Reporting Requirements
     nca_error_codes:
     - FSMA-002
@@ -97,9 +79,7 @@ nca_overrides:
     nca_doc_date: '2026-04-01'
     base_rule_path:
       aifm_report: aifm_report.identification.AIFMNationalCode
-      aif_report: aif_report.identification.AIFMNationalCode
-    technical_guidance: 'FSMA assigns AIFM national identifiers as 10-digit zero-padded numeric codes.
-      Example: 0000071453.'
+    technical_guidance: 'FSMA assigns AIFM national identifiers as 10-digit zero-padded numeric codes. Example: 0000071453.'
     eagle_action: ''
     validation_rules:
     - Must match regex ^[0-9]{10}$
@@ -122,14 +102,15 @@ nca_overrides:
     nca_doc_date: '2026-04-01'
     base_rule_path:
       aif_report: aif_report.identification.AIFNationalCode
-    technical_guidance: 'FSMA assigns AIF national identifiers in the format XXXXX-0001 (5 digits, hyphen,
-      always followed by 0001). Example: 05044-0001. The suffix -0001 is constant for all AIFs.'
+    technical_guidance: 'FSMA assigns AIF national identifiers in the format XXXXX-0001 (5 digits, hyphen, always followed
+      by 0001). Example: 05044-0001. The suffix -0001 is constant for all AIFs.'
     eagle_action: Ensure AIF national code always ends with -0001 suffix.
     validation_rules:
     - Must match regex ^[0-9]{5}-0001$
     - Total length must be exactly 10 characters (including hyphen)
     - The suffix -0001 is always fixed
     example: 05044-0001
+    report_type: AIF
   - rule_id: NCA-FSMA-HFTTransactionNumber
     base_rule_id: ''
     field_id: '24'
@@ -155,11 +136,9 @@ nca_overrides:
     nca_doc_date: '2026-04-01'
     base_rule_path:
       aif_report: aif_report.principal_info.description.HFTTransactionNumber
-    technical_guidance: FSMA requires the HFT transaction number field to be present in all AIF reports,
-      even when the value is 0. This field is optional or omitted in some other NCA jurisdictions (e.g.
-      BaFin DE).
-    eagle_action: Adapter must include <HFTTransactionNumber> for BE filings. Default to 0 if not provided
-      in template.
+    technical_guidance: FSMA requires the HFT transaction number field to be present in all AIF reports, even when the value
+      is 0. This field is optional or omitted in some other NCA jurisdictions (e.g. BaFin DE).
+    eagle_action: Adapter must include <HFTTransactionNumber> for BE filings. Default to 0 if not provided in template.
     validation_rules:
     - Must be a non-negative integer
     - Must be present (not omitted) in BE filings
@@ -189,11 +168,9 @@ nca_overrides:
     nca_doc_date: '2026-04-01'
     base_rule_path:
       aif_report: aif_report.principal_info.description.HFTBuySellMarketValue
-    technical_guidance: FSMA requires the HFT buy/sell market value field to be present in all AIF reports,
-      even when the value is 0. This field is optional or omitted in some other NCA jurisdictions (e.g.
-      BaFin DE).
-    eagle_action: Adapter must include <HFTBuySellMarketValue> for BE filings. Default to 0 if not provided
-      in template.
+    technical_guidance: FSMA requires the HFT buy/sell market value field to be present in all AIF reports, even when the
+      value is 0. This field is optional or omitted in some other NCA jurisdictions (e.g. BaFin DE).
+    eagle_action: Adapter must include <HFTBuySellMarketValue> for BE filings. Default to 0 if not provided in template.
     validation_rules:
     - Must be a non-negative integer
     - Must be present (not omitted) in BE filings
@@ -223,10 +200,9 @@ nca_overrides:
     nca_doc_date: '2026-04-01'
     base_rule_path:
       aif_report: aif_report.risk_profile.asset_type_exposures.ShortValue
-    technical_guidance: FSMA requires ShortValue to be present in each AssetTypeExposure element, even
-      when the value is 0. BaFin (DE) omits this field when no short positions exist.
-    eagle_action: Adapter must include <ShortValue> in each AssetTypeExposure for BE filings. Default
-      to 0 if no short positions.
+    technical_guidance: FSMA requires ShortValue to be present in each AssetTypeExposure element, even when the value is 0.
+      BaFin (DE) omits this field when no short positions exist.
+    eagle_action: Adapter must include <ShortValue> in each AssetTypeExposure for BE filings. Default to 0 if no short positions.
     validation_rules:
     - Must be a non-negative integer
     - Must be present in each AssetTypeExposure block for BE filings
@@ -256,16 +232,15 @@ nca_overrides:
     nca_doc_date: '2026-04-01'
     base_rule_path:
       aif_report: aif_report.risk_profile.market_risk_measures
-    technical_guidance: "FSMA requires three additional MarketRiskMeasure elements beyond the ESMA minimum\
-      \ set. BaFin (DE) only requires the base set (NET_EQTY_DELTA, NET_DV01, NET_CS01, VAR). The additional\
-      \ FSMA-required measures are:\n1. NET_FX_DELTA — Net FX delta. Always present, value 0.00 with\n\
-      \   description when not applicable.\n\n2. NET_CTY_DELTA — Net commodity delta. Always present,\
-      \ value 0.00\n   with description when not applicable.\n\n3. VEGA_EXPO — Vega exposure. Uses VegaRiskMeasureValues\
-      \ sub-element\n   with CurrentMarketRiskMeasureValue, LowerMarketRiskMeasureValue,\n   HigherMarketRiskMeasureValue.\
-      \ All set to 0.00 with description\n   when not applicable.\n\nThe order of risk measures in BE\
-      \ filings is: NET_EQTY_DELTA, NET_FX_DELTA, NET_CTY_DELTA, NET_DV01, NET_CS01, VEGA_EXPO, VAR"
-    eagle_action: Adapter must include NET_FX_DELTA, NET_CTY_DELTA, and VEGA_EXPO MarketRiskMeasure elements
-      for BE filings. Use template values or default to 0.00 with "Not applicable" description.
+    technical_guidance: "FSMA requires three additional MarketRiskMeasure elements beyond the ESMA minimum set. BaFin (DE)\
+      \ only requires the base set (NET_EQTY_DELTA, NET_DV01, NET_CS01, VAR). The additional FSMA-required measures are:\n\
+      1. NET_FX_DELTA — Net FX delta. Always present, value 0.00 with\n   description when not applicable.\n\n2. NET_CTY_DELTA\
+      \ — Net commodity delta. Always present, value 0.00\n   with description when not applicable.\n\n3. VEGA_EXPO — Vega\
+      \ exposure. Uses VegaRiskMeasureValues sub-element\n   with CurrentMarketRiskMeasureValue, LowerMarketRiskMeasureValue,\n\
+      \   HigherMarketRiskMeasureValue. All set to 0.00 with description\n   when not applicable.\n\nThe order of risk measures\
+      \ in BE filings is: NET_EQTY_DELTA, NET_FX_DELTA, NET_CTY_DELTA, NET_DV01, NET_CS01, VEGA_EXPO, VAR"
+    eagle_action: Adapter must include NET_FX_DELTA, NET_CTY_DELTA, and VEGA_EXPO MarketRiskMeasure elements for BE filings.
+      Use template values or default to 0.00 with "Not applicable" description.
     validation_rules:
     - NET_FX_DELTA must be present with RiskMeasureValue
     - NET_CTY_DELTA must be present with RiskMeasureValue
@@ -296,9 +271,8 @@ nca_overrides:
     nca_source_doc: FSMA AIFMD Reporting Requirements
     nca_doc_date: '2026-04-01'
     base_rule_path: {}
-    technical_guidance: 'AIFM report XML filename must follow the pattern AIFM_BE_{AIFMNationalCode}_{YYYYMMDD}.xml
-      where YYYYMMDD is the reporting period end date. The XML file must be wrapped in a ZIP archive with
-      the same base name: AIFM_BE_{AIFMNationalCode}_{YYYYMMDD}.zip'
+    technical_guidance: 'AIFM report XML filename must follow the pattern AIFM_BE_{AIFMNationalCode}_{YYYYMMDD}.xml where
+      YYYYMMDD is the reporting period end date. The XML file must be wrapped in a ZIP archive with the same base name: AIFM_BE_{AIFMNationalCode}_{YYYYMMDD}.zip'
     eagle_action: Adapter generates AIFM XML, then wraps in ZIP archive.
     validation_rules:
     - XML filename must match regex ^AIFM_BE_[0-9]{10}_[0-9]{8}\.xml$
@@ -329,9 +303,9 @@ nca_overrides:
     nca_source_doc: FSMA AIFMD Reporting Requirements
     nca_doc_date: '2026-04-01'
     base_rule_path: {}
-    technical_guidance: 'AIF report XML filename must follow the pattern AIF_BE_{AIFNationalCode}_{YYYYMMDD}.xml.
-      The XML file must be wrapped in a ZIP archive with the same base name: AIF_BE_{AIFNationalCode}_{YYYYMMDD}.zip.
-      Each AIF gets its own ZIP file.'
+    technical_guidance: 'AIF report XML filename must follow the pattern AIF_BE_{AIFNationalCode}_{YYYYMMDD}.xml. The XML
+      file must be wrapped in a ZIP archive with the same base name: AIF_BE_{AIFNationalCode}_{YYYYMMDD}.zip. Each AIF gets
+      its own ZIP file.'
     eagle_action: Adapter generates AIF XML, then wraps in ZIP archive per AIF.
     validation_rules:
     - XML filename must match regex ^AIF_BE_[0-9]{5}-[0-9]{4}_[0-9]{8}\.xml$
@@ -362,8 +336,8 @@ nca_overrides:
     nca_source_doc: FSMA AIFMD Reporting Requirements
     nca_doc_date: '2026-04-01'
     base_rule_path: {}
-    technical_guidance: All files submitted to FSMA must be compressed as ZIP archives. Each ZIP contains
-      exactly one XML file. The ZIP filename matches the XML filename but with .zip extension.
+    technical_guidance: All files submitted to FSMA must be compressed as ZIP archives. Each ZIP contains exactly one XML
+      file. The ZIP filename matches the XML filename but with .zip extension.
     eagle_action: Adapter wraps each generated XML in a ZIP archive for BE filings.
     validation_rules:
     - Must be valid ZIP format

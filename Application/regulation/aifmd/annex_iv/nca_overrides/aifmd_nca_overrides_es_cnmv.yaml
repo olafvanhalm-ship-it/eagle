@@ -1,37 +1,3 @@
-################################################################################
-# NCA-SPECIFIC OVERRIDES — CNMV (ES)
-# Version: v2
-# Base YAML: aifmd_validation_rules.yaml (v2.3)
-#
-# SCHEMA: DELTA-ONLY OVERRIDES (Option B)
-#
-# This file uses the delta-only override pattern. Each nca_rules entry carries
-# ONLY the fields that DIFFER from the base YAML rule it overrides.
-# All other attributes are INHERITED from the base rule at load time.
-#
-# Required keys per override rule:
-#   rule_id        — unique NCA rule identifier
-#   base_rule_id   — links to the base YAML rule (e.g. AIFM-1, AIF-17)
-#   field_id       — the ESMA field number being overridden
-#
-# Always-present NCA keys (even if empty):
-#   nca_error_codes, overrides_esma, status, nca_source_doc, nca_doc_date
-#   validation_rules, technical_guidance, eagle_action
-#
-# Delta keys (only present when NCA value differs from base):
-#   field_name, format, data_type, m_c_o_f, mandatory, severity, etc.
-#
-# NCA-specific rules (base_rule_id empty): carry FULL field definition
-# since there is no base rule to inherit from.
-#
-# Infrastructure sections (transmission, file_format, correction_rules,
-# eagle_implementation, return_files) are NCA-specific and always present.
-#
-# LOADER CONTRACT:
-#   merged_rule = base_rule | nca_override   (Python dict merge)
-#   i.e. NCA keys overwrite base keys; base keys not in NCA are inherited.
-################################################################################
-
 nca_overrides:
   nca: CNMV
   country: ES
@@ -59,11 +25,11 @@ nca_overrides:
     - Updated base_yaml_version from '2.3' to '2.3'
     - 'Schema: NCA rules now carry only rule_id, base_rule_id, field_id + delta keys'
   nca_rules:
-  - rule_id: NCA-CNMV-ReportingMemberState
+  - rule_id: NCA-CNMV-ReportingMemberState-AIFM
     base_rule_id: AIFM-1
     field_id: '1'
     field_name: Reporting Member State
-    report_type: AIF+AIFM
+    report_type: AIFM
     rule_source: CNMV AIFMD Reporting
     nca_error_codes: []
     overrides_esma: true
@@ -73,6 +39,22 @@ nca_overrides:
     nca_doc_date: '2025-03-05'
     base_rule_path:
       aifm_report: aifm_report.envelope.ReportingMemberState
+    technical_guidance: For reports submitted to the CNMV the value must always be "ES".
+    eagle_action: ''
+    validation_rules: ReportingMemberState = "ES"
+  - rule_id: NCA-CNMV-ReportingMemberState-AIF
+    base_rule_id: AIF-1
+    field_id: '1'
+    field_name: Reporting Member State
+    report_type: AIF
+    rule_source: CNMV AIFMD Reporting
+    nca_error_codes: []
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CNMV regulatory framework
+    nca_doc_date: '2025-03-05'
+    base_rule_path:
       aif_report: aif_report.envelope.ReportingMemberState
     technical_guidance: For reports submitted to the CNMV the value must always be "ES".
     eagle_action: ''
@@ -100,8 +82,8 @@ nca_overrides:
     nca_source_doc: CNMV CIFRADOC documentation
     nca_doc_date: '2025-03-05'
     base_rule_path: {}
-    technical_guidance: XML files must be transmitted in .ZIP format using the same filename with .xml
-      replaced by .zip, per ESMA standard. All text fields in the XML must be completed in English.
+    technical_guidance: XML files must be transmitted in .ZIP format using the same filename with .xml replaced by .zip, per
+      ESMA standard. All text fields in the XML must be completed in English.
     eagle_action: Adapter must compress each XML into ZIP. Ensure all text fields are in English.
     validation_rules:
     - XML files must be wrapped in ZIP format
@@ -131,11 +113,11 @@ nca_overrides:
     nca_source_doc: CNMV CIFRADOC documentation
     nca_doc_date: '2025-03-05'
     base_rule_path: {}
-    technical_guidance: Foreign entities must register for CIFRADOC accreditation and obtain a Spanish
-      Tax Identification Code (CIF or NIF) before they can submit reports. Electronic submission uses
-      registered legal person representative certificates via the CNMV Virtual Office (Sede Electrónica).
-    eagle_action: Verify CIFRADOC registration and CIF/NIF availability before first submission. Guide
-      foreign AIFMs through registration if needed.
+    technical_guidance: Foreign entities must register for CIFRADOC accreditation and obtain a Spanish Tax Identification
+      Code (CIF or NIF) before they can submit reports. Electronic submission uses registered legal person representative
+      certificates via the CNMV Virtual Office (Sede Electrónica).
+    eagle_action: Verify CIFRADOC registration and CIF/NIF availability before first submission. Guide foreign AIFMs through
+      registration if needed.
     validation_rules:
     - CIFRADOC accreditation required for electronic submission
     - Foreign entities must obtain Spanish CIF or NIF
@@ -164,8 +146,8 @@ nca_overrides:
     nca_source_doc: CNMV regulatory framework
     nca_doc_date: '2025-03-05'
     base_rule_path: {}
-    technical_guidance: Standard EU deadline of 30 calendar days from end of reporting period. Fund-of-funds
-      receive additional 15-day extension (45 days total). CNMV follows Regulation 231/2013 deadlines.
+    technical_guidance: Standard EU deadline of 30 calendar days from end of reporting period. Fund-of-funds receive additional
+      15-day extension (45 days total). CNMV follows Regulation 231/2013 deadlines.
     eagle_action: ''
     validation_rules:
     - Standard deadline: 30 calendar days from period end
@@ -177,8 +159,8 @@ nca_overrides:
     channels:
       cifradoc:
         name: CIFRADOC / CNMV Sede Electrónica
-        description: Electronic submission via CNMV Virtual Office using registered legal person representative
-          certificates. Foreign entities require CIFRADOC accreditation and Spanish CIF/NIF.
+        description: Electronic submission via CNMV Virtual Office using registered legal person representative certificates.
+          Foreign entities require CIFRADOC accreditation and Spanish CIF/NIF.
         url: https://sede.cnmv.gob.es/SedeCNMV/SedeElectronica.aspx?lang=en
   file_format:
     encoding: UTF-8
@@ -211,5 +193,5 @@ nca_overrides:
     contact:
       cnmv_sede: https://sede.cnmv.gob.es/SedeCNMV/SedeElectronica.aspx?lang=en
       cnmv_esma: https://www.cnmv.es/portal/gpage?id=LegESMA&lang=en
-    update_trigger: 'Monitor https://www.cnmv.es for updates. Latest circular: 1/2025 (5 March 2025).
-      Direct CNMV contact recommended for detailed national code format and validation specifications.'
+    update_trigger: 'Monitor https://www.cnmv.es for updates. Latest circular: 1/2025 (5 March 2025). Direct CNMV contact
+      recommended for detailed national code format and validation specifications.'

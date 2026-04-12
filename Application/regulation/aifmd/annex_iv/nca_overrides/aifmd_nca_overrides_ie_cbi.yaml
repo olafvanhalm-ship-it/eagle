@@ -1,37 +1,3 @@
-################################################################################
-# NCA-SPECIFIC OVERRIDES — CBI (IE)
-# Version: v3
-# Base YAML: aifmd_validation_rules.yaml (v2.3)
-#
-# SCHEMA: DELTA-ONLY OVERRIDES (Option B)
-#
-# This file uses the delta-only override pattern. Each nca_rules entry carries
-# ONLY the fields that DIFFER from the base YAML rule it overrides.
-# All other attributes are INHERITED from the base rule at load time.
-#
-# Required keys per override rule:
-#   rule_id        — unique NCA rule identifier
-#   base_rule_id   — links to the base YAML rule (e.g. AIFM-1, AIF-17)
-#   field_id       — the ESMA field number being overridden
-#
-# Always-present NCA keys (even if empty):
-#   nca_error_codes, overrides_esma, status, nca_source_doc, nca_doc_date
-#   validation_rules, technical_guidance, eagle_action
-#
-# Delta keys (only present when NCA value differs from base):
-#   field_name, format, data_type, m_c_o_f, mandatory, severity, etc.
-#
-# NCA-specific rules (base_rule_id empty): carry FULL field definition
-# since there is no base rule to inherit from.
-#
-# Infrastructure sections (transmission, file_format, correction_rules,
-# eagle_implementation, return_files) are NCA-specific and always present.
-#
-# LOADER CONTRACT:
-#   merged_rule = base_rule | nca_override   (Python dict merge)
-#   i.e. NCA keys overwrite base keys; base keys not in NCA are inherited.
-################################################################################
-
 nca_overrides:
   nca: CBI
   country: IE
@@ -56,8 +22,7 @@ nca_overrides:
     date: '2026-04-03'
     changes:
     - Added NCA-CBI-Article24-5-AdditionalData — Art 24(5) systemic risk data mandatory per ESMA/2013/1340
-    - Added NCA-CBI-NonEUMasterAIFSeparateFiling — separate AIF return required for non-EU master AIFs
-      with EU feeders
+    - Added NCA-CBI-NonEUMasterAIFSeparateFiling — separate AIF return required for non-EU master AIFs with EU feeders
     - Added NCA-CBI-PortalFilenameValidation — CBI Portal error code AIF-FIL-0003 for invalid filenames
     - Added NCA-CBI-AIFAIFMLinkageCheck — AIF must be linked to filing AIFM in CBI register
     - Added NCA-CBI-NonEUAIFMReg43Exemption — reporting exemption for non-EU AIFMs under Regulation 43
@@ -70,11 +35,11 @@ nca_overrides:
     - Updated base_yaml_version from '2.3' to '2.3'
     - 'Schema: NCA rules now carry only rule_id, base_rule_id, field_id + delta keys'
   nca_rules:
-  - rule_id: NCA-CBI-ReportingMemberState
+  - rule_id: NCA-CBI-ReportingMemberState-AIFM
     base_rule_id: AIFM-1
     field_id: '1'
     field_name: Reporting Member State
-    report_type: AIF+AIFM
+    report_type: AIFM
     rule_source: CBI Reporting Guidance November 2023
     nca_error_codes: []
     overrides_esma: true
@@ -84,9 +49,27 @@ nca_overrides:
     nca_doc_date: '2023-11-15'
     base_rule_path:
       aifm_report: aifm_report.envelope.ReportingMemberState
+    technical_guidance: For reports submitted to the CBI the value must always be the constant "IE". Any other value will
+      be rejected.
+    eagle_action: ''
+    validation_rules: ReportingMemberState = "IE"
+    example: IE
+  - rule_id: NCA-CBI-ReportingMemberState-AIF
+    base_rule_id: AIF-1
+    field_id: '1'
+    field_name: Reporting Member State
+    report_type: AIF
+    rule_source: CBI Reporting Guidance November 2023
+    nca_error_codes: []
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: CBI Reporting Guidance November 2023
+    nca_doc_date: '2023-11-15'
+    base_rule_path:
       aif_report: aif_report.envelope.ReportingMemberState
-    technical_guidance: For reports submitted to the CBI the value must always be the constant "IE". Any
-      other value will be rejected.
+    technical_guidance: For reports submitted to the CBI the value must always be the constant "IE". Any other value will
+      be rejected.
     eagle_action: ''
     validation_rules: ReportingMemberState = "IE"
     example: IE
@@ -111,16 +94,16 @@ nca_overrides:
     nca_doc_date: '2023-11-15'
     base_rule_path:
       aifm_report: aifm_report.identification.AIFMNationalCode
-    technical_guidance: 'The CBI assigns institution reference codes ("C-codes"): constant letter "C"
-      followed by 5 or 6 digits unique to that entity. Examples: C548423 (6 digits), C12345 (5 digits).
-      If this field is not filled out correctly the return will be rejected. The C-code must also match
-      the C-code segment in the filename.'
+    technical_guidance: 'The CBI assigns institution reference codes ("C-codes"): constant letter "C" followed by 5 or 6 digits
+      unique to that entity. Examples: C548423 (6 digits), C12345 (5 digits). If this field is not filled out correctly the
+      return will be rejected. The C-code must also match the C-code segment in the filename.'
     eagle_action: ''
     validation_rules:
     - Must match pattern C[0-9]{5,6}
     - Must exist in the CBI register of authorised/registered AIFMs
     - Value in XML must be identical to the C-code segment of the filename
     example: C548423
+    report_type: AIFM
   - rule_id: NCA-CBI-AIFNationalCode
     base_rule_id: AIF-44
     field_id: '44'
@@ -141,16 +124,16 @@ nca_overrides:
     nca_doc_date: '2023-11-15'
     base_rule_path:
       aif_report: aif_report.identification.AIFNationalCode
-    technical_guidance: 'The CBI assigns Fund Numbers in the same C-code format as the AIFM: C followed
-      by 5 or 6 digits. The AIF must be authorised, notified or registered by/with the CBI and linked
-      to the filing AIFM in CBI systems. For non-EU master AIFs without a C-code, contact aifmdreporting@centralbank.ie
-      to obtain one before filing.'
+    technical_guidance: 'The CBI assigns Fund Numbers in the same C-code format as the AIFM: C followed by 5 or 6 digits.
+      The AIF must be authorised, notified or registered by/with the CBI and linked to the filing AIFM in CBI systems. For
+      non-EU master AIFs without a C-code, contact aifmdreporting@centralbank.ie to obtain one before filing.'
     eagle_action: ''
     validation_rules:
     - Must match pattern C[0-9]{5,6}
     - AIF must be authorised/notified/registered with CBI and linked to the filing AIFM in CBI systems
     - Non-EU master AIF requires a separate C-code obtained from aifmdreporting@centralbank.ie
     example: C548423
+    report_type: AIF
   - rule_id: NCA-CBI-AIFMNoReportingFlag
     base_rule_id: ''
     field_id: '21'
@@ -175,10 +158,10 @@ nca_overrides:
     nca_doc_date: '2023-11-15'
     base_rule_path:
       aifm_report: aifm_report.no_reporting_flag
-    technical_guidance: When an AIFM has no information to report (e.g. newly authorised AIFM before activity
-      commences) a nil return must still be submitted. Data points 1-21 inclusive must be completed where
-      relevant. Data point 21 must be set to T. All data points after 21 must be left empty. If data point
-      21 = T and any data point after 21 is populated the file will fail validation.
+    technical_guidance: When an AIFM has no information to report (e.g. newly authorised AIFM before activity commences) a
+      nil return must still be submitted. Data points 1-21 inclusive must be completed where relevant. Data point 21 must
+      be set to T. All data points after 21 must be left empty. If data point 21 = T and any data point after 21 is populated
+      the file will fail validation.
     eagle_action: ''
     validation_rules:
     - 'When nil return: AIFMNoReportingFlag = "T"'
@@ -209,22 +192,21 @@ nca_overrides:
     nca_doc_date: '2023-11-15'
     base_rule_path:
       aif_report: aif_report.no_reporting_flag
-    technical_guidance: When an AIF has no information to report (e.g. AIF created but first investments
-      not yet made) a nil return must still be filed. Data points 1-23 inclusive must be completed. Data
-      point 23 must be set to T. All data points after 23 must be left empty. If data point 23 = T and
-      any data point after 23 is populated the file will fail validation.
+    technical_guidance: When an AIF has no information to report (e.g. AIF created but first investments not yet made) a nil
+      return must still be filed. Data points 1-23 inclusive must be completed. Data point 23 must be set to T. All data points
+      after 23 must be left empty. If data point 23 = T and any data point after 23 is populated the file will fail validation.
     eagle_action: ''
     validation_rules:
     - 'When nil return: AIFNoReportingFlag = "T"'
     - 'When AIFNoReportingFlag = "T": all fields after data point 23 must be empty'
     - Data points 1-23 must be completed even for nil returns
     esma_doc: ESMA/2013/1358 Rev.6
-  - rule_id: NCA-CBI-ReturnPeriodValidity
+  - rule_id: NCA-CBI-ReturnPeriodValidity-AIFM
     base_rule_id: AIFM-6
     field_id: '6'
     field_name: Reporting period validity
     xsd_element: <ReportingPeriodStartDate> / <ReportingPeriodEndDate>
-    report_type: AIF+AIFM
+    report_type: AIFM
     severity: HIGH
     rule_source: CBI Reporting Guidance November 2023
     nca_error_codes: []
@@ -235,11 +217,9 @@ nca_overrides:
     nca_doc_date: '2023-11-15'
     base_rule_path:
       aifm_report: aifm_report.record_header.ReportingPeriodEndDate
-      aif_report: aif_report.record_header.ReportingPeriodEndDate
-    technical_guidance: The CBI performs additional validation to ensure that return periods are within
-      one calendar year and do not cross a year-end boundary. Valid reporting end dates are 31 March,
-      30 June, 30 September or 31 December. These dates are fixed and do not shift for bank holidays or
-      weekends.
+    technical_guidance: The CBI performs additional validation to ensure that return periods are within one calendar year
+      and do not cross a year-end boundary. Valid reporting end dates are 31 March, 30 June, 30 September or 31 December.
+      These dates are fixed and do not shift for bank holidays or weekends.
     eagle_action: ''
     validation_rules:
     - Reporting period must be within one calendar year
@@ -269,13 +249,12 @@ nca_overrides:
     nca_doc_date: '2023-11-15'
     base_rule_path:
       aif_report: aif_report.article_24_5
-    technical_guidance: 'The CBI requests the additional information recommended by ESMA in their Opinion
-      (Ref: ESMA/2013/1340) on the collection of information for the effective monitoring of systemic
-      risk under Article 24(5), first sub-paragraph, of the AIFMD (published 1 October 2013). This data
-      is mandatory for all AIF returns filed with the CBI, overriding the ESMA base rule where this data
-      is optional for some NCAs.'
-    eagle_action: Ensure all Article 24(5) fields are populated in AIF returns destined for CBI. Treat
-      as mandatory even if the base ESMA rule marks them as optional or conditional.
+    technical_guidance: 'The CBI requests the additional information recommended by ESMA in their Opinion (Ref: ESMA/2013/1340)
+      on the collection of information for the effective monitoring of systemic risk under Article 24(5), first sub-paragraph,
+      of the AIFMD (published 1 October 2013). This data is mandatory for all AIF returns filed with the CBI, overriding the
+      ESMA base rule where this data is optional for some NCAs.'
+    eagle_action: Ensure all Article 24(5) fields are populated in AIF returns destined for CBI. Treat as mandatory even if
+      the base ESMA rule marks them as optional or conditional.
     validation_rules:
     - All Article 24(5) first sub-paragraph fields must be present and populated in AIF returns
     - This applies regardless of whether the AIF exceeds the Art 24(2)/24(4) thresholds
@@ -305,16 +284,14 @@ nca_overrides:
     nca_doc_date: '2023-11-15'
     base_rule_path:
       aif_report: aif_report.non_eu_master_aif
-    technical_guidance: 'Per ESMA Q&A (1 October 2015) adopted by CBI: in addition to Art 24(1) information,
-      the CBI requests Art 24(2) and Art 24(5) information for non-EU master AIFs not marketed in the
-      EU that have either EU feeder AIFs or non-EU feeder AIFs marketed in the Union under Article 42.
-      A separate AIF file must be submitted for each non-EU master AIF. The non-EU master AIF must have
-      its own CBI C-code — contact aifmdreporting@centralbank.ie to obtain one. Mandatory from 1 January
-      2016 reporting period onwards. Exception: not required where the non-EU master AIF and feeder AIF
-      do not have the same AIFM.'
-    eagle_action: When generating AIF returns, detect non-EU master AIFs with EU feeder relationships.
-      If applicable, generate a separate AIF return file and verify a valid C-code is assigned. Alert
-      the user if a C-code is missing.
+    technical_guidance: 'Per ESMA Q&A (1 October 2015) adopted by CBI: in addition to Art 24(1) information, the CBI requests
+      Art 24(2) and Art 24(5) information for non-EU master AIFs not marketed in the EU that have either EU feeder AIFs or
+      non-EU feeder AIFs marketed in the Union under Article 42. A separate AIF file must be submitted for each non-EU master
+      AIF. The non-EU master AIF must have its own CBI C-code — contact aifmdreporting@centralbank.ie to obtain one. Mandatory
+      from 1 January 2016 reporting period onwards. Exception: not required where the non-EU master AIF and feeder AIF do
+      not have the same AIFM.'
+    eagle_action: When generating AIF returns, detect non-EU master AIFs with EU feeder relationships. If applicable, generate
+      a separate AIF return file and verify a valid C-code is assigned. Alert the user if a C-code is missing.
     validation_rules:
     - Condition: non-EU master AIF with EU feeder AIFs or non-EU feeder AIFs marketed under Art 42
     - A separate AIF return must be filed for each qualifying non-EU master AIF
@@ -351,14 +328,12 @@ nca_overrides:
     base_rule_path:
       aifm_report: aifm_report.file.filename
       aif_report: aif_report.file.filename
-    technical_guidance: The CBI Portal performs automated validation on the filename at upload time. Files
-      that do not match the naming convention are rejected with error code AIF-FIL-0003. The filename
-      must exactly follow the pattern CNNNNNN_YYYYMMDD_AIM.xml (for AIFM returns) or CNNNNNN_YYYYMMDD_AIF.xml
-      (for AIF returns). The C-code in the filename must match the AIFMNationalCode in the XML content.
-      The date must be the reporting period end date (31-03, 30-06, 30-09, or 31-12 of the reporting year).
-    eagle_action: Apply strict filename validation before upload. Cross-check C-code in filename against
-      AIFMNationalCode in XML. Cross-check date in filename against ReportingPeriodEndDate in XML. Reject
-      mismatches before attempting upload.
+    technical_guidance: The CBI Portal performs automated validation on the filename at upload time. Files that do not match
+      the naming convention are rejected with error code AIF-FIL-0003. The filename must exactly follow the pattern CNNNNNN_YYYYMMDD_AIM.xml
+      (for AIFM returns) or CNNNNNN_YYYYMMDD_AIF.xml (for AIF returns). The C-code in the filename must match the AIFMNationalCode
+      in the XML content. The date must be the reporting period end date (31-03, 30-06, 30-09, or 31-12 of the reporting year).
+    eagle_action: Apply strict filename validation before upload. Cross-check C-code in filename against AIFMNationalCode
+      in XML. Cross-check date in filename against ReportingPeriodEndDate in XML. Reject mismatches before attempting upload.
     validation_rules:
     - 'AIFM files: filename must match pattern C[0-9]{6}_[0-9]{8}_AIM\.xml'
     - 'AIF files: filename must match pattern C[0-9]{6}_[0-9]{8}_AIF\.xml'
@@ -390,15 +365,13 @@ nca_overrides:
     nca_doc_date: '2023-11-15'
     base_rule_path:
       aif_report: aif_report.identification.AIFNationalCode
-    technical_guidance: The CBI Portal performs a cross-check to verify that the AIF (identified by its
-      C-code/Fund Number) is authorised, notified or registered with the CBI and that the AIF is linked
-      to the filing AIFM in CBI systems. If the fund C-code is not present on the list of funds assigned
-      to that AIFM, the AIFM will not be permitted to complete the submission. The AIFM must notify the
-      CBI of changes in AIFs managed/marketed prior to returns being due. This is stricter than the base
-      ESMA rule which only validates format.
-    eagle_action: Before generating AIF returns, verify that each AIF C-code is assigned to the filing
-      AIFM in the CBI register. If a fund is newly added or removed, alert the user to contact the CBI
-      before the filing deadline.
+    technical_guidance: The CBI Portal performs a cross-check to verify that the AIF (identified by its C-code/Fund Number)
+      is authorised, notified or registered with the CBI and that the AIF is linked to the filing AIFM in CBI systems. If
+      the fund C-code is not present on the list of funds assigned to that AIFM, the AIFM will not be permitted to complete
+      the submission. The AIFM must notify the CBI of changes in AIFs managed/marketed prior to returns being due. This is
+      stricter than the base ESMA rule which only validates format.
+    eagle_action: Before generating AIF returns, verify that each AIF C-code is assigned to the filing AIFM in the CBI register.
+      If a fund is newly added or removed, alert the user to contact the CBI before the filing deadline.
     validation_rules:
     - AIF C-code must exist in CBI register
     - AIF must be linked to the filing AIFM in CBI systems
@@ -428,15 +401,13 @@ nca_overrides:
     nca_source_doc: CBI Reporting Guidance November 2023, p.11
     nca_doc_date: '2023-11-15'
     base_rule_path: {}
-    technical_guidance: 'A non-EU AIFM marketing an AIF into Ireland under Regulation 43 of the EU AIFM
-      Regulations 2013 is not required to report to the CBI if two conditions are both met: (1) the AIFM
-      has notified the CBI that marketing has ceased or will not commence, AND (2) the AIFM confirms that
-      there are no Irish investors in the AIF. If such confirmation is received, a new notification under
-      Regulation 43 is required before the AIFM can market to Irish investors again. Eagle must check
-      these conditions before determining reporting obligation scope.'
-    eagle_action: During scoping/onboarding, check whether the non-EU AIFM qualifies for the Reg 43 exemption.
-      If both conditions are met, exclude from CBI reporting scope. Log the exemption with the notification
-      date and confirmation details.
+    technical_guidance: 'A non-EU AIFM marketing an AIF into Ireland under Regulation 43 of the EU AIFM Regulations 2013 is
+      not required to report to the CBI if two conditions are both met: (1) the AIFM has notified the CBI that marketing has
+      ceased or will not commence, AND (2) the AIFM confirms that there are no Irish investors in the AIF. If such confirmation
+      is received, a new notification under Regulation 43 is required before the AIFM can market to Irish investors again.
+      Eagle must check these conditions before determining reporting obligation scope.'
+    eagle_action: During scoping/onboarding, check whether the non-EU AIFM qualifies for the Reg 43 exemption. If both conditions
+      are met, exclude from CBI reporting scope. Log the exemption with the notification date and confirmation details.
     validation_rules:
     - 'Condition 1: AIFM has notified CBI that marketing has ceased or will not commence'
     - 'Condition 2: AIFM confirms no Irish investors in the AIF'
@@ -445,18 +416,17 @@ nca_overrides:
     - Re-marketing requires new Regulation 43 notification to CBI
     esma_doc: EU AIFM Regulations 2013, Regulation 43
   transmission:
-    note: The CBI Portal is the only accepted submission channel. Direct XML files are uploaded via the
-      Portal — no ZIP container is used. Eagle must exclusively use the Portal upload workflow.
+    note: The CBI Portal is the only accepted submission channel. Direct XML files are uploaded via the Portal — no ZIP container
+      is used. Eagle must exclusively use the Portal upload workflow.
     overrides_esma: true
     channels:
       cbi_portal:
         name: Central Bank of Ireland Portal
-        description: Reports are uploaded directly as XML files via the CBI Portal. A return instance
-          must be created in the Portal before a file can be uploaded. The file goes through automated
-          validation on upload; the user receives an email confirming acceptance or rejection.
+        description: Reports are uploaded directly as XML files via the CBI Portal. A return instance must be created in the
+          Portal before a file can be uploaded. The file goes through automated validation on upload; the user receives an
+          email confirming acceptance or rejection.
         url: https://www.centralbank.ie/regulation/central-bank-portal
-        note: Files must not be open on the desktop at the time of upload as this will prevent the upload
-          from completing.
+        note: Files must not be open on the desktop at the time of upload as this will prevent the upload from completing.
   file_format:
     encoding: UTF-8
     container: XML direct (no ZIP)
@@ -467,12 +437,12 @@ nca_overrides:
     - Multiple AIF returns can be contained in one XML file
     header_format_aifm:
       description: Required XML header for AIFM (AIM) files. All five attributes must be present.
-      format: <AIFMReportingInfo ReportingMemberState="IE" Version="1.2" CreationDateAndTime="YYYY-MM-DDThh:mm:ss"
-        xsi:noNamespaceSchemaLocation="AIFMD_DATMAN_V1.2.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      format: <AIFMReportingInfo ReportingMemberState="IE" Version="1.2" CreationDateAndTime="YYYY-MM-DDThh:mm:ss" xsi:noNamespaceSchemaLocation="AIFMD_DATMAN_V1.2.xsd"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     header_format_aif:
       description: Required XML header for AIF files. All five attributes must be present.
-      format: <AIFReportingInfo ReportingMemberState="IE" Version="1.2" CreationDateAndTime="YYYY-MM-DDThh:mm:ss.0Z"
-        xsi:noNamespaceSchemaLocation="AIFMD_DATAIF_V1.2.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      format: <AIFReportingInfo ReportingMemberState="IE" Version="1.2" CreationDateAndTime="YYYY-MM-DDThh:mm:ss.0Z" xsi:noNamespaceSchemaLocation="AIFMD_DATAIF_V1.2.xsd"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     naming_convention_aifm_report:
       description: Naming convention for AIFM manager-level (AIM) files.
       format: CNNNNNN_YYYYMMDD_AIM.xml
@@ -506,9 +476,8 @@ nca_overrides:
     - Portable Document Format (.pdf)
     - Microsoft Word (.docx)
   return_files:
-    note: The CBI sends email notifications when a file is accepted or rejected. Validation errors are
-      also visible in the Portal on the submission screen. Eagle must monitor submission status and trigger
-      correction workflows on rejection.
+    note: The CBI sends email notifications when a file is accepted or rejected. Validation errors are also visible in the
+      Portal on the submission screen. Eagle must monitor submission status and trigger correction workflows on rejection.
     source: CBI Reporting Guidance — November 2023
     email_accepted:
       trigger: After successful validation and upload
@@ -516,29 +485,25 @@ nca_overrides:
       eagle_action: Update submission status to ''accepted_by_cbi''. No client action required.
     email_rejected:
       trigger: After failed validation
-      description: Email indicating the file was rejected. Validation error details are visible in the
-        Portal.
-      eagle_action: 'Parse validation errors from the Portal. Map each error code to the nca_rules entries
-        above using base_rule_path for traceability. Trigger client notification and correction workflow.
-        Error code reference: https://www.centralbank.ie/regulation/industry-market-sectors/funds-service-providers/aifm/reporting-requirements'
+      description: Email indicating the file was rejected. Validation error details are visible in the Portal.
+      eagle_action: 'Parse validation errors from the Portal. Map each error code to the nca_rules entries above using base_rule_path
+        for traceability. Trigger client notification and correction workflow. Error code reference: https://www.centralbank.ie/regulation/industry-market-sectors/funds-service-providers/aifm/reporting-requirements'
   correction_rules:
     amendment_rule:
-      description: Incorrect returns must be resubmitted. AIFMs submitting incorrect or late returns may
-        be subject to further regulatory action.
+      description: Incorrect returns must be resubmitted. AIFMs submitting incorrect or late returns may be subject to further
+        regulatory action.
       base_rule_path: aifm_report.record_header.FilingType
       overrides_esma: false
-      validation_rule: A return that has been signed-off must be unlocked by the CBI before it can be
-        amended. The AIFM must request an unlock via the procedure in the CBI Portal User Manual.
+      validation_rule: A return that has been signed-off must be unlocked by the CBI before it can be amended. The AIFM must
+        request an unlock via the procedure in the CBI Portal User Manual.
     sign_off_rule:
-      description: The CBI Portal enforces a two-person rule. The person signing off a return must be
-        different from the person who finalised it. A return that is uploaded but not signed-off is NOT
-        considered submitted and the AIFM will have failed its reporting obligations.
+      description: The CBI Portal enforces a two-person rule. The person signing off a return must be different from the person
+        who finalised it. A return that is uploaded but not signed-off is NOT considered submitted and the AIFM will have
+        failed its reporting obligations.
       overrides_esma: true
-      validation_rule: sign_off_user != finalise_user. Both steps must be completed before the submission
-        deadline.
+      validation_rule: sign_off_user != finalise_user. Both steps must be completed before the submission deadline.
     submission_deadlines:
-      description: Returns must be submitted and signed-off by the last calendar day of the month following
-        the quarter end.
+      description: Returns must be submitted and signed-off by the last calendar day of the month following the quarter end.
       schedule:
       - reporting_date: 31-03
         due_date: 30-04
@@ -549,8 +514,7 @@ nca_overrides:
       - reporting_date: 31-12
         due_date: 31-01
       fund_of_funds_extension:
-        description: For AIFs that are Funds of Funds the submission deadline may be extended by 15 calendar
-          days.
+        description: For AIFs that are Funds of Funds the submission deadline may be extended by 15 calendar days.
         extension_days: 15
   eagle_implementation:
     pre_submission_checks:
@@ -563,14 +527,13 @@ nca_overrides:
     - Verify XML header uses Version="1.2" with all five required attributes
     - Apply CBI filename naming convention exactly — CNNNNNN_YYYYMMDD_AIM/AIF.xml
     - 'For nil returns: verify NoReportingFlag = T and all fields after data point 21/23 are empty'
-    - 'For non-EU master AIFs with EU feeders: ensure separate AIF return and valid C-code obtained from
-      CBI'
+    - 'For non-EU master AIFs with EU feeders: ensure separate AIF return and valid C-code obtained from CBI'
     sign_off_enforcement:
-      description: Eagle must track the finaliser and sign-off user separately and enforce the two-person
-        rule. Alerts must be sent when a return is finalised but not yet signed-off as the deadline approaches.
+      description: Eagle must track the finaliser and sign-off user separately and enforce the two-person rule. Alerts must
+        be sent when a return is finalised but not yet signed-off as the deadline approaches.
     return_file_processing:
-      description: Eagle must monitor the CBI Portal and email notifications for acceptance/rejection
-        after each upload and process them automatically.
+      description: Eagle must monitor the CBI Portal and email notifications for acceptance/rejection after each upload and
+        process them automatically.
     contact:
       aifmd_reporting: aifmdreporting@centralbank.ie
       online_authorisation: onlineauthorisation@centralbank.ie
@@ -578,7 +541,7 @@ nca_overrides:
       passporting_out: aifmdpassportingout@centralbank.ie
       internal_passporting_in: aifinternalpassportingin@centralbank.ie
       internal_passporting_out: aifinternalpassportingout@centralbank.ie
-    update_trigger: 'Monitor https://www.centralbank.ie for updates to the Reporting Guidance for Alternative
-      Investment Fund Managers. This section must be reviewed whenever CBI publishes a new version. Current
-      captured version: November 2023 (updated 15/11/2023).'
+    update_trigger: 'Monitor https://www.centralbank.ie for updates to the Reporting Guidance for Alternative Investment Fund
+      Managers. This section must be reviewed whenever CBI publishes a new version. Current captured version: November 2023
+      (updated 15/11/2023).'
     owner: Head of Compliance & Risk

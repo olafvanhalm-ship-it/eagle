@@ -20,8 +20,9 @@ class SourcePriority(IntEnum):
     """
     SMART_DEFAULT = 10     # System-generated default value
     AI_PROPOSED = 20       # AI-extracted from unstructured source (low confidence)
-    DERIVED = 30           # Calculated from other fields (e.g. AuM from positions)
+    DERIVED = 30           # Calculated from other fields (e.g. EEA flag from domicile)
     IMPORTED = 40          # Parsed from structured input (M template, ESMA Excel, XML)
+    SYSTEM = 45            # Auto-generated metadata (version, dates, NCA code) — not editable
     MANUALLY_OVERRIDDEN = 50  # Client edit via review screen
 
 

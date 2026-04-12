@@ -1,37 +1,3 @@
-################################################################################
-# NCA-SPECIFIC OVERRIDES — ASF (RO)
-# Version: v2
-# Base YAML: aifmd_validation_rules.yaml (v2.3)
-#
-# SCHEMA: DELTA-ONLY OVERRIDES (Option B)
-#
-# This file uses the delta-only override pattern. Each nca_rules entry carries
-# ONLY the fields that DIFFER from the base YAML rule it overrides.
-# All other attributes are INHERITED from the base rule at load time.
-#
-# Required keys per override rule:
-#   rule_id        — unique NCA rule identifier
-#   base_rule_id   — links to the base YAML rule (e.g. AIFM-1, AIF-17)
-#   field_id       — the ESMA field number being overridden
-#
-# Always-present NCA keys (even if empty):
-#   nca_error_codes, overrides_esma, status, nca_source_doc, nca_doc_date
-#   validation_rules, technical_guidance, eagle_action
-#
-# Delta keys (only present when NCA value differs from base):
-#   field_name, format, data_type, m_c_o_f, mandatory, severity, etc.
-#
-# NCA-specific rules (base_rule_id empty): carry FULL field definition
-# since there is no base rule to inherit from.
-#
-# Infrastructure sections (transmission, file_format, correction_rules,
-# eagle_implementation, return_files) are NCA-specific and always present.
-#
-# LOADER CONTRACT:
-#   merged_rule = base_rule | nca_override   (Python dict merge)
-#   i.e. NCA keys overwrite base keys; base keys not in NCA are inherited.
-################################################################################
-
 nca_overrides:
   nca: ASF
   country: RO
@@ -70,6 +36,7 @@ nca_overrides:
     status: active
     nca_source_doc: Autoritatea de Supraveghere Financiară (ASF) reporting requirements
     nca_doc_date: '2026-04-03'
-    technical_guidance: For reports submitted to ASF Romania the value must always be RO. ASF implements
-      AIFMD via Law no. 74/2015, amended by Law 237/2022 and Government Emergency Ordinance 71/2024.
+    technical_guidance: For reports submitted to ASF Romania the value must always be RO. ASF implements AIFMD via Law no.
+      74/2015, amended by Law 237/2022 and Government Emergency Ordinance 71/2024.
     validation_rules: ReportingMemberState = "RO"
+    report_type: AIFM

@@ -159,6 +159,15 @@ class AifBuilderMixin:
                           override_national_code: str = None):
         aif_id = _str(aif.get("Custom AIF Identification", "") or aif.get("AIF ID", ""))
         positions = self._positions_for_aif(aif_id)
+
+        # Ensure derived content type is available in the AIF dict BEFORE
+        # any gating method reads it. This is the single source of truth —
+        # _derive_aif_content_type() lives in m_adapter.py and handles
+        # light vs full, explicit vs derived, EEA vs non-EEA.
+        if not (aif.get("AIF Content Type") or aif.get("AIF content type")):
+            aif["AIF Content Type"] = self._derive_aif_content_type(
+                aif, reporting_member_state)
+
         is_full = self._aif_is_full(aif)
 
         # For full/authorised AIFs, use AIF-level AUM/NAV; for registered, calculate from positions
@@ -220,12 +229,8 @@ class AifBuilderMixin:
         rec = _sub(root, "AIFRecordInfo")
         _sub(rec, "FilingType", aif_filing_type)
 
-        # ContentType: use value from AIF record (field 5), fallback to derived value
-        content_type_raw = aif.get("AIF Content Type") or aif.get("AIF content type")
-        if content_type_raw is not None:
-            content_type = str(int(content_type_raw))
-        else:
-            content_type = "3" if self._is_registered_aif(aif) else "2"
+        # ContentType: already derived and injected into aif dict above
+        content_type = _str(aif.get("AIF Content Type", ""))
         _sub(rec, "AIFContentType", content_type)
 
         # Reporting period — AIF may have its own period type; if empty, derive

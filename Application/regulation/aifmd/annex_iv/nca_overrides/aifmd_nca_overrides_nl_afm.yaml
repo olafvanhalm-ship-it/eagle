@@ -1,37 +1,3 @@
-################################################################################
-# NCA-SPECIFIC OVERRIDES — AFM (NL)
-# Version: v2
-# Base YAML: aifmd_validation_rules.yaml (v2.3)
-#
-# SCHEMA: DELTA-ONLY OVERRIDES (Option B)
-#
-# This file uses the delta-only override pattern. Each nca_rules entry carries
-# ONLY the fields that DIFFER from the base YAML rule it overrides.
-# All other attributes are INHERITED from the base rule at load time.
-#
-# Required keys per override rule:
-#   rule_id        — unique NCA rule identifier
-#   base_rule_id   — links to the base YAML rule (e.g. AIFM-1, AIF-17)
-#   field_id       — the ESMA field number being overridden
-#
-# Always-present NCA keys (even if empty):
-#   nca_error_codes, overrides_esma, status, nca_source_doc, nca_doc_date
-#   validation_rules, technical_guidance, eagle_action
-#
-# Delta keys (only present when NCA value differs from base):
-#   field_name, format, data_type, m_c_o_f, mandatory, severity, etc.
-#
-# NCA-specific rules (base_rule_id empty): carry FULL field definition
-# since there is no base rule to inherit from.
-#
-# Infrastructure sections (transmission, file_format, correction_rules,
-# eagle_implementation, return_files) are NCA-specific and always present.
-#
-# LOADER CONTRACT:
-#   merged_rule = base_rule | nca_override   (Python dict merge)
-#   i.e. NCA keys overwrite base keys; base keys not in NCA are inherited.
-################################################################################
-
 nca_overrides:
   nca: AFM
   country: NL
@@ -49,12 +15,10 @@ nca_overrides:
     changes:
     - Initial AFM NCA override file
     - 'NCA-AFM-ReportingMemberState: ReportingMemberState must be constant NL for all filings to AFM'
-    - 'NCA-AFM-AIFMNationalCode: AFM assigns AIFM codes in format BXX999 (letter B + 2 uppercase letters
-      + 3 digits)'
+    - 'NCA-AFM-AIFMNationalCode: AFM assigns AIFM codes in format BXX999 (letter B + 2 uppercase letters + 3 digits)'
     - 'NCA-AFM-AIFNationalCode: AFM assigns AIF codes as 8-digit numbers starting with 500 (range 50000000-50099999)'
     - 'NCA-AFM-FilenameAIFM: AIFM XML filename convention AIFM_NL_{AIFMNationalCode}_{YYYYMMDD}.xml'
-    - 'NCA-AFM-FilenameAIF: AIF XML filename convention AIF_NL_{AIFNationalCode}_{YYYYMMDD}.xml; multiple
-      AIFs in ZIP'
+    - 'NCA-AFM-FilenameAIF: AIF XML filename convention AIF_NL_{AIFNationalCode}_{YYYYMMDD}.xml; multiple AIFs in ZIP'
     - 'NCA-AFM-AIFMJurisdiction: AIFM jurisdiction must be NL for domestic registered managers'
   - version: v2
     date: '2026-04-10'
@@ -64,11 +28,11 @@ nca_overrides:
     - Updated base_yaml_version from '2.3' to '2.3'
     - 'Schema: NCA rules now carry only rule_id, base_rule_id, field_id + delta keys'
   nca_rules:
-  - rule_id: NCA-AFM-ReportingMemberState
+  - rule_id: NCA-AFM-ReportingMemberState-AIFM
     base_rule_id: AIFM-1
     field_id: '1'
     field_name: Reporting Member State
-    report_type: AIF+AIFM
+    report_type: AIFM
     rule_source: AFM AIFMD Reporting Requirements
     nca_error_codes:
     - AFM-001
@@ -80,8 +44,27 @@ nca_overrides:
     base_rule_path:
       aifm_report: aifm_report.envelope.ReportingMemberState
       aif_report: aif_report.envelope.ReportingMemberState
-    technical_guidance: For reports submitted to the AFM the value must always be the constant "NL". Any
-      other value is rejected by the DNB/AFM filing portal.
+    technical_guidance: For reports submitted to the AFM the value must always be the constant "NL". Any other value is rejected
+      by the DNB/AFM filing portal.
+    eagle_action: ''
+    validation_rules: ReportingMemberState = "NL"
+  - rule_id: NCA-AFM-ReportingMemberState-AIF
+    base_rule_id: AIF-1
+    field_id: '1'
+    field_name: Reporting Member State
+    report_type: AIF
+    rule_source: AFM AIFMD Reporting Requirements
+    nca_error_codes:
+    - AFM-001
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: AFM AIFMD Reporting Requirements
+    nca_doc_date: '2026-03-31'
+    base_rule_path:
+      aif_report: aif_report.envelope.ReportingMemberState
+    technical_guidance: For reports submitted to the AFM the value must always be the constant "NL". Any other value is rejected
+      by the DNB/AFM filing portal.
     eagle_action: ''
     validation_rules: ReportingMemberState = "NL"
   - rule_id: NCA-AFM-AIFMNationalCode
@@ -89,7 +72,7 @@ nca_overrides:
     field_id: '18'
     format: B[A-Z]{2}[0-9]{3}
     section: AIFM - Identifiers
-    report_type: AIF+AIFM
+    report_type: AIFM
     rule_source: AFM AIFMD Reporting Requirements
     nca_error_codes:
     - AFM-002
@@ -101,9 +84,8 @@ nca_overrides:
     base_rule_path:
       aifm_report: aifm_report.identification.AIFMNationalCode
       aif_report: aif_report.identification.AIFMNationalCode
-    technical_guidance: 'AFM assigns AIFM national identifiers in the format BXX999: constant letter "B"
-      followed by exactly 2 uppercase letters and exactly 3 digits. Total length is always 6 characters.
-      Examples: BJQ306, BJP612, BJH161.'
+    technical_guidance: 'AFM assigns AIFM national identifiers in the format BXX999: constant letter "B" followed by exactly
+      2 uppercase letters and exactly 3 digits. Total length is always 6 characters. Examples: BJQ306, BJP612, BJH161.'
     eagle_action: ''
     validation_rules:
     - Must match regex ^B[A-Z]{2}[0-9]{3}$
@@ -127,8 +109,8 @@ nca_overrides:
     nca_doc_date: '2026-03-31'
     base_rule_path:
       aif_report: aif_report.identification.AIFNationalCode
-    technical_guidance: 'AFM assigns AIF national identifiers as 8-digit numeric codes starting with prefix
-      "500". Valid range is 50000000 through 50099999. Examples: 50020108, 50019055, 50017086.'
+    technical_guidance: 'AFM assigns AIF national identifiers as 8-digit numeric codes starting with prefix "500". Valid range
+      is 50000000 through 50099999. Examples: 50020108, 50019055, 50017086.'
     eagle_action: ''
     validation_rules:
     - Must match regex ^500[0-9]{5}$
@@ -136,6 +118,7 @@ nca_overrides:
     - Must be purely numeric (no letters)
     - Value in XML must be identical to AIF code segment of the filename
     example: '50020108'
+    report_type: AIF
   - rule_id: NCA-AFM-AIFMJurisdiction
     base_rule_id: AIFM-17
     field_id: '17'
@@ -152,11 +135,11 @@ nca_overrides:
     nca_doc_date: '2026-03-31'
     base_rule_path:
       aifm_report: aifm_report.identification.AIFMJurisdiction
-    technical_guidance: For domestic registered managers filing to AFM, the AIFM jurisdiction must be
-      "NL". Non-NL managers filing to AFM (e.g. cross-border marketing notification) are permitted but
-      rare for registered managers.
+    technical_guidance: For domestic registered managers filing to AFM, the AIFM jurisdiction must be "NL". Non-NL managers
+      filing to AFM (e.g. cross-border marketing notification) are permitted but rare for registered managers.
     eagle_action: ''
     validation_rules: AIFMJurisdiction should be "NL" for domestic managers; warn if different
+    report_type: AIFM
   - rule_id: NCA-AFM-FilenameAIFM
     base_rule_id: ''
     field_id: FNAME-AIFM
@@ -181,11 +164,10 @@ nca_overrides:
     nca_source_doc: AFM AIFMD Reporting Requirements
     nca_doc_date: '2026-03-31'
     base_rule_path: {}
-    technical_guidance: 'AIFM report XML filename must follow the pattern AIFM_NL_{AIFMNationalCode}_{YYYYMMDD}.xml
-      where YYYYMMDD is the reporting period end date. Example: AIFM_NL_BJP612_20241231.xml. One AIFM
-      file per manager per reporting period.'
-    eagle_action: Adapter generates filename automatically from AIFM national code and reporting period
-      end date.
+    technical_guidance: 'AIFM report XML filename must follow the pattern AIFM_NL_{AIFMNationalCode}_{YYYYMMDD}.xml where
+      YYYYMMDD is the reporting period end date. Example: AIFM_NL_BJP612_20241231.xml. One AIFM file per manager per reporting
+      period.'
+    eagle_action: Adapter generates filename automatically from AIFM national code and reporting period end date.
     validation_rules:
     - Filename must match regex ^AIFM_NL_B[A-Z]{2}[0-9]{3}_[0-9]{8}\.xml$
     - Date segment must equal ReportingPeriodEndDate (without hyphens)
@@ -215,12 +197,11 @@ nca_overrides:
     nca_source_doc: AFM AIFMD Reporting Requirements
     nca_doc_date: '2026-03-31'
     base_rule_path: {}
-    technical_guidance: 'AIF report XML filename must follow the pattern AIF_NL_{AIFNationalCode}_{YYYYMMDD}.xml
-      where YYYYMMDD is the reporting period end date. Example: AIF_NL_50017086_20241231.xml. When the
-      manager has a single AIF, one XML file is produced. When the manager has multiple AIFs, each AIF
-      gets its own XML file and all are packaged into a single ZIP archive.'
-    eagle_action: Adapter generates one AIF XML per fund. If multiple AIFs, packages into ZIP. Naming
-      convention for ZIP TBD.
+    technical_guidance: 'AIF report XML filename must follow the pattern AIF_NL_{AIFNationalCode}_{YYYYMMDD}.xml where YYYYMMDD
+      is the reporting period end date. Example: AIF_NL_50017086_20241231.xml. When the manager has a single AIF, one XML
+      file is produced. When the manager has multiple AIFs, each AIF gets its own XML file and all are packaged into a single
+      ZIP archive.'
+    eagle_action: Adapter generates one AIF XML per fund. If multiple AIFs, packages into ZIP. Naming convention for ZIP TBD.
     validation_rules:
     - Filename must match regex ^AIF_NL_500[0-9]{5}_[0-9]{8}\.xml$
     - Date segment must equal ReportingPeriodEndDate (without hyphens)

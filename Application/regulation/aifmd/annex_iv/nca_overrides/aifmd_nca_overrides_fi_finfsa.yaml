@@ -1,37 +1,3 @@
-################################################################################
-# NCA-SPECIFIC OVERRIDES — FIN-FSA (FI)
-# Version: v2
-# Base YAML: aifmd_validation_rules.yaml (v2.3)
-#
-# SCHEMA: DELTA-ONLY OVERRIDES (Option B)
-#
-# This file uses the delta-only override pattern. Each nca_rules entry carries
-# ONLY the fields that DIFFER from the base YAML rule it overrides.
-# All other attributes are INHERITED from the base rule at load time.
-#
-# Required keys per override rule:
-#   rule_id        — unique NCA rule identifier
-#   base_rule_id   — links to the base YAML rule (e.g. AIFM-1, AIF-17)
-#   field_id       — the ESMA field number being overridden
-#
-# Always-present NCA keys (even if empty):
-#   nca_error_codes, overrides_esma, status, nca_source_doc, nca_doc_date
-#   validation_rules, technical_guidance, eagle_action
-#
-# Delta keys (only present when NCA value differs from base):
-#   field_name, format, data_type, m_c_o_f, mandatory, severity, etc.
-#
-# NCA-specific rules (base_rule_id empty): carry FULL field definition
-# since there is no base rule to inherit from.
-#
-# Infrastructure sections (transmission, file_format, correction_rules,
-# eagle_implementation, return_files) are NCA-specific and always present.
-#
-# LOADER CONTRACT:
-#   merged_rule = base_rule | nca_override   (Python dict merge)
-#   i.e. NCA keys overwrite base keys; base keys not in NCA are inherited.
-################################################################################
-
 nca_overrides:
   nca: FIN-FSA
   country: FI
@@ -58,11 +24,11 @@ nca_overrides:
     - Updated base_yaml_version from '2.3' to '2.3'
     - 'Schema: NCA rules now carry only rule_id, base_rule_id, field_id + delta keys'
   nca_rules:
-  - rule_id: NCA-FINFSA-ReportingMemberState
+  - rule_id: NCA-FINFSA-ReportingMemberState-AIFM
     base_rule_id: AIFM-1
     field_id: '1'
     field_name: Reporting Member State
-    report_type: AIF+AIFM
+    report_type: AIFM
     rule_source: FIN-FSA AIFMD Reporting
     nca_error_codes: []
     overrides_esma: true
@@ -72,6 +38,22 @@ nca_overrides:
     nca_doc_date: '2024-01-04'
     base_rule_path:
       aifm_report: aifm_report.envelope.ReportingMemberState
+    technical_guidance: For reports submitted to FIN-FSA the value must always be "FI".
+    eagle_action: ''
+    validation_rules: ReportingMemberState = "FI"
+  - rule_id: NCA-FINFSA-ReportingMemberState-AIF
+    base_rule_id: AIF-1
+    field_id: '1'
+    field_name: Reporting Member State
+    report_type: AIF
+    rule_source: FIN-FSA AIFMD Reporting
+    nca_error_codes: []
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: FIN-FSA Description of Electronic Reporting
+    nca_doc_date: '2024-01-04'
+    base_rule_path:
       aif_report: aif_report.envelope.ReportingMemberState
     technical_guidance: For reports submitted to FIN-FSA the value must always be "FI".
     eagle_action: ''
@@ -91,15 +73,16 @@ nca_overrides:
     nca_doc_date: '2024-01-04'
     base_rule_path:
       aifm_report: aifm_report.identification.AIFMNationalCode
-    technical_guidance: 'FIN-FSA assigns AIFM national codes as 7-digit numeric identifiers. Example:
-      8506386. Note that this differs from the Y-tunnus (Finnish Business ID, which is 7+1 digits with
-      hyphen). The NCA code used in AIFMD reporting is specifically the 7-digit FIN-FSA assigned identifier.'
+    technical_guidance: 'FIN-FSA assigns AIFM national codes as 7-digit numeric identifiers. Example: 8506386. Note that this
+      differs from the Y-tunnus (Finnish Business ID, which is 7+1 digits with hyphen). The NCA code used in AIFMD reporting
+      is specifically the 7-digit FIN-FSA assigned identifier.'
     eagle_action: Use the 7-digit FIN-FSA assigned NCA code, not the Y-tunnus directly.
     validation_rules:
     - Must match regex ^[0-9]{7}$
     - Total length must be exactly 7 digits
     - Must match the code registered in FIN-FSA systems
     example: '8506386'
+    report_type: AIFM
   - rule_id: NCA-FINFSA-AIFNationalCode
     base_rule_id: AIF-17
     field_id: '17'
@@ -115,16 +98,16 @@ nca_overrides:
     nca_doc_date: '2024-01-04'
     base_rule_path:
       aif_report: aif_report.identification.AIFNationalCode
-    technical_guidance: 'FIN-FSA assigns AIF national codes using the AIFM''s 7-digit code followed by
-      a hash (#) and a 3-digit sequence number. Example: 8506386#001. The sequence number starts at 001
-      for the first AIF under that manager and increments for each additional AIF.'
-    eagle_action: Compose AIF national code as {AIFMNationalCode}#{sequence_number}. Sequence is 3-digit
-      zero-padded.
+    technical_guidance: 'FIN-FSA assigns AIF national codes using the AIFM''s 7-digit code followed by a hash (#) and a 3-digit
+      sequence number. Example: 8506386#001. The sequence number starts at 001 for the first AIF under that manager and increments
+      for each additional AIF.'
+    eagle_action: Compose AIF national code as {AIFMNationalCode}#{sequence_number}. Sequence is 3-digit zero-padded.
     validation_rules:
     - Must match regex ^[0-9]{7}#[0-9]{3}$
     - The 7-digit prefix must match the AIFM's national code
     - Sequence number is 3 digits, zero-padded (001, 002, etc.)
     example: 8506386#001
+    report_type: AIF
   - rule_id: NCA-FINFSA-RegisterCrossCheck
     base_rule_id: ''
     field_id: ''
@@ -150,14 +133,13 @@ nca_overrides:
     base_rule_path:
       aif_report: aif_report.identification
       aifm_report: aifm_report.identification
-    technical_guidance: FIN-FSA performs a register cross-check on submission. Reports are rejected if
-      the identifying details (fund manager and fund information) do NOT match information stored in the
-      FIN-FSA register. Before submitting, ensure that AIFM and AIF details are up to date via the reporting
-      obligation notification forms. After submission, reporters receive a receipt notification followed
-      by an automatic feedback message (Accepted or Rejected) with a findings attachment (.xlsx) detailing
-      any errors.
-    eagle_action: Verify all entity identifiers against FIN-FSA register data before submission. If identifiers
-      have changed, update via reporting obligation notification forms first.
+    technical_guidance: FIN-FSA performs a register cross-check on submission. Reports are rejected if the identifying details
+      (fund manager and fund information) do NOT match information stored in the FIN-FSA register. Before submitting, ensure
+      that AIFM and AIF details are up to date via the reporting obligation notification forms. After submission, reporters
+      receive a receipt notification followed by an automatic feedback message (Accepted or Rejected) with a findings attachment
+      (.xlsx) detailing any errors.
+    eagle_action: Verify all entity identifiers against FIN-FSA register data before submission. If identifiers have changed,
+      update via reporting obligation notification forms first.
     validation_rules:
     - AIFM and AIF identifying details must match FIN-FSA register
     - Mismatched identifiers cause immediate rejection
@@ -187,10 +169,9 @@ nca_overrides:
     nca_source_doc: FIN-FSA reporting calendar
     nca_doc_date: '2024-01-04'
     base_rule_path: {}
-    technical_guidance: Standard deadline is 30 calendar days from quarter-end. Fund-of-funds receive
-      45 calendar days (additional 15 days). Quarterly reporting applies when AUM exceeds EUR 1 billion.
-      Reporting obligation begins at the start of the quarter after AIFM authorisation/registration is
-      granted (domestic) or marketing permission is granted (foreign AIFMs).
+    technical_guidance: Standard deadline is 30 calendar days from quarter-end. Fund-of-funds receive 45 calendar days (additional
+      15 days). Quarterly reporting applies when AUM exceeds EUR 1 billion. Reporting obligation begins at the start of the
+      quarter after AIFM authorisation/registration is granted (domestic) or marketing permission is granted (foreign AIFMs).
     eagle_action: ''
     validation_rules:
     - Standard deadline: 30 calendar days from quarter-end
@@ -198,15 +179,14 @@ nca_overrides:
     - Quarterly reporting when AUM > EUR 1 billion
     esma_doc: ''
   transmission:
-    note: Since 30 September 2023, all AIFMD reports must be submitted via the FIN-FSA Reporter Portal
-      (replacing the legacy Jakelu Distribution Service). Three submission methods are available.
+    note: Since 30 September 2023, all AIFMD reports must be submitted via the FIN-FSA Reporter Portal (replacing the legacy
+      Jakelu Distribution Service). Three submission methods are available.
     overrides_esma: true
     channels:
       reporter_portal:
         name: FIN-FSA Reporter Portal
-        description: 'Reports can be submitted via: (1) direct web form entry, (2) self-produced XML upload,
-          or (3) A2A (Application-to-Application) interface for automated submissions. A test environment
-          (Validation service) is available for pre-submission testing.'
+        description: 'Reports can be submitted via: (1) direct web form entry, (2) self-produced XML upload, or (3) A2A (Application-to-Application)
+          interface for automated submissions. A test environment (Validation service) is available for pre-submission testing.'
         url: https://www.finanssivalvonta.fi/en/reporting/reporting-of-financial-standing-and-risks/new-reporting-system/aifmd-reporting/
   file_format:
     encoding: UTF-8
@@ -238,5 +218,4 @@ nca_overrides:
     contact:
       reporting_info: https://www.finanssivalvonta.fi/en/reporting/reporting-of-financial-standing-and-risks/new-reporting-system/aifmd-reporting/
       detailed_instructions: https://www.finanssivalvonta.fi/en/reporting/reporting-of-financial-standing-and-risks/new-reporting-system/aifmd-reporting/more-detailed-instructions-on-aifmd-reporting/
-    update_trigger: 'Monitor https://www.finanssivalvonta.fi for updates. Current guidance: 4 January
-      2024.'
+    update_trigger: 'Monitor https://www.finanssivalvonta.fi for updates. Current guidance: 4 January 2024.'

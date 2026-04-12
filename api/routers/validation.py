@@ -12,7 +12,10 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 
-from api.deps import get_store, get_app_root, get_adapter_path, get_field_registry
+from api.deps import (
+    get_store, get_app_root, get_adapter_path, get_field_registry,
+    get_reporting_obligations, get_nca_overrides,
+)
 from persistence.report_store import ReviewValidationRun
 
 log = logging.getLogger(__name__)
@@ -89,6 +92,37 @@ async def validate_session(session_id: str):
                 else:
                     dqf_pass += 1
 
+        # Always run cross-field validation (Q5+Q8+Q20 against obligations matrix)
+        xfv_findings = _cross_field_validation(reports, get_reporting_obligations())
+        findings.extend(xfv_findings)
+        for f in xfv_findings:
+            if f.get("status") == "FAIL":
+                dqf_fail += 1
+                if f.get("severity") in ("CRITICAL", "HIGH"):
+                    has_critical = True
+            else:
+                dqf_pass += 1
+
+        # NCA-specific validation (format overrides, e.g. AFM national code format)
+        # Single source of truth: field 1 (ReportingMemberState) from the report.
+        nca_code = ""
+        if reports:
+            _fj = reports[0].fields_json or {}
+            nca_code = str(_fj.get("1", {}).get("value", "") or "").strip()
+        if nca_code:
+            nca_rules = get_nca_overrides(nca_code)
+            if nca_rules:
+                nca_findings = _nca_override_validation(
+                    reports, nca_code, nca_rules, get_field_registry())
+                findings.extend(nca_findings)
+                for f in nca_findings:
+                    if f.get("status") == "FAIL":
+                        dqf_fail += 1
+                        if f.get("severity") in ("CRITICAL", "HIGH"):
+                            has_critical = True
+                    else:
+                        dqf_pass += 1
+
     except Exception as e:
         log.warning("Pipeline validation failed, falling back to field-level: %s", e)
         # Fallback: do basic field-level validation
@@ -98,6 +132,34 @@ async def validate_session(session_id: str):
                 dqf_fail += 1
             else:
                 dqf_pass += 1
+        # Cross-field validation runs regardless
+        xfv_findings = _cross_field_validation(reports, get_reporting_obligations())
+        findings.extend(xfv_findings)
+        for f in xfv_findings:
+            if f.get("status") == "FAIL":
+                dqf_fail += 1
+                if f.get("severity") in ("CRITICAL", "HIGH"):
+                    has_critical = True
+            else:
+                dqf_pass += 1
+        # NCA-specific validation in fallback path too
+        nca_code = ""
+        if reports:
+            _fj = reports[0].fields_json or {}
+            nca_code = str(_fj.get("1", {}).get("value", "") or "").strip()
+        if nca_code:
+            nca_rules = get_nca_overrides(nca_code)
+            if nca_rules:
+                nca_findings = _nca_override_validation(
+                    reports, nca_code, nca_rules, get_field_registry())
+                findings.extend(nca_findings)
+                for f in nca_findings:
+                    if f.get("status") == "FAIL":
+                        dqf_fail += 1
+                        if f.get("severity") in ("CRITICAL", "HIGH"):
+                            has_critical = True
+                    else:
+                        dqf_pass += 1
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
@@ -244,6 +306,229 @@ def _field_level_validation(reports: list, registry) -> list[dict]:
                         "message": f"Q{fid} ({fdef.field_name}) value type mismatch — expected {fdef.data_type.value}",
                         "fix_suggestion": f"Value must be of type {fdef.data_type.value}",
                     })
+
+    return findings
+
+
+def _cross_field_validation(reports: list, obligations: list[dict]) -> list[dict]:
+    """Cross-field validation: check that Q5 + Q8 + Q20 form a valid combination.
+
+    Uses the reporting_obligations matrix from the AIFMD validation rules YAML
+    as the single source of truth.
+
+    Fields (AIF-level only):
+      Q5  = AIF content type   → aif_content_type in YAML
+      Q8  = Reporting period   → maps to frequency (Y1/H1/Q1)
+      Q20 = AIF reporting code → aif_reporting_code in YAML
+
+    Q8 period-to-frequency mapping:
+      Y1         → Y1  (annual)
+      H1, H2     → H1  (half-yearly)
+      Q1..Q4     → Q1  (quarterly)
+      X1, X2     → transitional (skipped — no obligation row applies)
+    """
+    if not obligations:
+        return []
+
+    # Build set of valid (aif_content_type, aif_reporting_code, frequency) tuples
+    valid_combos: set[tuple[str, str, str]] = set()
+    for row in obligations:
+        ct = str(row.get("aif_content_type", ""))
+        rc = str(row.get("aif_reporting_code", ""))
+        freq = str(row.get("frequency", ""))
+        if ct and rc and freq:
+            valid_combos.add((ct, rc, freq))
+
+    findings = []
+
+    for report in reports:
+        if report.report_type != "AIF":
+            continue
+
+        fields_json = report.fields_json or {}
+
+        def _val(fid: str) -> str:
+            fd = fields_json.get(fid, {})
+            v = fd.get("value") if isinstance(fd, dict) else fd
+            return str(v).strip() if v is not None else ""
+
+        q5 = _val("5")    # AIF content type
+        q8 = _val("8")    # Reporting period type (e.g. Q1, H1, Y1)
+        q20 = _val("20")  # AIF reporting code
+
+        # Skip if any of the three fields is empty — MAN- checks handle that
+        if not q5 or not q8 or not q20:
+            continue
+
+        # Map Q8 period value to obligation frequency
+        q8_upper = q8.upper()
+        if q8_upper.startswith("Y"):
+            frequency = "Y1"
+        elif q8_upper.startswith("H"):
+            frequency = "H1"
+        elif q8_upper.startswith("Q"):
+            frequency = "Q1"
+        elif q8_upper.startswith("X"):
+            # Transitional periods — skip cross-field check
+            continue
+        else:
+            findings.append({
+                "rule_id": f"XFV-AIF-Q8-PERIOD",
+                "field_path": "AIF.8",
+                "status": "FAIL",
+                "check_type": "dqf",
+                "severity": "HIGH",
+                "message": (
+                    f"Q8 (Reporting period type) value '{q8}' is not a "
+                    f"recognised period code (expected Y1, H1, H2, Q1–Q4)"
+                ),
+                "fix_suggestion": "Use one of: Y1, H1, H2, Q1, Q2, Q3, Q4",
+            })
+            continue
+
+        combo = (q5, q20, frequency)
+
+        if combo not in valid_combos:
+            # Build a helpful message: what ARE the valid combos for this Q5?
+            valid_for_ct = sorted(
+                (rc, f) for ct, rc, f in valid_combos if ct == q5
+            )
+            if valid_for_ct:
+                hint_lines = [
+                    f"  reporting code {rc}, frequency {f}"
+                    for rc, f in valid_for_ct[:8]
+                ]
+                if len(valid_for_ct) > 8:
+                    hint_lines.append(f"  ... and {len(valid_for_ct) - 8} more")
+                hint = (
+                    f"Valid combinations for AIF content type {q5}:\n"
+                    + "\n".join(hint_lines)
+                )
+            else:
+                hint = (
+                    f"AIF content type '{q5}' does not appear in the "
+                    f"reporting obligations matrix"
+                )
+
+            findings.append({
+                "rule_id": "XFV-AIF-Q5-Q8-Q20",
+                "field_path": "AIF.5+AIF.8+AIF.20",
+                "status": "FAIL",
+                "check_type": "dqf",
+                "severity": "CRITICAL",
+                "message": (
+                    f"Invalid combination: AIF content type (Q5) = {q5}, "
+                    f"reporting code (Q20) = {q20}, "
+                    f"reporting period (Q8) = {q8} (frequency {frequency}). "
+                    f"This combination does not exist in the ESMA "
+                    f"reporting obligations matrix."
+                ),
+                "fix_suggestion": hint,
+            })
+        else:
+            findings.append({
+                "rule_id": "XFV-AIF-Q5-Q8-Q20",
+                "field_path": "AIF.5+AIF.8+AIF.20",
+                "status": "PASS",
+                "check_type": "dqf",
+                "severity": "INFO",
+                "message": (
+                    f"Cross-field check passed: AIF content type {q5}, "
+                    f"reporting code {q20}, frequency {frequency}"
+                ),
+            })
+
+    return findings
+
+
+def _nca_override_validation(
+    reports: list,
+    nca_code: str,
+    nca_rules: list[dict],
+    registry,
+) -> list[dict]:
+    """Validate fields against NCA-specific override rules.
+
+    NCA overrides can tighten ESMA base rules — e.g. AFM requires AIFM
+    national codes to match ^B[A-Z]{2}[0-9]{3}$ instead of the generic
+    "30 (max) 1 (min)" format.
+
+    Each NCA rule targets exactly one report type (AIFM or AIF) via its
+    report_type field or base_rule_id prefix.  AIFM and AIF have
+    independent field numbering, so rules are never shared across types.
+    """
+    import re
+
+    if not nca_rules or not registry:
+        return []
+
+    findings = []
+
+    for nca_rule in nca_rules:
+        fmt = nca_rule.get("format", "")
+        if not fmt:
+            continue  # No format constraint → nothing to check here
+
+        base_rule_id = nca_rule.get("base_rule_id", "")
+        rule_id = nca_rule.get("rule_id", base_rule_id)
+        nca_err_codes = nca_rule.get("nca_error_codes", [])
+        severity = nca_rule.get("severity", "HIGH")
+
+        # Determine report type: explicit field first, then infer from
+        # base_rule_id prefix (e.g. "AIFM-18" → "AIFM").
+        rule_rtype = nca_rule.get("report_type", "")
+        if not rule_rtype:
+            parts = base_rule_id.split("-", 1)
+            rule_rtype = parts[0] if len(parts) == 2 else ""
+
+        fid = str(nca_rule.get("field_id", ""))
+        if not fid:
+            # Fallback: parse from base_rule_id (e.g. "AIFM-18" → "18")
+            parts = base_rule_id.split("-", 1)
+            fid = parts[1] if len(parts) == 2 else ""
+        if not fid or not rule_rtype:
+            continue
+
+        # Build regex from NCA format
+        try:
+            pattern = re.compile(f"^{fmt}$")
+        except re.error:
+            log.warning("Invalid regex in NCA rule %s: %s", rule_id, fmt)
+            continue
+
+        # Check against matching reports
+        for report in reports:
+            if report.report_type != rule_rtype and report.report_type not in rule_rtype.split("+"):
+                continue
+
+            fields_json = report.fields_json or {}
+            fd = fields_json.get(fid, {})
+            value = fd.get("value") if isinstance(fd, dict) else fd
+
+            if value is None or (isinstance(value, str) and not value.strip()):
+                continue  # Empty — MAN- checks handle that
+
+            str_val = str(value).strip()
+
+            if not pattern.match(str_val):
+                field_name = nca_rule.get("field_name", f"Q{fid}")
+                err_code = nca_err_codes[0] if nca_err_codes else ""
+                err_prefix = f"[{err_code}] " if err_code else ""
+
+                findings.append({
+                    "rule_id": f"NCA-{nca_code.upper()}-{rule_rtype}-{fid}",
+                    "field_path": f"{rule_rtype}.{fid}",
+                    "status": "FAIL",
+                    "check_type": "dqf",
+                    "severity": severity,
+                    "message": (
+                        f"{err_prefix}{field_name} (Q{fid}) value "
+                        f"'{str_val}' does not match {nca_code.upper()} "
+                        f"NCA required format: {fmt}"
+                    ),
+                    "fix_suggestion": nca_rule.get("technical_guidance", "")
+                        or f"Value must match pattern: {fmt}",
+                })
 
     return findings
 

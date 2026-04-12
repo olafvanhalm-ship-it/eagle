@@ -71,6 +71,8 @@ class FieldDef:
     esma_doc: str                        # Source document reference
     allowed_values_ref: Optional[str]    # Reference table name, if any
     esma_error_codes: list[str] = field(default_factory=list)
+    gate_field: Optional[str] = None          # Field ID controlling conditional visibility
+    gate_condition: Optional[str] = None      # Condition expression, e.g. not_equals(49, EUR)
 
     # Derived properties
     @property
@@ -241,6 +243,8 @@ class FieldRegistry:
             esma_doc=rule.get("esma_doc", ""),
             allowed_values_ref=rule.get("allowed_values_ref"),
             esma_error_codes=error_codes,
+            gate_field=rule.get("gate_field"),
+            gate_condition=rule.get("gate_condition"),
         )
 
     def _build_repeating_groups(self):

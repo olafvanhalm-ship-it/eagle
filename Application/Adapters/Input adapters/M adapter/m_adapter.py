@@ -159,8 +159,11 @@ class MAdapter(AifmBuilderMixin, AifBuilderMixin, OrchestratorMixin):
         self.positions_ws = None
         self.extra_data_sheets = []    # additional sheets to parse
 
+        import warnings as _warnings
         for excel_path in self.excel_paths:
-            wb = openpyxl.load_workbook(str(excel_path), data_only=True)
+            with _warnings.catch_warnings():
+                _warnings.filterwarnings("ignore", message="Data Validation extension", category=UserWarning)
+                wb = openpyxl.load_workbook(str(excel_path), data_only=True)
             self._workbooks.append(wb)
 
             for name in wb.sheetnames:
@@ -1295,20 +1298,23 @@ class MAdapter(AifmBuilderMixin, AifBuilderMixin, OrchestratorMixin):
                                   reporting_member_state: str = "") -> str:
         """Derive AIF content type from template type and AIF domicile.
 
-        Returns "1" (Art 24(1)), "3" (Art 3(3)(d)), or the explicit value
-        from the template if provided.
+        Light templates (registered AIFM) → always CT3 (Art 3(3)(d)).
+        Full templates (authorised AIFM) → honour explicit value from
+        template if present, otherwise derive from AIF domicile.
         Note: CT2/CT4/CT5 require additional threshold data and are set via
         the reporting obligation matrix — not derivable from template alone.
         """
-        # Honour explicit value from template if present
+        # Light template = registered AIFM → always Art 3(3)(d), regardless
+        # of any explicit value in the template (which could be wrong).
+        if self.template_type != "FULL":
+            return "3"  # registered AIFM → Art 3(3)(d)
+
+        # Full template: honour explicit value from template if present
         if aif:
             explicit = _str(aif.get("AIF Content Type", "") or
                            aif.get("AIF content type", ""))
             if explicit:
                 return explicit
-
-        if self.template_type != "FULL":
-            return "3"  # registered AIFM → Art 3(3)(d)
 
         # Authorised AIFM: derive from AIF domicile
         rms = reporting_member_state or self.reporting_member_state or ""
@@ -1474,17 +1480,17 @@ class MAdapter(AifmBuilderMixin, AifBuilderMixin, OrchestratorMixin):
         report = CanonicalAIFMReport()
 
         # AIFM scalar fields — map from self.aifm dict and derived fields
-        # Q1: Reporting Member State
+        # Q1: Reporting Member State (SYSTEM — derived from NCA, not editable)
         rms = self.reporting_member_state or ""
         if rms:
-            report.set_field("1", rms, source="m_adapter", priority=SourcePriority.IMPORTED)
+            report.set_field("1", rms, source="m_adapter", priority=SourcePriority.SYSTEM)
 
-        # Q2: Version (XSD version)
-        report.set_field("2", XSD_VERSION, source="m_adapter", priority=SourcePriority.IMPORTED)
+        # Q2: Version (XSD version) — SYSTEM metadata
+        report.set_field("2", XSD_VERSION, source="m_adapter", priority=SourcePriority.SYSTEM)
 
-        # Q3: Creation date
+        # Q3: Creation date — SYSTEM metadata
         report.set_field("3", datetime.now().strftime("%Y-%m-%d"), source="m_adapter",
-                        priority=SourcePriority.IMPORTED)
+                        priority=SourcePriority.SYSTEM)
 
         # Q4: Filing Type
         filing_type = self.filing_type or "INIT"
@@ -1497,32 +1503,32 @@ class MAdapter(AifmBuilderMixin, AifBuilderMixin, OrchestratorMixin):
         # Q6: Period Start Date
         period_start, period_end = _reporting_period_dates(self.reporting_period_type,
                                                            self.reporting_year)
-        report.set_field("6", period_start, source="m_adapter", priority=SourcePriority.IMPORTED)
+        report.set_field("6", period_start, source="m_adapter", priority=SourcePriority.SYSTEM)
 
-        # Q7: Period End Date
-        report.set_field("7", period_end, source="m_adapter", priority=SourcePriority.IMPORTED)
+        # Q7: Period End Date — SYSTEM (derived from period type + year)
+        report.set_field("7", period_end, source="m_adapter", priority=SourcePriority.SYSTEM)
 
         # Q8: Period Type
         period_type = self.reporting_period_type or "Y1"
         report.set_field("8", period_type, source="m_adapter", priority=SourcePriority.IMPORTED)
 
-        # Q9: Year
+        # Q9: Year — SYSTEM (derived from reporting year)
         year = str(self.reporting_year) if self.reporting_year else ""
         if year:
-            report.set_field("9", year, source="m_adapter", priority=SourcePriority.IMPORTED)
+            report.set_field("9", year, source="m_adapter", priority=SourcePriority.SYSTEM)
 
-        # Q10-Q12: Change codes (from aifm)
+        # Q10-Q12: Change codes — SYSTEM metadata
         change_code_1 = _str(self.aifm.get("Change code 1", "") or self.aifm.get("Change Code 1", ""))
         if change_code_1:
-            report.set_field("10", change_code_1, source="m_adapter", priority=SourcePriority.IMPORTED)
+            report.set_field("10", change_code_1, source="m_adapter", priority=SourcePriority.SYSTEM)
 
         change_code_2 = _str(self.aifm.get("Change code 2", "") or self.aifm.get("Change Code 2", ""))
         if change_code_2:
-            report.set_field("11", change_code_2, source="m_adapter", priority=SourcePriority.IMPORTED)
+            report.set_field("11", change_code_2, source="m_adapter", priority=SourcePriority.SYSTEM)
 
         change_code_3 = _str(self.aifm.get("Change code 3", "") or self.aifm.get("Change Code 3", ""))
         if change_code_3:
-            report.set_field("12", change_code_3, source="m_adapter", priority=SourcePriority.IMPORTED)
+            report.set_field("12", change_code_3, source="m_adapter", priority=SourcePriority.SYSTEM)
 
         # Q13: Last Reporting Flag
         last_reporting = _str(self.aifm.get("Last Reporting Flag", ""))
@@ -1562,9 +1568,9 @@ class MAdapter(AifmBuilderMixin, AifBuilderMixin, OrchestratorMixin):
                     report.add_group_item("aifm_national_data", nd_dict, source="m_adapter",
                                         priority=SourcePriority.IMPORTED)
 
-        # Q16: Reporting Code
+        # Q16: Reporting Code — DERIVED (determined by obligation matrix)
         reporting_code = _str(self.aifm.get("AIFM Reporting Code", "")) or "1"
-        report.set_field("16", reporting_code, source="m_adapter", priority=SourcePriority.IMPORTED)
+        report.set_field("16", reporting_code, source="m_adapter", priority=SourcePriority.DERIVED)
 
         # Q17: Jurisdiction
         jurisdiction = self.aifm_jurisdiction or ""
@@ -1698,17 +1704,17 @@ class MAdapter(AifmBuilderMixin, AifBuilderMixin, OrchestratorMixin):
             # ── AIF Header file (fields 1-3) ─────────────────────────────
             # These mirror the AIFM header: report-level metadata
 
-            # Field 1: Reporting Member State
+            # Field 1: Reporting Member State — SYSTEM (derived from NCA)
             rms = self.reporting_member_state or ""
             if rms:
-                report.set_field("1", rms, source="m_adapter", priority=SourcePriority.IMPORTED)
+                report.set_field("1", rms, source="m_adapter", priority=SourcePriority.SYSTEM)
 
-            # Field 2: Version (XSD version)
-            report.set_field("2", XSD_VERSION, source="m_adapter", priority=SourcePriority.IMPORTED)
+            # Field 2: Version (XSD version) — SYSTEM metadata
+            report.set_field("2", XSD_VERSION, source="m_adapter", priority=SourcePriority.SYSTEM)
 
-            # Field 3: Creation date and time
+            # Field 3: Creation date and time — SYSTEM metadata
             report.set_field("3", datetime.now().strftime("%Y-%m-%d"), source="m_adapter",
-                            priority=SourcePriority.IMPORTED)
+                            priority=SourcePriority.SYSTEM)
 
             # ── AIF Header section (fields 4-15) ─────────────────────────
 
@@ -1725,37 +1731,37 @@ class MAdapter(AifmBuilderMixin, AifBuilderMixin, OrchestratorMixin):
             # Field 6: Reporting period start date
             period_start, period_end = _reporting_period_dates(self.reporting_period_type,
                                                                self.reporting_year)
-            report.set_field("6", period_start, source="m_adapter", priority=SourcePriority.IMPORTED)
+            report.set_field("6", period_start, source="m_adapter", priority=SourcePriority.SYSTEM)
 
-            # Field 7: Reporting period end date
-            report.set_field("7", period_end, source="m_adapter", priority=SourcePriority.IMPORTED)
+            # Field 7: Reporting period end date — SYSTEM
+            report.set_field("7", period_end, source="m_adapter", priority=SourcePriority.SYSTEM)
 
             # Field 8: Reporting period type
             period_type = self.reporting_period_type or "Y1"
             report.set_field("8", period_type, source="m_adapter", priority=SourcePriority.IMPORTED)
 
-            # Field 9: Reporting period year
+            # Field 9: Reporting period year — SYSTEM
             year = str(self.reporting_year) if self.reporting_year else ""
             if year:
-                report.set_field("9", year, source="m_adapter", priority=SourcePriority.IMPORTED)
+                report.set_field("9", year, source="m_adapter", priority=SourcePriority.SYSTEM)
 
-            # Field 10: Change in AIF reporting obligation frequency Code
+            # Field 10: Change in AIF reporting obligation frequency Code — SYSTEM
             change_freq = _str(aif.get("Change code 1", "") or aif.get("Change Code 1", "")
                               or aif.get("Change in AIF reporting obligation frequency Code", ""))
             if change_freq:
-                report.set_field("10", change_freq, source="m_adapter", priority=SourcePriority.IMPORTED)
+                report.set_field("10", change_freq, source="m_adapter", priority=SourcePriority.SYSTEM)
 
-            # Field 11: Change in AIF reporting obligation contents Code
+            # Field 11: Change in AIF reporting obligation contents Code — SYSTEM
             change_contents = _str(aif.get("Change code 2", "") or aif.get("Change Code 2", "")
                                   or aif.get("Change in AIF reporting obligation contents Code", ""))
             if change_contents:
-                report.set_field("11", change_contents, source="m_adapter", priority=SourcePriority.IMPORTED)
+                report.set_field("11", change_contents, source="m_adapter", priority=SourcePriority.SYSTEM)
 
-            # Field 12: Change in AIF reporting obligation Quarter
+            # Field 12: Change in AIF reporting obligation Quarter — SYSTEM
             change_quarter = _str(aif.get("Change code 3", "") or aif.get("Change Code 3", "")
                                  or aif.get("Change in AIF reporting obligation Quarter", ""))
             if change_quarter:
-                report.set_field("12", change_quarter, source="m_adapter", priority=SourcePriority.IMPORTED)
+                report.set_field("12", change_quarter, source="m_adapter", priority=SourcePriority.SYSTEM)
 
             # Field 13: Last reporting flag
             aif_last_reporting = _str(aif.get("Last Reporting Flag", ""))
@@ -1777,10 +1783,12 @@ class MAdapter(AifmBuilderMixin, AifBuilderMixin, OrchestratorMixin):
 
             # ── AIF Identification (fields 16-30) ────────────────────────
 
-            # Field 16: AIFM National Code
+            # Field 16: AIFM National Code — SYSTEM when inherited from AIFM,
+            # IMPORTED when standalone AIF (no AIFM report)
             aifm_nc = self.aifm_national_code or ""
             if aifm_nc:
-                report.set_field("16", aifm_nc, source="m_adapter", priority=SourcePriority.IMPORTED)
+                nc16_priority = SourcePriority.SYSTEM if self.aifm else SourcePriority.IMPORTED
+                report.set_field("16", aifm_nc, source="m_adapter", priority=nc16_priority)
 
             # Field 17: AIF national code
             aif_nc = _str(aif.get("AIF National Code", "") or aif.get("AIF national code", ""))
@@ -1791,6 +1799,7 @@ class MAdapter(AifmBuilderMixin, AifBuilderMixin, OrchestratorMixin):
                 if aif_ncs:
                     aif_nc = _str(aif_ncs[0].get("AIF national code", "") or aif_ncs[0].get("AIF National Code", ""))
             if aif_nc:
+                # Always IMPORTED (editable) — NCA format validation handles correctness
                 report.set_field("17", aif_nc, source="m_adapter", priority=SourcePriority.IMPORTED)
 
             # Field 18: AIF Name
@@ -1919,14 +1928,22 @@ class MAdapter(AifmBuilderMixin, AifBuilderMixin, OrchestratorMixin):
                 report.set_field("49", base_ccy, source="m_adapter", priority=SourcePriority.IMPORTED)
 
             # Field 50: Base currency / EUR FX rate
+            # SYSTEM when base currency is EUR (no conversion needed), else IMPORTED
             fx_rate = _str(aif.get("FX Rate", "") or aif.get("Base currency / EUR FX rate", ""))
-            if fx_rate:
+            _is_eur = (base_ccy or "").upper() == "EUR"
+            if _is_eur:
+                # EUR→EUR: rate is always 1, not editable
+                report.set_field("50", fx_rate or "", source="m_adapter", priority=SourcePriority.SYSTEM)
+            elif fx_rate:
                 report.set_field("50", fx_rate, source="m_adapter", priority=SourcePriority.IMPORTED)
 
             # Field 51: FX reference rate type
+            # SYSTEM when EUR (no rate type needed), else IMPORTED
             fx_rate_type = _str(aif.get("FX Rate Type", "") or
                                aif.get("Base currency / EUR FX reference rate type", ""))
-            if fx_rate_type:
+            if _is_eur:
+                report.set_field("51", fx_rate_type or "", source="m_adapter", priority=SourcePriority.SYSTEM)
+            elif fx_rate_type:
                 report.set_field("51", fx_rate_type, source="m_adapter", priority=SourcePriority.IMPORTED)
 
             # Field 52: FX reference rate description for no ECB rates

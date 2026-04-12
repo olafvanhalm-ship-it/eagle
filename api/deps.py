@@ -97,6 +97,70 @@ def get_field_registry():
 
 
 @lru_cache(maxsize=1)
+def get_reporting_obligations() -> list[dict]:
+    """Load the reporting_obligations matrix from the AIFMD validation rules YAML.
+
+    Returns a list of obligation rows, each containing at minimum:
+      aif_content_type, aif_reporting_code, frequency
+    Rows with aif_content_type=null (non-reportable AIFs) are excluded.
+
+    This is the single source of truth for valid (Q5, Q20, Q8) combinations.
+    """
+    yaml_path = (
+        _APP_ROOT / "regulation" / "aifmd" / "annex_iv"
+        / "aifmd_validation_rules.yaml"
+    )
+    if not yaml_path.exists():
+        log.warning("Validation rules YAML not found: %s", yaml_path)
+        return []
+
+    try:
+        import yaml
+        with open(yaml_path, "r", encoding="utf-8") as f:
+            raw = yaml.safe_load(f)
+
+        obligations = raw.get("reporting_obligations", [])
+        # Filter out non-reportable rows (aif_content_type is null)
+        valid = [
+            row for row in obligations
+            if row.get("aif_content_type") is not None
+        ]
+        log.info("Loaded %d valid reporting obligations from YAML", len(valid))
+        return valid
+    except Exception as e:
+        log.warning("Failed to load reporting obligations: %s", e)
+        return []
+
+
+_NCA_OVERRIDES_DIR = _APP_ROOT / "regulation" / "aifmd" / "annex_iv" / "nca_overrides"
+
+
+@lru_cache(maxsize=8)
+def get_nca_overrides(nca_code: str) -> list[dict]:
+    """Load NCA override rules for a given country code.
+
+    Returns a list of active NCA rule dicts (not indexed — the caller
+    decides how to look them up).
+    """
+    cc = nca_code.lower()
+    candidates = sorted(_NCA_OVERRIDES_DIR.glob(f"aifmd_nca_overrides_{cc}_*.yaml"))
+    if not candidates:
+        return []
+
+    try:
+        import yaml
+        with open(candidates[-1], "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        rules = data.get("nca_overrides", {}).get("nca_rules", [])
+        active = [r for r in rules if r.get("status", "active") == "active"]
+        log.info("Loaded %d active NCA override rules for %s", len(active), nca_code)
+        return active
+    except Exception as e:
+        log.warning("Failed to load NCA overrides for %s: %s", nca_code, e)
+        return []
+
+
+@lru_cache(maxsize=1)
 def get_field_classification() -> dict:
     """Load the field source classification YAML.
 

@@ -42,6 +42,7 @@ REM --- All project files (deduplicated, one copy per file) --------------------
 echo --- API backend ---
 call :cp "api\__init__.py"
 call :cp "api\main.py"
+call :cp "api\version.py"
 call :cp "api\deps.py"
 call :cp "api\routers\__init__.py"
 call :cp "api\models\__init__.py"
@@ -56,6 +57,10 @@ echo.
 echo --- Frontend ---
 call :cp "frontend\app\page.js"
 call :cp "frontend\app\layout.js"
+call :cp "frontend\app\globals.css"
+call :cp "frontend\jsconfig.json"
+call :cp "frontend\package.json"
+call :cp "frontend\page.jsx"
 
 echo.
 echo --- Persistence ---
@@ -66,9 +71,19 @@ echo.
 echo --- Application core ---
 call :cp "Application\canonical\aifmd_xml_field_extractor.py"
 call :cp "Application\canonical\aifmd_field_registry.py"
+call :cp "Application\canonical\provenance.py"
+call :cp "Application\canonical\gate_evaluator.py"
 call :cp "Application\validation\validate_aifmd_xml.py"
 call :cp "Application\validation\aifmd_approved_rule_hashes.yaml"
+call :cp "Application\validation\aifmd_validation_engine.py"
 call :cp "Application\lessons_learned.md"
+
+echo.
+echo --- AIFMD packaging (XML builders) ---
+call :cp "Application\aifmd_packaging\__init__.py"
+call :cp "Application\aifmd_packaging\orchestrator.py"
+call :cp "Application\aifmd_packaging\aif_builder.py"
+call :cp "Application\aifmd_packaging\aifm_builder.py"
 
 echo.
 echo --- Regulation YAML ---
@@ -109,6 +124,33 @@ call :cp "Application\regulation\aifmd\annex_iv\nca_overrides\aifmd_nca_override
 call :cp "Application\regulation\aifmd\annex_iv\nca_overrides\aifmd_nca_overrides_sk_nbs.yaml"
 
 echo.
+echo --- Shared utilities ---
+call :cp "Application\shared\__init__.py"
+call :cp "Application\shared\constants.py"
+call :cp "Application\shared\aifmd_constants.py"
+call :cp "Application\shared\reference_data.py"
+call :cp "Application\shared\reference_store.py"
+call :cp "Application\shared\formatting.py"
+call :cp "Application\shared\lei_validator.py"
+call :cp "Application\shared\lei_enrichment.py"
+call :cp "Application\shared\aifmd_reference_data.py"
+call :cp "Application\shared\clean_name.py"
+
+echo.
+echo --- Reference data (platform schema) ---
+call :cp "Application\reference_data\__init__.py"
+call :cp "Application\reference_data\config.py"
+call :cp "Application\reference_data\setup_and_fetch_all.py"
+call :cp "Application\reference_data\fetch_ecb_rates.py"
+call :cp "Application\reference_data\fetch_gleif_lei.py"
+call :cp "Application\reference_data\fetch_mic_codes.py"
+call :cp "Application\reference_data\migrate_add_normalized_name.py"
+call :cp "Application\reference_data\migrate_to_platform_schema.py"
+call :cp "Application\reference_data\setup_nca_tables.py"
+call :cp "Application\reference_data\fetch_nca_registers.py"
+call :cp "Application\reference_data\export_nca_register.py"
+
+echo.
 echo --- M adapter ---
 call :cp "Application\Adapters\Input adapters\M adapter\m_adapter.py"
 call :cp "Application\Adapters\Input adapters\M adapter\m_column_schema_v1.yaml"
@@ -130,6 +172,15 @@ call :cp "start_UI_eagle.bat"
 call :cp "start_eagle.bat"
 call :cp "sync_to_local.bat"
 call :cp "run_tests.bat"
+
+echo.
+echo --- Clear Next.js cache (force fresh build) ---
+if exist "!LOCAL_ROOT!\frontend\.next" (
+    rmdir /s /q "!LOCAL_ROOT!\frontend\.next" 2>nul
+    echo   [OK]   Cleared frontend\.next cache
+) else (
+    echo   [SKIP] No .next cache to clear
+)
 
 echo.
 echo ============================================================================

@@ -1,16 +1,19 @@
 # One-click setup: create schema + fetch all public reference data.
 #
 # Usage (PowerShell):
-#     cd "C:\Users\olafv\Mijn Drive (olaf.van.halm@maxxmanagement.nl)\Project Eagle"
+#     cd "C:\Dev\eagle"
 #     pip install psycopg2-binary requests openpyxl
 #     python Application\reference_data\setup_and_fetch_all.py
 #
 # This will:
-#   1. Connect to your local PostgreSQL (localhost:5432, database 'postgres')
-#   2. Create the aifmd schema + reference data tables
+#   1. Connect to your local PostgreSQL (localhost:5432, database 'eagle_dev')
+#   2. Create the platform schema + reference data tables
 #   3. Fetch ECB exchange rates (full history since 1999)
 #   4. Fetch MIC codes (ISO 10383)
 #   5. Print a freshness report
+#
+# Reference data lives in the platform schema (P4/P15) — product-agnostic,
+# consumed by MOD-ADMIN, MOD-DATA, MOD-GTM, MOD-TRIAL, MOD-CLIENT.
 #
 # For GLEIF LEI lookups, run separately:
 #     python Application\reference_data\fetch_gleif_lei.py lookup <LEI>
@@ -51,7 +54,7 @@ def main():
             password=PG_PASSWORD,
         )
         print(f"  Connected to {PG_HOST}:{PG_PORT}/{PG_DBNAME}")
-        print("  Schema 'aifmd' created (or already exists)")
+        print("  Schema 'platform' created (or already exists)")
     except Exception as e:
         print(f"\n  ERROR: Could not connect to PostgreSQL: {e}")
         print(f"\n  Check that PostgreSQL is running and these settings are correct:")
@@ -94,13 +97,13 @@ def main():
     print("\n" + "=" * 60)
     print("  Setup complete!")
     print()
-    print("  Tables created in schema 'aifmd':")
-    print("    - aifmd.ecb_rates")
-    print("    - aifmd.gleif_lei_cache")
-    print("    - aifmd.mic_codes")
+    print("  Tables created in schema 'platform':")
+    print("    - platform.ecb_rates")
+    print("    - platform.gleif_lei_cache")
+    print("    - platform.mic_codes")
     print()
     print("  Next steps:")
-    print("    - Open pgAdmin 4 → Project Eagle local → Databases → postgres → Schemas → aifmd")
+    print("    - Open pgAdmin 4 → eagle_dev → Schemas → platform → Tables")
     print("    - GLEIF lookups: python Application/reference_data/fetch_gleif_lei.py lookup <LEI>")
     print("    - Daily ECB refresh: python Application/reference_data/fetch_ecb_rates.py daily")
     print("=" * 60)

@@ -111,6 +111,7 @@ class ReportDetailResponse(BaseModel):
     empty_section_count: int
     validation_run: bool = False
     no_reporting: bool = False
+    build: int | None = None  # Backend build number that produced this response
 
 
 class SourceEntityResponse(BaseModel):

@@ -1,37 +1,3 @@
-################################################################################
-# NCA-SPECIFIC OVERRIDES — Finanstilsynet (NO)
-# Version: v2
-# Base YAML: aifmd_validation_rules.yaml (v2.3)
-#
-# SCHEMA: DELTA-ONLY OVERRIDES (Option B)
-#
-# This file uses the delta-only override pattern. Each nca_rules entry carries
-# ONLY the fields that DIFFER from the base YAML rule it overrides.
-# All other attributes are INHERITED from the base rule at load time.
-#
-# Required keys per override rule:
-#   rule_id        — unique NCA rule identifier
-#   base_rule_id   — links to the base YAML rule (e.g. AIFM-1, AIF-17)
-#   field_id       — the ESMA field number being overridden
-#
-# Always-present NCA keys (even if empty):
-#   nca_error_codes, overrides_esma, status, nca_source_doc, nca_doc_date
-#   validation_rules, technical_guidance, eagle_action
-#
-# Delta keys (only present when NCA value differs from base):
-#   field_name, format, data_type, m_c_o_f, mandatory, severity, etc.
-#
-# NCA-specific rules (base_rule_id empty): carry FULL field definition
-# since there is no base rule to inherit from.
-#
-# Infrastructure sections (transmission, file_format, correction_rules,
-# eagle_implementation, return_files) are NCA-specific and always present.
-#
-# LOADER CONTRACT:
-#   merged_rule = base_rule | nca_override   (Python dict merge)
-#   i.e. NCA keys overwrite base keys; base keys not in NCA are inherited.
-################################################################################
-
 nca_overrides:
   nca: Finanstilsynet
   country: 'NO'
@@ -58,11 +24,11 @@ nca_overrides:
     - Updated base_yaml_version from '2.3' to '2.3'
     - 'Schema: NCA rules now carry only rule_id, base_rule_id, field_id + delta keys'
   nca_rules:
-  - rule_id: NCA-NO-ReportingMemberState
+  - rule_id: NCA-NO-ReportingMemberState-AIFM
     base_rule_id: AIFM-1
     field_id: '1'
     field_name: Reporting Member State
-    report_type: AIF+AIFM
+    report_type: AIFM
     rule_source: Finanstilsynet AIFMD Reporting
     nca_error_codes: []
     overrides_esma: true
@@ -72,9 +38,26 @@ nca_overrides:
     nca_doc_date: '2025-01-01'
     base_rule_path:
       aifm_report: aifm_report.envelope.ReportingMemberState
+    technical_guidance: For reports submitted to Finanstilsynet the value must always be "NO". Norway uses its ISO 3166 country
+      code despite being EEA rather than EU.
+    eagle_action: ''
+    validation_rules: ReportingMemberState = "NO"
+  - rule_id: NCA-NO-ReportingMemberState-AIF
+    base_rule_id: AIF-1
+    field_id: '1'
+    field_name: Reporting Member State
+    report_type: AIF
+    rule_source: Finanstilsynet AIFMD Reporting
+    nca_error_codes: []
+    overrides_esma: true
+    status: active
+    deactivated_version: ''
+    nca_source_doc: Finanstilsynet AIFMD reporting guidance
+    nca_doc_date: '2025-01-01'
+    base_rule_path:
       aif_report: aif_report.envelope.ReportingMemberState
-    technical_guidance: For reports submitted to Finanstilsynet the value must always be "NO". Norway
-      uses its ISO 3166 country code despite being EEA rather than EU.
+    technical_guidance: For reports submitted to Finanstilsynet the value must always be "NO". Norway uses its ISO 3166 country
+      code despite being EEA rather than EU.
     eagle_action: ''
     validation_rules: ReportingMemberState = "NO"
   - rule_id: NCA-NO-AIFMNationalCode
@@ -91,13 +74,14 @@ nca_overrides:
     nca_doc_date: '2025-01-01'
     base_rule_path:
       aifm_report: aifm_report.identification.AIFMNationalCode
-    technical_guidance: 'Finanstilsynet assigns AIFM national codes with the prefix "FT00" followed by
-      a numeric identifier. Example: FT00123456. The FT00 prefix is constant for all Norwegian NCA codes.'
+    technical_guidance: 'Finanstilsynet assigns AIFM national codes with the prefix "FT00" followed by a numeric identifier.
+      Example: FT00123456. The FT00 prefix is constant for all Norwegian NCA codes.'
     eagle_action: ''
     validation_rules:
     - Must start with "FT00" prefix
     - Must match regex ^FT00[0-9]+$
     example: FT00123456
+    report_type: AIFM
   - rule_id: NCA-NO-AIFNationalCode
     base_rule_id: AIF-17
     field_id: '17'
@@ -113,13 +97,14 @@ nca_overrides:
     nca_doc_date: '2025-01-01'
     base_rule_path:
       aif_report: aif_report.identification.AIFNationalCode
-    technical_guidance: 'Finanstilsynet assigns AIF national codes with the same "FT00" prefix followed
-      by a numeric identifier. Example: FT00654321. Same format as the AIFM national code.'
+    technical_guidance: 'Finanstilsynet assigns AIF national codes with the same "FT00" prefix followed by a numeric identifier.
+      Example: FT00654321. Same format as the AIFM national code.'
     eagle_action: ''
     validation_rules:
     - Must start with "FT00" prefix
     - Must match regex ^FT00[0-9]+$
     example: FT00654321
+    report_type: AIF
   - rule_id: NCA-NO-SingleEntityPerFile
     base_rule_id: ''
     field_id: ''
@@ -145,12 +130,11 @@ nca_overrides:
     base_rule_path:
       aif_report: aif_report.structure
       aifm_report: aifm_report.structure
-    technical_guidance: Finanstilsynet restricts the ESMA XSD to enforce a single-entity-per-file rule.
-      Each XML file must contain data for exactly ONE AIF or ONE AIFM. Multiple AIFs or AIFMs cannot be
-      combined in a single file. This is stricter than ESMA base rules and differs from NCAs like CBI
-      (Ireland) which allow multiple AIF returns in one file.
-    eagle_action: Adapter must generate one XML file per AIF and one per AIFM for NO filings. Never combine
-      multiple entities in a single file.
+    technical_guidance: Finanstilsynet restricts the ESMA XSD to enforce a single-entity-per-file rule. Each XML file must
+      contain data for exactly ONE AIF or ONE AIFM. Multiple AIFs or AIFMs cannot be combined in a single file. This is stricter
+      than ESMA base rules and differs from NCAs like CBI (Ireland) which allow multiple AIF returns in one file.
+    eagle_action: Adapter must generate one XML file per AIF and one per AIFM for NO filings. Never combine multiple entities
+      in a single file.
     validation_rules:
     - Each XML file must contain exactly one AIFRecordInfo or one AIFMRecordInfo
     - Multiple AIFs in one file will be rejected
@@ -179,10 +163,9 @@ nca_overrides:
     nca_source_doc: Finanstilsynet Altinn documentation
     nca_doc_date: '2025-01-01'
     base_rule_path: {}
-    technical_guidance: 'Finanstilsynet uses two Altinn form codes for AIFMD reporting: KRT-1161 for AIFM
-      periodic reporting (one per registered/authorised AIFM) and KRT-1160 for AIF periodic reporting
-      (one per AIF authorised to market in Norway). Forms are pre-delivered to the AIFM''s Altinn account
-      approximately 3 weeks before the reporting deadline.'
+    technical_guidance: 'Finanstilsynet uses two Altinn form codes for AIFMD reporting: KRT-1161 for AIFM periodic reporting
+      (one per registered/authorised AIFM) and KRT-1160 for AIF periodic reporting (one per AIF authorised to market in Norway).
+      Forms are pre-delivered to the AIFM''s Altinn account approximately 3 weeks before the reporting deadline.'
     eagle_action: Map AIFM reports to KRT-1161 and AIF reports to KRT-1160 when interfacing with Altinn.
     validation_rules:
     - 'AIFM returns: submit under form KRT-1161'
@@ -211,22 +194,22 @@ nca_overrides:
     nca_source_doc: Finanstilsynet AIFMD reporting guidance
     nca_doc_date: '2025-01-01'
     base_rule_path: {}
-    technical_guidance: Non-EEA AIFMs are NOT required to report AIFs they manage if those AIFs are NOT
-      marketed in Norway. Only AIFs that are authorised to market in Norway require an AIF return (KRT-1160).
+    technical_guidance: Non-EEA AIFMs are NOT required to report AIFs they manage if those AIFs are NOT marketed in Norway.
+      Only AIFs that are authorised to market in Norway require an AIF return (KRT-1160).
     eagle_action: During scoping, exclude non-marketed AIFs from NO reporting scope for non-EEA AIFMs.
     validation_rules:
     - Non-EEA AIFMs only report AIFs that are marketed in Norway
     - AIFs not marketed in Norway are exempt from KRT-1160 filing
     esma_doc: ''
   transmission:
-    note: Reports are submitted via Altinn.no. From 1 June 2026, only XML file uploads are accepted —
-      manual form entry is discontinued. The XML parallel reporting option has been available since 2020.
+    note: Reports are submitted via Altinn.no. From 1 June 2026, only XML file uploads are accepted — manual form entry is
+      discontinued. The XML parallel reporting option has been available since 2020.
     overrides_esma: true
     channels:
       altinn:
         name: Altinn.no
-        description: XML files are uploaded as attachments to Altinn forms (KRT-1160 for AIF, KRT-1161
-          for AIFM). Forms appear in the AIFM's Altinn inbox approximately one week after quarter-end.
+        description: XML files are uploaded as attachments to Altinn forms (KRT-1160 for AIF, KRT-1161 for AIFM). Forms appear
+          in the AIFM's Altinn inbox approximately one week after quarter-end.
         url: https://www.altinn.no
         note: From 1 June 2026, only XML uploads accepted. Manual form entry completely discontinued.
     contact:
@@ -241,8 +224,7 @@ nca_overrides:
     mandatory_xml_date: '2026-06-30'
   correction_rules:
     submission_deadlines:
-      description: Returns due one month after reporting period end. Quarterly reporting mandatory since
-        1 January 2021.
+      description: Returns due one month after reporting period end. Quarterly reporting mandatory since 1 January 2021.
       schedule:
       - reporting_date: 31-03
         due_date: 30-04
@@ -266,5 +248,4 @@ nca_overrides:
       email: AIFMD-rapportering@finanstilsynet.no
       altinn_aif: https://info.altinn.no/en/forms-overview/financial-supervisory-authority-of-norway/aif-reporting/
       altinn_aifm: https://info.altinn.no/en/forms-overview/financial-supervisory-authority-of-norway/aifm-reporting/
-    update_trigger: Monitor https://www.finanstilsynet.no for updates. Mandatory XML reporting from 30
-      June 2026.
+    update_trigger: Monitor https://www.finanstilsynet.no for updates. Mandatory XML reporting from 30 June 2026.

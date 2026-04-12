@@ -28,79 +28,26 @@ from dataclasses import dataclass
 from typing import Optional
 
 from shared.reference_store import ReferenceStore, LEIRecord
+from shared.clean_name import clean_name
 
 
 # ── Name normalization ─────────────────────────────────────────────────
 
-# Common legal suffixes to strip before comparison
-_LEGAL_SUFFIXES = [
-    "LIMITED", "LTD", "LLC", "LLP", "LP", "INC", "INCORPORATED",
-    "CORP", "CORPORATION", "CO", "COMPANY", "PLC", "AG", "GMBH",
-    "SA", "SAS", "SARL", "SRL", "BV", "NV", "SE", "AB", "OY",
-    "OYJ", "AS", "ASA", "APS", "KG", "KGAA", "EV", "SICAV",
-    "SICAF", "SCA", "SCS", "SPA", "SPRL", "CVBA", "VOF",
-    "FCP", "FCPE", "FUND", "TRUST", "MANAGEMENT", "MGMT",
-    "PARTNERS", "CAPITAL", "INVESTMENTS", "INVESTMENT",
-    "ADVISORS", "ADVISORY", "ASSET", "ASSETS",
-    "GESELLSCHAFT", "AKTIENGESELLSCHAFT", "VERWALTUNG", "BETEILIGUNG",
-    "HOLDING", "HOLDINGS", "GROUP", "INTERNATIONAL", "INTL",
-    "THE",
-]
-
-# Pre-compile pattern: match any suffix at word boundary at end of string
-_SUFFIX_PATTERN = re.compile(
-    r"\b(" + "|".join(re.escape(s) for s in sorted(_LEGAL_SUFFIXES, key=len, reverse=True)) + r")\b",
-    re.IGNORECASE,
-)
-
-
 def normalize_entity_name(name: str) -> str:
     """Normalize an entity name for comparison.
 
-    Steps:
-      1. Unicode NFKD decomposition → strip diacritics
-      2. Uppercase
-      3. Replace punctuation with spaces (so "S.A." → "S A" → matches "SA")
-      4. Collapse multiple spaces
-      5. Strip common legal suffixes (LTD, GMBH, SA, AKTIENGESELLSCHAFT, etc.)
-      6. Remove all non-alphanumeric (including remaining spaces)
-      7. Fallback: if stripping removed everything, use just alphanumeric
+    Delegates to the unified clean_name() function in shared/clean_name.py.
+    This ensures GLEIF cache, NCA register, and LEI validation all use
+    the exact same normalization logic.
 
     Examples:
-      "BlackRock, Inc."                     → "BLACKROCK"
-      "Société Générale S.A."              → "SOCIETEGENERALE"
-      "BNP Paribas Asset Mgmt"             → "BNPPARIBAS"
-      "HSBC Holdings plc"                   → "HSBC"
-      "Deutsche Bank Aktiengesellschaft"    → "DEUTSCHEBANK"
+      "BlackRock, Inc."                     → "BLACKROCK INC"
+      "Société Générale S.A."              → "SOCIETE GENERALE SA"
+      "Deutsche Bank Aktiengesellschaft"    → "DEUTSCHE BANK AKTIENGESELLSCHAFT"
+      "3 Banken-Generali Investment-Gesellschaft m.b.H." → "3 BANKEN GENERALI INVESTMENT GESELLSCHAFT MBH"
+      "Marble Capital B.V."                 → "MARBLE CAPITAL BV"
     """
-    if not name:
-        return ""
-
-    # Step 1: Unicode normalize — decompose accented chars
-    nfkd = unicodedata.normalize("NFKD", name)
-    ascii_only = "".join(c for c in nfkd if not unicodedata.combining(c))
-
-    # Step 2: Uppercase
-    upper = ascii_only.upper()
-
-    # Step 3: Replace all non-alphanumeric with spaces (so "S.A." → "S A")
-    spaced = re.sub(r"[^A-Z0-9]+", " ", upper).strip()
-
-    # Step 4: Collapse sequences of single letters into one token
-    # "S A" → "SA", "S A S" → "SAS", so "S.A." suffix matching works
-    spaced = re.sub(r"\b([A-Z])\s+(?=[A-Z]\b)", r"\1", spaced)
-
-    # Step 5: Strip legal suffixes (word boundaries work because we preserved spaces)
-    stripped = _SUFFIX_PATTERN.sub("", spaced)
-
-    # Step 5: Remove all remaining non-alphanumeric (spaces, etc.)
-    clean = re.sub(r"[^A-Z0-9]", "", stripped)
-
-    # Step 6: If stripping suffixes removed everything, fall back to just alphanumeric
-    if not clean:
-        clean = re.sub(r"[^A-Z0-9]", "", spaced)
-
-    return clean
+    return clean_name(name)
 
 
 # ── LEI format validation (ISO 17442 + ISO 7064 checkdigit) ───────────

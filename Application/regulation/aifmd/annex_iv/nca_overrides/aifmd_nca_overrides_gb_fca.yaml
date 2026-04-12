@@ -1,37 +1,3 @@
-################################################################################
-# NCA-SPECIFIC OVERRIDES — FCA (GB)
-# Version: v2
-# Base YAML: aifmd_validation_rules.yaml (v2.3)
-#
-# SCHEMA: DELTA-ONLY OVERRIDES (Option B)
-#
-# This file uses the delta-only override pattern. Each nca_rules entry carries
-# ONLY the fields that DIFFER from the base YAML rule it overrides.
-# All other attributes are INHERITED from the base rule at load time.
-#
-# Required keys per override rule:
-#   rule_id        — unique NCA rule identifier
-#   base_rule_id   — links to the base YAML rule (e.g. AIFM-1, AIF-17)
-#   field_id       — the ESMA field number being overridden
-#
-# Always-present NCA keys (even if empty):
-#   nca_error_codes, overrides_esma, status, nca_source_doc, nca_doc_date
-#   validation_rules, technical_guidance, eagle_action
-#
-# Delta keys (only present when NCA value differs from base):
-#   field_name, format, data_type, m_c_o_f, mandatory, severity, etc.
-#
-# NCA-specific rules (base_rule_id empty): carry FULL field definition
-# since there is no base rule to inherit from.
-#
-# Infrastructure sections (transmission, file_format, correction_rules,
-# eagle_implementation, return_files) are NCA-specific and always present.
-#
-# LOADER CONTRACT:
-#   merged_rule = base_rule | nca_override   (Python dict merge)
-#   i.e. NCA keys overwrite base keys; base keys not in NCA are inherited.
-################################################################################
-
 nca_overrides:
   nca: FCA
   country: GB
@@ -76,13 +42,14 @@ nca_overrides:
     nca_doc_date: '2026-04-01'
     base_rule_path:
       aifm_report: aifm_report.identification.AIFMNationalCode
-    technical_guidance: 'The FCA assigns AIFM national codes as 6 or 7 digit numeric identifiers (FCA
-      Firm Reference Number). Example: 123456 or 1234567.'
+    technical_guidance: 'The FCA assigns AIFM national codes as 6 or 7 digit numeric identifiers (FCA Firm Reference Number).
+      Example: 123456 or 1234567.'
     eagle_action: ''
     validation_rules:
     - Must match regex ^[0-9]{6,7}$
     - Length must be 6 or 7 digits
     example: '123456'
+    report_type: AIFM
   - rule_id: NCA-FCA-AIFNationalCode
     base_rule_id: AIF-17
     field_id: '17'
@@ -99,13 +66,14 @@ nca_overrides:
     nca_doc_date: '2026-04-01'
     base_rule_path:
       aif_report: aif_report.identification.AIFNationalCode
-    technical_guidance: The FCA assigns AIF national codes as 6 or 7 digit numeric identifiers (Product
-      Reference Number). Same format as the AIFM national code.
+    technical_guidance: The FCA assigns AIF national codes as 6 or 7 digit numeric identifiers (Product Reference Number).
+      Same format as the AIFM national code.
     eagle_action: ''
     validation_rules:
     - Must match regex ^[0-9]{6,7}$
     - Length must be 6 or 7 digits
     example: '1234567'
+    report_type: AIF
   - rule_id: NCA-FCA-AIFMEEAFlag
     base_rule_id: AIFM-20
     field_id: '20'
@@ -125,12 +93,13 @@ nca_overrides:
     nca_source_doc: FCA AIFMD post-Brexit filing guidance
     nca_doc_date: '2026-04-01'
     base_rule_path: aifm_report.AIFMEEAFlag
-    technical_guidance: Post-Brexit, UK is not part of the EEA. FCA filings do not include AIFMEEAFlag
-      as it is not applicable for non-EEA reporting member states.
+    technical_guidance: Post-Brexit, UK is not part of the EEA. FCA filings do not include AIFMEEAFlag as it is not applicable
+      for non-EEA reporting member states.
     eagle_action: Adapter omits AIFMEEAFlag for GB filings.
     validation_rules:
     - AIFMEEAFlag is not applicable for GB filings (post-Brexit)
     esma_doc: ''
+    report_type: AIFM
   - rule_id: NCA-FCA-AIFEEAFlag
     base_rule_id: AIF-19
     field_id: '19'
@@ -150,12 +119,13 @@ nca_overrides:
     nca_source_doc: FCA AIFMD post-Brexit filing guidance
     nca_doc_date: '2026-04-01'
     base_rule_path: aif_report.AIFEEAFlag
-    technical_guidance: Post-Brexit, UK is not part of the EEA. FCA filings do not include AIFEEAFlag
-      as it is not applicable for non-EEA reporting member states.
+    technical_guidance: Post-Brexit, UK is not part of the EEA. FCA filings do not include AIFEEAFlag as it is not applicable
+      for non-EEA reporting member states.
     eagle_action: Adapter omits AIFEEAFlag for GB filings.
     validation_rules:
     - AIFEEAFlag is not applicable for GB filings (post-Brexit)
     esma_doc: ''
+    report_type: AIF
   - rule_id: NCA-FCA-EEANAVRate
     base_rule_id: AIF-81
     field_id: '81'
@@ -174,12 +144,13 @@ nca_overrides:
     nca_source_doc: FCA AIFMD post-Brexit filing guidance
     nca_doc_date: '2026-04-01'
     base_rule_path: aif_report.geographical_focus.EEANAVRate
-    technical_guidance: Post-Brexit, FCA uses UKNAVRate and EuropeNonUKNAVRate instead of EEANAVRate and
-      EuropeNAVRate. This ESMA element is not applicable.
+    technical_guidance: Post-Brexit, FCA uses UKNAVRate and EuropeNonUKNAVRate instead of EEANAVRate and EuropeNAVRate. This
+      ESMA element is not applicable.
     eagle_action: Adapter uses FCA region elements for GB filings.
     validation_rules:
     - EEANAVRate not applicable for GB — replaced by UKNAVRate
     esma_doc: ''
+    report_type: AIF
   - rule_id: NCA-FCA-EuropeNAVRate
     base_rule_id: AIF-80
     field_id: '80'
@@ -198,12 +169,13 @@ nca_overrides:
     nca_source_doc: FCA AIFMD post-Brexit filing guidance
     nca_doc_date: '2026-04-01'
     base_rule_path: aif_report.geographical_focus.EuropeNAVRate
-    technical_guidance: Post-Brexit, FCA uses EuropeNonUKNAVRate instead of EuropeNAVRate. This ESMA element
-      is not applicable for GB filings.
+    technical_guidance: Post-Brexit, FCA uses EuropeNonUKNAVRate instead of EuropeNAVRate. This ESMA element is not applicable
+      for GB filings.
     eagle_action: Adapter uses FCA region elements for GB filings.
     validation_rules:
     - EuropeNAVRate not applicable for GB — replaced by EuropeNonUKNAVRate
     esma_doc: ''
+    report_type: AIF
   - rule_id: NCA-FCA-RegionRemapping
     base_rule_id: ''
     field_id: 78-93
@@ -228,13 +200,11 @@ nca_overrides:
     nca_source_doc: M adapter FAQ - FCA region rules
     nca_doc_date: '2026-04-01'
     base_rule_path: aif_report.complete_description.principal_info.NAVGeographicalFocus
-    technical_guidance: 'FCA uses different geographic regions than ESMA. The mapping is: - Europe (EEA)
-      → Europe (other than UK) - Europe (Non-EEA) with GBP currency → UK - Europe (Non-EEA) with non-GBP
-      currency → Europe (other than UK) - All other regions remain unchanged The adapter must remap positions
-      when generating XML for GB filings.'
-    eagle_action: Adapter remaps geographic focus regions for GB filings based on currency and original
-      ESMA region. Requires position-level currency information to distinguish UK vs Europe (other than
-      UK).
+    technical_guidance: 'FCA uses different geographic regions than ESMA. The mapping is: - Europe (EEA) → Europe (other than
+      UK) - Europe (Non-EEA) with GBP currency → UK - Europe (Non-EEA) with non-GBP currency → Europe (other than UK) - All
+      other regions remain unchanged The adapter must remap positions when generating XML for GB filings.'
+    eagle_action: Adapter remaps geographic focus regions for GB filings based on currency and original ESMA region. Requires
+      position-level currency information to distinguish UK vs Europe (other than UK).
     validation_rules:
     - Europe (EEA) positions must map to Europe (other than UK) for FCA
     - Europe (Non-EEA) + GBP must map to UK
@@ -282,11 +252,10 @@ nca_overrides:
     nca_source_doc: M adapter FAQ - FCA share class rules
     nca_doc_date: '2026-04-01'
     base_rule_path: aif_report.record_info.ShareClassIdentifier
-    technical_guidance: FCA RegData rejects share classes without any identification code (AIF Questions
-      34-39). When no code is available, a dummy ShareClassNationalCode with value "No Code Available"
-      and a sequence number must be added.
-    eagle_action: Adapter checks share classes for GB filings and auto-inserts dummy national code "No
-      Code Available [N]" when no identification code is present.
+    technical_guidance: FCA RegData rejects share classes without any identification code (AIF Questions 34-39). When no code
+      is available, a dummy ShareClassNationalCode with value "No Code Available" and a sequence number must be added.
+    eagle_action: Adapter checks share classes for GB filings and auto-inserts dummy national code "No Code Available [N]"
+      when no identification code is present.
     validation_rules:
     - At least one type of identification code must be entered per share class
     - IF no code available THEN insert "No Code Available" as ShareClassNationalCode
@@ -323,11 +292,9 @@ nca_overrides:
     nca_source_doc: M adapter FAQ - FCA dominant influence rules
     nca_doc_date: '2026-04-01'
     base_rule_path: aif_report.individual_info.CompanyDominantInfluence
-    technical_guidance: FCA RegData rejects PEQF (Private Equity) funds without any Dominant Influence
-      records. When no dominant influence exists, a dummy record with company name "Not Applicable" must
-      be added.
-    eagle_action: Adapter checks PEQF funds for GB filings and auto-inserts dummy dominant influence record
-      when none exists.
+    technical_guidance: FCA RegData rejects PEQF (Private Equity) funds without any Dominant Influence records. When no dominant
+      influence exists, a dummy record with company name "Not Applicable" must be added.
+    eagle_action: Adapter checks PEQF funds for GB filings and auto-inserts dummy dominant influence record when none exists.
     validation_rules:
     - IF PredominantAIFType == PEQF THEN at least one DominantInfluence required
     - IF no DominantInfluence for PEQF THEN insert dummy "Not Applicable"
@@ -364,10 +331,9 @@ nca_overrides:
     nca_source_doc: M adapter FAQ - FCA sub-asset type conversions
     nca_doc_date: '2026-04-01'
     base_rule_path: aif_report.complete_description.position.SubAssetType
-    technical_guidance: FCA uses different sub-asset types for sovereign bonds than ESMA. The exact mapping
-      depends on the specific bond types. The M adapter applies heuristic conversion for GB filings.
-    eagle_action: Adapter converts sovereign bond sub-asset types for GB filings using FCA-specific mapping
-      rules.
+    technical_guidance: FCA uses different sub-asset types for sovereign bonds than ESMA. The exact mapping depends on the
+      specific bond types. The M adapter applies heuristic conversion for GB filings.
+    eagle_action: Adapter converts sovereign bond sub-asset types for GB filings using FCA-specific mapping rules.
     validation_rules:
     - Sovereign bond sub-asset types must use FCA codes for GB filings
     esma_doc: ''

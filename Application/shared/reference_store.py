@@ -1,9 +1,14 @@
 """Reference data store — dual-backend (SQLite for test, PostgreSQL for production).
 
-Provides a clean interface for storing and querying public reference data:
+Provides a clean interface for storing and querying public reference data
+in the **platform** schema (P4 single source of truth, P15 platform-first):
   - ECB exchange rates (REQ-REF-001)
   - GLEIF LEI register cache (REQ-REF-002)
   - ISO 10383 MIC codes (REQ-REF-001)
+  - NCA registered entities (REQ-REF-003) — planned
+
+All reference data is product-agnostic and consumed by multiple modules:
+MOD-ADMIN, MOD-DATA, MOD-GTM, MOD-TRIAL, MOD-CLIENT.
 
 Usage:
     from shared.reference_store import ReferenceStore
@@ -11,10 +16,10 @@ Usage:
     # Test phase (SQLite — works anywhere)
     store = ReferenceStore.sqlite("reference_data/reference_data.db")
 
-    # Production (PostgreSQL)
+    # Production (PostgreSQL — platform schema)
     store = ReferenceStore.postgresql(
         host="localhost", port=5432,
-        dbname="Project Eagle local", user="postgres",
+        dbname="eagle_dev", user="eagle_app",
     )
 
     # Query
@@ -57,6 +62,10 @@ class LEIRecord:
     last_update: Optional[date]
     fetched_at: datetime
     expires_at: datetime
+    headquarters_address: Optional[str] = None
+    legal_address: Optional[str] = None
+    jurisdiction: Optional[str] = None
+    registered_as: Optional[str] = None
 
 
 @dataclass
@@ -71,7 +80,8 @@ class MICRecord:
 
 # ── Schema DDL ─────────────────────────────────────────────────────────
 # Follows eagle_software_architecture.md §6.3 exactly.
-# SQLite-compatible (no schema prefix); PostgreSQL uses aifmd.* prefix.
+# SQLite-compatible (no schema prefix); PostgreSQL uses platform.* prefix.
+# Migrated from aifmd.* to platform.* per P4/P15 (2026-04-11).
 
 _SQLITE_SCHEMA = """
 CREATE TABLE IF NOT EXISTS ecb_rates (
@@ -93,7 +103,11 @@ CREATE TABLE IF NOT EXISTS gleif_lei_cache (
     registration_authority  TEXT,
     last_update             TEXT,
     fetched_at              TEXT NOT NULL,
-    expires_at              TEXT NOT NULL
+    expires_at              TEXT NOT NULL,
+    headquarters_address    TEXT,
+    legal_address           TEXT,
+    jurisdiction            TEXT,
+    registered_as           TEXT
 );
 
 CREATE TABLE IF NOT EXISTS mic_codes (
@@ -119,9 +133,9 @@ CREATE INDEX IF NOT EXISTS idx_mic_country
 """
 
 _POSTGRESQL_SCHEMA = """
-CREATE SCHEMA IF NOT EXISTS aifmd;
+CREATE SCHEMA IF NOT EXISTS platform;
 
-CREATE TABLE IF NOT EXISTS aifmd.ecb_rates (
+CREATE TABLE IF NOT EXISTS platform.ecb_rates (
     rate_date       DATE          NOT NULL,
     base_currency   CHAR(3)       NOT NULL DEFAULT 'EUR',
     target_currency CHAR(3)       NOT NULL,
@@ -131,7 +145,7 @@ CREATE TABLE IF NOT EXISTS aifmd.ecb_rates (
     PRIMARY KEY (rate_date, target_currency)
 );
 
-CREATE TABLE IF NOT EXISTS aifmd.gleif_lei_cache (
+CREATE TABLE IF NOT EXISTS platform.gleif_lei_cache (
     lei                     CHAR(20) PRIMARY KEY,
     legal_name              VARCHAR(500) NOT NULL,
     normalized_name         VARCHAR(500) NOT NULL DEFAULT '',
@@ -140,10 +154,14 @@ CREATE TABLE IF NOT EXISTS aifmd.gleif_lei_cache (
     registration_authority  VARCHAR(100),
     last_update             DATE,
     fetched_at              TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    expires_at              TIMESTAMPTZ  NOT NULL
+    expires_at              TIMESTAMPTZ  NOT NULL,
+    headquarters_address    TEXT,
+    legal_address           TEXT,
+    jurisdiction             VARCHAR(10),
+    registered_as           TEXT
 );
 
-CREATE TABLE IF NOT EXISTS aifmd.mic_codes (
+CREATE TABLE IF NOT EXISTS platform.mic_codes (
     mic             VARCHAR(10) PRIMARY KEY,
     operating_mic   VARCHAR(10) NOT NULL,
     name            VARCHAR(500) NOT NULL,
@@ -152,17 +170,17 @@ CREATE TABLE IF NOT EXISTS aifmd.mic_codes (
     fetched_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_ecb_rates_currency
-    ON aifmd.ecb_rates(target_currency, rate_date);
+CREATE INDEX IF NOT EXISTS idx_platform_ecb_rates_currency
+    ON platform.ecb_rates(target_currency, rate_date);
 
-CREATE INDEX IF NOT EXISTS idx_gleif_legal_name
-    ON aifmd.gleif_lei_cache(legal_name);
+CREATE INDEX IF NOT EXISTS idx_platform_gleif_legal_name
+    ON platform.gleif_lei_cache(legal_name);
 
-CREATE INDEX IF NOT EXISTS idx_gleif_normalized_name
-    ON aifmd.gleif_lei_cache(normalized_name);
+CREATE INDEX IF NOT EXISTS idx_platform_gleif_normalized_name
+    ON platform.gleif_lei_cache(normalized_name);
 
-CREATE INDEX IF NOT EXISTS idx_mic_country
-    ON aifmd.mic_codes(country);
+CREATE INDEX IF NOT EXISTS idx_platform_mic_country
+    ON platform.mic_codes(country);
 """
 
 
@@ -174,7 +192,7 @@ class ReferenceStore:
     def __init__(self, backend: str, connection):
         self._backend = backend  # "sqlite" or "postgresql"
         self._conn = connection
-        self._table_prefix = "" if backend == "sqlite" else "aifmd."
+        self._table_prefix = "" if backend == "sqlite" else "platform."
 
     # ── Factory methods ────────────────────────────────────────────
 
@@ -346,7 +364,7 @@ class ReferenceStore:
         """Bulk upsert LEI records. Automatically computes normalized_name."""
         if not records:
             return
-        from shared.lei_validator import normalize_entity_name
+        from shared.clean_name import clean_name as normalize_entity_name
         now = datetime.utcnow().isoformat()
         rows = [
             (
@@ -357,6 +375,10 @@ class ReferenceStore:
                 r.get("registration_authority"),
                 r.get("last_update"), now,
                 r.get("expires_at", now),
+                r.get("headquarters_address"),
+                r.get("legal_address"),
+                r.get("jurisdiction"),
+                r.get("registered_as"),
             )
             for r in records
         ]
@@ -365,8 +387,9 @@ class ReferenceStore:
                 cur.executemany(
                     f"""INSERT OR REPLACE INTO {self._t('gleif_lei_cache')}
                         (lei, legal_name, normalized_name, entity_status, country,
-                         registration_authority, last_update, fetched_at, expires_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                         registration_authority, last_update, fetched_at, expires_at,
+                         headquarters_address, legal_address, jurisdiction, registered_as)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     rows,
                 )
             else:
@@ -375,7 +398,8 @@ class ReferenceStore:
                     cur,
                     f"""INSERT INTO {self._t('gleif_lei_cache')}
                         (lei, legal_name, normalized_name, entity_status, country,
-                         registration_authority, last_update, fetched_at, expires_at)
+                         registration_authority, last_update, fetched_at, expires_at,
+                         headquarters_address, legal_address, jurisdiction, registered_as)
                         VALUES %s
                         ON CONFLICT (lei)
                         DO UPDATE SET
@@ -386,7 +410,11 @@ class ReferenceStore:
                             registration_authority = EXCLUDED.registration_authority,
                             last_update = EXCLUDED.last_update,
                             fetched_at = EXCLUDED.fetched_at,
-                            expires_at = EXCLUDED.expires_at""",
+                            expires_at = EXCLUDED.expires_at,
+                            headquarters_address = EXCLUDED.headquarters_address,
+                            legal_address = EXCLUDED.legal_address,
+                            jurisdiction = EXCLUDED.jurisdiction,
+                            registered_as = EXCLUDED.registered_as""",
                     rows,
                 )
 
@@ -395,7 +423,8 @@ class ReferenceStore:
         with self._cursor() as cur:
             cur.execute(
                 f"""SELECT lei, legal_name, normalized_name, entity_status, country,
-                           registration_authority, last_update, fetched_at, expires_at
+                           registration_authority, last_update, fetched_at, expires_at,
+                           headquarters_address, legal_address, jurisdiction, registered_as
                     FROM {self._t('gleif_lei_cache')}
                     WHERE lei = {param}""",
                 (lei,),
@@ -415,6 +444,10 @@ class ReferenceStore:
                 last_update=parse_d(row[6]),
                 fetched_at=parse_dt(row[7]),
                 expires_at=parse_dt(row[8]),
+                headquarters_address=row[9],
+                legal_address=row[10],
+                jurisdiction=row[11],
+                registered_as=row[12],
             )
 
     def search_lei_by_normalized_name(
@@ -438,16 +471,21 @@ class ReferenceStore:
                     country=r[4].strip() if r[4] else "",
                     registration_authority=r[5], last_update=parse_d(r[6]),
                     fetched_at=parse_dt(r[7]), expires_at=parse_dt(r[8]),
+                    headquarters_address=r[9], legal_address=r[10],
+                    jurisdiction=r[11], registered_as=r[12],
                 )
                 for r in rows
             ]
+
+        _cols = """lei, legal_name, normalized_name, entity_status, country,
+                   registration_authority, last_update, fetched_at, expires_at,
+                   headquarters_address, legal_address, jurisdiction, registered_as"""
 
         with self._cursor() as cur:
             # Try with country filter first (if provided)
             if country and country.strip():
                 cur.execute(
-                    f"""SELECT lei, legal_name, normalized_name, entity_status, country,
-                               registration_authority, last_update, fetched_at, expires_at
+                    f"""SELECT {_cols}
                         FROM {self._t('gleif_lei_cache')}
                         WHERE normalized_name = {param} AND country = {param}
                         LIMIT {limit}""",
@@ -460,8 +498,7 @@ class ReferenceStore:
 
             # Name-only search
             cur.execute(
-                f"""SELECT lei, legal_name, normalized_name, entity_status, country,
-                           registration_authority, last_update, fetched_at, expires_at
+                f"""SELECT {_cols}
                     FROM {self._t('gleif_lei_cache')}
                     WHERE normalized_name = {param}
                     LIMIT {limit}""",
